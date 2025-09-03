@@ -1,0 +1,73 @@
+I’ll create 4 JIRA tasks based on your requirements for the first phase of database connectivity testing. Here are the tasks in proper user story format:
+
+## Task 1: Database Discovery and Connection Setup
+
+**Title:** Set up MS SQL test database connection for network accessibility testing
+
+**User Story:**
+As a DevOps engineer, I want to identify and configure access to an MS SQL test database so that I can establish baseline connectivity from our jump servers to validate network paths and authentication mechanisms.
+
+**Acceptance Criteria:**
+
+- Locate available MS SQL test database instances
+- Document database connection parameters (host, port, instance)
+- Verify network routing from jump servers to database hosts
+- Confirm test database is accessible and responsive
+
+-----
+
+## Task 2: Service Account Configuration
+
+**Title:** Provision read-only database service account for automated testing
+
+**User Story:**
+As a DevOps engineer, I want to create local read-only database credentials (non-SSO account) so that I can perform automated connectivity tests and database queries without impacting production authentication systems.
+
+**Acceptance Criteria:**
+
+- Create dedicated service account for database testing
+- Configure read-only permissions on test database
+- Document credential management and storage approach
+- Validate account can connect but cannot modify data
+
+-----
+
+## Task 3: CLI Database Connectivity Testing
+
+**Title:** Implement command-line database connectivity validation
+
+**User Story:**
+As a DevOps engineer, I want to test connectivity to MS SQL database using CLI tools (curl or sqlcmd) so that I can verify network accessibility and basic database responsiveness from our Linux jump servers.
+
+**Acceptance Criteria:**
+
+- Install and configure SQL client tools on Linux jump server
+- Create connectivity test scripts using CLI tools
+- Implement basic database query tests (SELECT @@VERSION, connection validation)
+- Document successful connection parameters and any network issues
+
+-----
+
+## Task 4: Ansible Playbook Development for Database Testing
+
+**Title:** Develop Ansible playbook to orchestrate database connectivity tests
+
+**User Story:**
+As a DevOps engineer, I want to write an Ansible playbook that automates connectivity testing to MS SQL database so that I can systematically validate database access across multiple jump servers and create repeatable testing procedures.
+
+**Acceptance Criteria:**
+
+- Create Ansible inventory group for database testing
+- Develop playbook with tasks for connectivity validation
+- Implement error handling and reporting mechanisms
+- Test playbook execution in development environment (Tower/AWX)
+- Document playbook usage and expected outcomes
+
+-----
+
+**Epic:** Database Connectivity Validation - Phase 1
+**Labels:** database, connectivity, mssql, devops, infrastructure
+**Priority:** High
+**Sprint:** [Current Sprint]
+
+Each task builds upon the previous one, creating a logical progression from basic setup to automated testing infrastructure.​​​​​​​​​​​​​​​​
