@@ -51,7 +51,7 @@ The commit message validation pattern can be easily modified by editing the rege
 scripts/git-hooks/pre-push
 ```
 
-Look for the `COMMIT_REGEX` variable at the top of the file (line 11).
+Look for the `COMMIT_REGEX` variable at the top of the file (line 8).
 
 ### Bypassing the Hook (Not Recommended)
 
@@ -113,18 +113,62 @@ Server-side validation ensures ALL developers follow commit standards, regardles
 
 ### GitHub Actions Setup
 
-Create `.github/workflows/validate-commits.yml` in your repository:
+The repository already includes a GitHub Actions workflow at `.github/workflows/validate-commits.yml` that automatically validates commit messages.
 
-```yaml
-# Copy the contents from scripts/git-hooks/github-action.yml
+#### How it Works
+
+The workflow triggers on:
+- **Pull Requests** - Validates all commits in the PR
+- **Pushes to protected branches** - main, master, develop
+
+#### Commit Message Validation
+
+The workflow enforces the same JIRA pattern:
+```
+(feat|fix|update): JIRA-XXX <description>
 ```
 
-This will automatically validate commit messages on:
+#### What Happens on Validation Failure
 
-- Pull requests
-- Pushes to main/master/develop branches
+When invalid commit messages are detected:
+1. The GitHub Actions check will fail ❌
+2. The PR cannot be merged until fixed
+3. Clear error messages show which commits are invalid
+4. Instructions are provided for fixing the commits
 
-The action will fail the CI check if any commit messages don't match the required format, preventing merges until fixed.
+#### Customizing the Server-Side Pattern
+
+To modify the validation pattern in GitHub Actions:
+1. Edit `.github/workflows/validate-commits.yml`
+2. Update the `COMMIT_REGEX` variable (line 25)
+3. Commit and push the changes
+
+#### Testing Server-Side Validation
+
+1. Create a feature branch:
+   ```bash
+   git checkout -b test-validation
+   ```
+
+2. Create a commit with invalid message:
+   ```bash
+   git commit -m "bad message"
+   ```
+
+3. Push and create a PR:
+   ```bash
+   git push origin test-validation
+   ```
+
+4. The GitHub Actions check will fail, blocking the merge
+
+5. Fix the commit:
+   ```bash
+   git commit --amend -m "fix: JIRA-123 Correct commit message"
+   git push --force
+   ```
+
+6. The check will pass ✅
 
 ## Server vs Client Validation
 
