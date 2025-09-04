@@ -1,0 +1,74 @@
+name: Validate Commit Messages
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+  push:
+    branches:
+      - main
+      - master
+      - develop
+
+jobs:
+  validate-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0  # Fetch all history for all branches
+
+      - name: Validate commit messages
+        run: |
+          # Configuration - modify this regex as needed
+          # Option 1: JIRA pattern (DEFAULT)
+          COMMIT_REGEX='^(feat|fix|update): JIRA-[0-9]{3,}'
+          
+          # Option 2: Comprehensive conventional commits (uncomment to use)
+          # COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
+          
+          # For PRs, check all commits in the PR
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            commits=$(git rev-list ${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }})
+          else
+            # For pushes, check the pushed commits
+            commits=$(git rev-list ${{ github.event.before }}..${{ github.event.after }} 2>/dev/null || git rev-list HEAD~1..HEAD)
+          fi
+          
+          failed=0
+          invalid_commits=""
+          
+          for commit in $commits; do
+            commit_msg=$(git log --format=%s -n 1 "$commit")
+            
+            if ! echo "$commit_msg" | grep -qE "$COMMIT_REGEX"; then
+              failed=1
+              short_hash=$(echo $commit | cut -c1-7)
+              invalid_commits="${invalid_commits}\n  - ${short_hash}: ${commit_msg}"
+            fi
+          done
+          
+          if [ $failed -eq 1 ]; then
+            echo "❌ ERROR: Invalid commit message format detected!"
+            echo ""
+            echo "The following commits do not match the required format:"
+            echo -e "$invalid_commits"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "📝 REQUIRED FORMAT:"
+            echo ""
+            echo "  (feat|fix|update): JIRA-XXX <description>"
+            echo ""
+            echo "  Examples:"
+            echo "    feat: JIRA-123 Add user authentication"
+            echo "    fix: JIRA-456 Resolve memory leak issue"
+            echo "    update: JIRA-789 Improve error handling"
+            echo ""
+            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+            echo ""
+            echo "💡 Fix with: git rebase -i and reword commits"
+            exit 1
+          fi
+          
+          echo "✅ All commit messages are valid!"

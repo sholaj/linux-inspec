@@ -1,0 +1,145 @@
+# Linux InSpec
+
+## Git Hooks Setup
+
+This repository uses Git hooks to enforce commit message standards. You can implement validation either client-side (on developer machines) or server-side (on the Git server).
+
+## Client-Side Setup (Pre-Push Hook)
+
+### Installation
+
+To enable the pre-push hook that validates commit messages:
+
+```bash
+# Set the Git hooks directory
+git config core.hooksPath scripts/git-hooks
+```
+
+### Commit Message Format
+
+The repository enforces the following commit message format:
+
+#### Option 1: Simple Format (JIRA Integration)
+```
+<type>: JIRA-XXX <description>
+```
+- **Types**: `feat`, `fix`
+- **Example**: `feat: JIRA-123 Add user authentication module`
+
+#### Option 2: Conventional Commits Format
+```
+<type>(<scope>): <description>
+```
+- **Types**: `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `perf`, `refactor`, `revert`, `style`, `test`
+- **Example**: `feat(auth): add OAuth2 integration`
+
+### Examples of Valid Commit Messages
+
+- `feat: JIRA-123 Add new authentication module`
+- `fix: JIRA-456 Resolve memory leak in data processor`
+- `docs: JIRA-789 Improve documentation`
+- `feat(auth): implement OAuth2 integration`
+- `fix(api): resolve race condition in request handler`
+- `docs(readme): update installation instructions`
+- `Merge branch 'feature/new-feature' into main`
+- `Initial commit`
+
+### Customizing the Validation Pattern
+
+The commit message validation pattern can be easily modified by editing the regex in:
+```
+scripts/git-hooks/pre-push
+```
+
+Look for the `COMMIT_REGEX` variable at the top of the file (line 11).
+
+### Bypassing the Hook (Not Recommended)
+
+If you need to bypass the validation temporarily:
+```bash
+git push --no-verify
+```
+
+⚠️ **Warning**: Bypassing the hook should only be done in exceptional cases and may result in non-compliant commit history.
+
+### Troubleshooting
+
+If you encounter issues with the pre-push hook:
+
+1. **Ensure the hook is executable**:
+   ```bash
+   chmod +x scripts/git-hooks/pre-push
+   ```
+
+2. **Verify the hooks path is set correctly**:
+   ```bash
+   git config core.hooksPath
+   ```
+   Should output: `scripts/git-hooks`
+
+3. **Fix existing commit messages**:
+   - To amend the last commit: `git commit --amend`
+   - To fix multiple commits: `git rebase -i HEAD~n` (where n is the number of commits)
+
+### Testing the Hook
+
+To test that the hook is working correctly:
+
+1. Create a commit with an invalid message:
+   ```bash
+   git commit -m "bad commit message"
+   ```
+
+2. Try to push:
+   ```bash
+   git push
+   ```
+   The push should be rejected with a helpful error message.
+
+3. Fix the commit message:
+   ```bash
+   git commit --amend -m "feat: JIRA-001 Test commit message validation"
+   ```
+
+4. Push again:
+   ```bash
+   git push
+   ```
+   The push should succeed.
+
+## Server-Side Setup (GitHub Actions)
+
+Server-side validation ensures ALL developers follow commit standards, regardless of their local setup.
+
+### GitHub Actions Setup
+
+Create `.github/workflows/validate-commits.yml` in your repository:
+
+```yaml
+# Copy the contents from scripts/git-hooks/github-action.yml
+```
+
+This will automatically validate commit messages on:
+
+- Pull requests
+- Pushes to main/master/develop branches
+
+The action will fail the CI check if any commit messages don't match the required format, preventing merges until fixed.
+
+## Server vs Client Validation
+
+| Aspect | Client-Side (pre-push) | Server-Side (GitHub Actions) |
+|--------|------------------------|-------------------------------|
+| **Enforcement** | Optional (can bypass with --no-verify) | Mandatory (blocks PR merge) |
+| **Setup** | Each developer must configure | One-time repository setup |
+| **Feedback** | Immediate, before push | On PR creation/push |
+| **Performance** | No server load | Uses GitHub Actions minutes |
+| **Best for** | Development teams with discipline | Strict enforcement needs |
+
+## Recommended Approach
+
+**Use both**:
+1. **Client-side hooks** - Immediate developer feedback before pushing
+2. **GitHub Actions** - Final enforcement at PR level
+
+This provides the best developer experience while ensuring compliance.

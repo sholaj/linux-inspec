@@ -1,0 +1,98 @@
+#!/bin/bash
+
+# GitHub Enterprise Server pre-receive hook to validate commit messages
+# This hook is for GitHub Enterprise Server installations only
+# For GitHub.com, use GitHub Actions instead (see github-action.yml)
+
+# CONFIGURATION - Modify this regex pattern as needed
+# Option 1: Simple pattern for feat/fix/update: JIRA-XXX
+# COMMIT_REGEX='^(feat|fix|update): JIRA-[0-9]{3,}'
+
+# Option 2: More comprehensive conventional commit format
+COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|¯\\_\(ツ\)_/¯)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to print error messages
+print_error() {
+    echo -e "${RED}❌ REJECTED: $1${NC}" >&2
+}
+
+# Function to print success messages
+print_success() {
+    echo -e "${GREEN}✅ $1${NC}" >&2
+}
+
+# Read stdin for all refs being pushed
+while read oldrev newrev refname
+do
+    # Skip branch deletions
+    if [ "$newrev" = "0000000000000000000000000000000000000000" ]; then
+        continue
+    fi
+
+    # For new branches, check all commits
+    if [ "$oldrev" = "0000000000000000000000000000000000000000" ]; then
+        # List all commits in the new branch
+        commits=$(git rev-list "$newrev" --not --all)
+    else
+        # For existing branches, check only new commits
+        commits=$(git rev-list "$oldrev..$newrev")
+    fi
+
+    # Validate each commit
+    failed=0
+    invalid_commits=""
+    
+    for commit in $commits
+    do
+        # Get the commit message (first line)
+        commit_msg=$(git log --format=%s -n 1 "$commit")
+        
+        # Check if commit message matches the pattern
+        if ! echo "$commit_msg" | grep -qE "$COMMIT_REGEX"; then
+            failed=1
+            invalid_commits="${invalid_commits}\n  - ${commit:0:7}: $commit_msg"
+        fi
+    done
+
+    if [ $failed -eq 1 ]; then
+        echo ""
+        print_error "Push rejected due to invalid commit message format!"
+        echo ""
+        echo "The following commits do not match the required format:"
+        echo -e "${RED}${invalid_commits}${NC}"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "📝 REQUIRED COMMIT MESSAGE FORMAT:"
+        echo ""
+        echo "  Option 1 (Simple): <type>: JIRA-XXX <description>"
+        echo "    Types: feat, fix, update"
+        echo "    Example: feat: JIRA-123 Add user authentication"
+        echo ""
+        echo "  Option 2 (Conventional Commits): <type>(<scope>): <description>"
+        echo "    Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test"
+        echo "    Example: feat(auth): add OAuth2 integration"
+        echo ""
+        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+        echo ""
+        echo "💡 TO FIG THIS:"
+        echo "  1. Fix commits locally:"
+        echo "     • Amend last commit: git commit --amend"
+        echo "     • Interactive rebase: git rebase -i HEAD~n"
+        echo "  2. Force push after fixing (if needed): git push --force-with-lease"
+        echo ""
+        echo "📖 Server enforces this regex pattern:"
+        echo "  $COMMIT_REGEX"
+        echo ""
+        exit 1
+    fi
+done
+
+print_success "All commit messages validated successfully!"
+exit 0
