@@ -29,12 +29,15 @@ git config core.hooksPath scripts/git-hooks
 
 The repository enforces the following commit message format:
 
-#### Option 1: Simple Format (JIRA Integration) - DEFAULT
+#### Option 1: Simple Format (Any Project Prefix) - DEFAULT
 ```
-<type>: JIRA-XXX <description>
+<type>: <PROJECT>-<NUMBER> <description>
 ```
-- **Types**: `feat`, `fix`, `update`
-- **Example**: `feat: JIRA-123 Add user authentication module`
+- **Types**: `feat`, `fix`, `update`, `test`
+- **Examples**: 
+  - `feat: JIRA-123 Add user authentication module`
+  - `fix: TPE-456 Fix authentication bug`
+  - `update: PROJ-789 Update dependencies`
 
 #### Option 2: Conventional Commits Format
 ```
@@ -46,8 +49,9 @@ The repository enforces the following commit message format:
 ### Examples of Valid Commit Messages
 
 - `feat: JIRA-123 Add new authentication module`
-- `fix: JIRA-456 Resolve memory leak in data processor`
-- `update: JIRA-789 Improve error handling`
+- `fix: TPE-456 Resolve memory leak in data processor`
+- `update: PROJ-789 Improve error handling`
+- `test: TICKET-999 Add integration tests for API`
 - `feat(auth): implement OAuth2 integration`
 - `fix(api): resolve race condition in request handler`
 - `docs(readme): update installation instructions`
@@ -136,10 +140,11 @@ The workflow triggers on:
 
 #### Commit Message Validation
 
-The workflow enforces the same JIRA pattern:
+The workflow enforces the flexible project prefix pattern:
 ```
-(feat|fix|update): JIRA-XXX <description>
+(feat|fix|update|test): [A-Z]+-[0-9]+ <description>
 ```
+This supports any uppercase project prefix like JIRA-123, TPE-456, PROJ-789, etc.
 
 #### What Happens on Validation Failure
 

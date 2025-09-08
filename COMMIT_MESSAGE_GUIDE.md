@@ -6,11 +6,14 @@ This guide explains when and how to use each commit message type in this reposit
 
 ### Format Options
 
-#### Option 1: JIRA Integration (Default)
+#### Option 1: Any Project Prefix (Default)
 ```
-<type>: JIRA-XXX <description>
+<type>: <PROJECT>-<NUMBER> <description>
 ```
-Example: `feat: JIRA-123 Add user authentication`
+Examples: 
+- `feat: JIRA-123 Add user authentication`
+- `fix: TPE-456 Fix authentication bug`
+- `update: PROJ-789 Update dependencies`
 
 #### Option 2: Conventional Commits
 ```
@@ -20,7 +23,7 @@ Example: `feat(auth): add OAuth2 integration`
 
 ## Commit Types
 
-### Core Types (JIRA Format)
+### Core Types (Project Prefix Format)
 
 #### `feat` - New Feature
 Use when adding new functionality to the application.
