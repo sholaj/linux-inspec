@@ -21,7 +21,11 @@ jobs:
       - name: Validate commit messages
         run: |
           # Configuration - modify this regex as needed
-          COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
+          # Option 1: Any project prefix pattern (DEFAULT)
+          COMMIT_REGEX='^(feat|fix|update|test): [A-Z]+-[0-9]+ .+'
+          
+          # Option 2: Comprehensive conventional commits (uncomment to use)
+          # COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
           
           # For PRs, check all commits in the PR
           if [ "${{ github.event_name }}" == "pull_request" ]; then
@@ -52,16 +56,15 @@ jobs:
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
-            echo "📝 REQUIRED FORMATS:"
+            echo "📝 REQUIRED FORMAT:"
             echo ""
-            echo "  Simple: <type>: JIRA-XXX <description>"
-            echo "    Example: feat: JIRA-123 Add user authentication"
+            echo "  (feat|fix|update|test): <PROJECT>-<NUMBER> <description>"
             echo ""
-            echo "  Conventional: <type>(<scope>): <description>"
-            echo "    Example: feat(auth): add OAuth2 integration"
-            echo ""
-            echo "  Valid types: build, chore, ci, docs, feat, fix,"
-            echo "               perf, refactor, revert, style, test"
+            echo "  Examples:"
+            echo "    feat: JIRA-123 Add user authentication"
+            echo "    fix: TPE-456 Resolve memory leak issue"
+            echo "    update: PROJ-789 Improve error handling"
+            echo "    test: TICKET-999 Add integration tests"
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
             echo ""
