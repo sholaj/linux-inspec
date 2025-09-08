@@ -4,8 +4,9 @@
 # This hook validates that all commit messages follow the required pattern
 
 # CONFIGURATION - Modify this regex pattern as needed
-# Option 1: Simple pattern for feat/fix/update: JIRA-XXX (DEFAULT)
-COMMIT_REGEX='^(feat|fix|update|test): JIRA-[0-9]{3,}'
+# Option 1: Simple pattern for common types with any project prefix (DEFAULT)
+# Accepts: feat/fix/update/test: PROJECT-XXX (e.g., JIRA-123, TPE-456, PROJ-789)
+COMMIT_REGEX='^(feat|fix|update|test): [A-Z]+-[0-9]+ .+'
 
 # Option 2: More comprehensive conventional commit format (uncomment to use)
 # COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|¯\\_\(ツ\)_/¯)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
