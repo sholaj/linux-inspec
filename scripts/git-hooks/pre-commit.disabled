@@ -5,7 +5,7 @@
 
 # CONFIGURATION - Modify this regex pattern as needed
 # Option 1: Simple pattern for feat/fix/update: JIRA-XXX (DEFAULT)
-COMMIT_REGEX='^(feat|fix|update): JIRA-[0-9]{3,}'
+COMMIT_REGEX='^(feat|fix|update|test): JIRA-[0-9]{3,}'
 
 # Option 2: More comprehensive conventional commit format (uncomment to use)
 # COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
@@ -67,7 +67,7 @@ if ! echo "$commit_msg" | grep -qE "$COMMIT_REGEX"; then
     echo "REQUIRED COMMIT MESSAGE FORMAT:"
     echo ""
     echo '  Option 1 (Simple): <type>: JIRA-XXX <description>'
-    echo "    Types: feat, fix, update"
+    echo "    Types: feat, fix, update, test"
     echo "    Example: feat: JIRA-123 Add user authentication"
     echo ""
     echo '  Option 2 (Conventional Commits): <type>(<scope>): <description>'
