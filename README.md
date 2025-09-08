@@ -2,13 +2,23 @@
 
 ## Git Hooks Setup
 
-This repository uses Git hooks to enforce commit message standards. You can implement validation either client-side (on developer machines) or server-side (on the Git server).
+This repository uses Git hooks to enforce commit message standards at both commit-time and push-time. The hooks validate commit messages automatically to maintain consistent commit history.
 
-## Client-Side Setup (Pre-Push Hook)
+## Quick Setup
 
-### Installation
+### Automatic Setup (Recommended)
 
-To enable the pre-push hook that validates commit messages:
+Run the setup script after cloning the repository:
+
+```bash
+./scripts/setup-hooks.sh
+```
+
+This will automatically configure Git to use the repository's hooks.
+
+### Manual Setup
+
+Alternatively, configure manually:
 
 ```bash
 # Set the Git hooks directory
@@ -19,11 +29,11 @@ git config core.hooksPath scripts/git-hooks
 
 The repository enforces the following commit message format:
 
-#### Option 1: Simple Format (JIRA Integration)
+#### Option 1: Simple Format (JIRA Integration) - DEFAULT
 ```
 <type>: JIRA-XXX <description>
 ```
-- **Types**: `feat`, `fix`
+- **Types**: `feat`, `fix`, `update`
 - **Example**: `feat: JIRA-123 Add user authentication module`
 
 #### Option 2: Conventional Commits Format
@@ -37,7 +47,7 @@ The repository enforces the following commit message format:
 
 - `feat: JIRA-123 Add new authentication module`
 - `fix: JIRA-456 Resolve memory leak in data processor`
-- `docs: JIRA-789 Improve documentation`
+- `update: JIRA-789 Improve error handling`
 - `feat(auth): implement OAuth2 integration`
 - `fix(api): resolve race condition in request handler`
 - `docs(readme): update installation instructions`
@@ -47,11 +57,14 @@ The repository enforces the following commit message format:
 ### Customizing the Validation Pattern
 
 The commit message validation pattern can be easily modified by editing the regex in:
-```
-scripts/git-hooks/pre-push
-```
+- `scripts/git-hooks/commit-msg` - For commit-time validation
+- `scripts/git-hooks/pre-push` - For push-time validation
 
-Look for the `COMMIT_REGEX` variable at the top of the file (line 8).
+Look for the `COMMIT_REGEX` variable at the top of each file (line 8 or 11).
+
+### Developer Guide
+
+For detailed information on when to use each commit type, see [COMMIT_MESSAGE_GUIDE.md](COMMIT_MESSAGE_GUIDE.md).
 
 ### Bypassing the Hook (Not Recommended)
 
