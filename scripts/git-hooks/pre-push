@@ -4,11 +4,12 @@
 # This hook validates that all commit messages follow the required pattern
 
 # CONFIGURATION - Modify this regex pattern as needed
-# Option 1: Simple pattern for feat/fix/update: JIRA-XXX
-# COMMIT_REGEX='^(feat|fix|update): JIRA-[0-9]{3,}'
+# Option 1: Simple pattern for common types with any project prefix (DEFAULT)
+# Accepts: feat/fix/update/test: PROJECT-XXX (e.g., JIRA-123, TPE-456, PROJ-789)
+COMMIT_REGEX='^(feat|fix|update|test): [A-Z]+-[0-9]+ .+'
 
-# Option 2: More comprehensive conventional commit format
-COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|¯\\_\(ツ\)_/¯)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
+# Option 2: More comprehensive conventional commit format (uncomment to use)
+# COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test|¯\\_\(ツ\)_/¯)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
 
 # Colors for output
 RED='\033[0;31m'
@@ -18,17 +19,17 @@ NC='\033[0m' # No Color
 
 # Function to print error messages
 print_error() {
-    echo -e "${RED}❌ ERROR: $1${NC}"
+    echo -e "${RED}ERROR: $1${NC}"
 }
 
 # Function to print success messages
 print_success() {
-    echo -e "${GREEN}✅ $1${NC}"
+    echo -e "${GREEN}SUCCESS: $1${NC}"
 }
 
 # Function to print warning messages
 print_warning() {
-    echo -e "${YELLOW}⚠️  $1${NC}"
+    echo -e "${YELLOW}WARNING: $1${NC}"
 }
 
 # Read stdin to get the commits being pushed
@@ -77,30 +78,32 @@ do
             echo "The following commits do not match the required format:"
             echo -e "${RED}${invalid_commits}${NC}"
             echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
-            echo "📝 REQUIRED COMMIT MESSAGE FORMAT:"
-            echo ""
-            echo "  Option 1 (Simple): <type>: JIRA-XXX <description>"
-            echo "    Types: feat, fix, update"
-            echo "    Example: feat: JIRA-123 Add user authentication"
-            echo ""
-            echo "  Option 2 (Conventional Commits): <type>(<scope>): <description>"
-            echo "    Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test"
-            echo "    Example: feat(auth): add OAuth2 integration"
-            echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo ""
-            echo "💡 TIPS:"
-            echo "  • Amend your last commit: git commit --amend"
-            echo "  • Interactive rebase to fix multiple commits: git rebase -i HEAD~n"
-            echo "  • Bypass this check (NOT recommended): git push --no-verify"
-            echo ""
-            echo "📖 Current regex pattern being used:"
-            echo "  $COMMIT_REGEX"
-            echo ""
-            echo "To modify the validation pattern, edit:"
-            echo "  scripts/git-hooks/pre-push (line 9 or 12)"
+            echo "=============================================================";
+            echo "";
+            echo "REQUIRED COMMIT MESSAGE FORMAT:";
+            echo "";
+            echo '  Option 1 (Simple): <type>: <PROJECT>-<NUMBER> <description>';
+            echo "    Types: feat, fix, update, test";
+            echo "    Examples: feat: JIRA-123 Add user authentication";
+            echo "             fix: TPE-456 Fix authentication bug";
+            echo "             update: PROJ-789 Update dependencies";
+            echo "";
+            echo '  Option 2 (Conventional Commits): <type>(<scope>): <description>';
+            echo "    Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test";
+            echo "    Example: feat(auth): add OAuth2 integration";
+            echo "";
+            echo "=============================================================";
+            echo "";
+            echo "TIPS:";
+            echo "  - Amend your last commit: git commit --amend";
+            echo "  - Interactive rebase to fix multiple commits: git rebase -i HEAD~n";
+            echo '  - Bypass this check: git push --no-verify (NOT recommended)';
+            echo "";
+            echo "Current regex pattern being used:";
+            echo "  $COMMIT_REGEX";
+            echo "";
+            echo "To modify the validation pattern, edit:";
+            echo '  scripts/git-hooks/pre-push (line 8 or 11)';
             echo ""
             exit 1
         fi

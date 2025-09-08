@@ -1,0 +1,110 @@
+#!/bin/bash
+
+# Git pre-commit hook to validate commit messages
+# This hook validates that the commit message follows the required pattern
+
+# CONFIGURATION - Modify this regex pattern as needed
+# Option 1: Simple pattern for feat/fix/update: JIRA-XXX (DEFAULT)
+COMMIT_REGEX='^(feat|fix|update|test): JIRA-[0-9]{3,}'
+
+# Option 2: More comprehensive conventional commit format (uncomment to use)
+# COMMIT_REGEX='^((build|chore|ci|docs|feat|fix|perf|refactor|revert|style|test)(\(\w+\))?(!)?(: (.*\s*)*))|(Merge (.*\s*)*)|(Initial commit$)'
+
+# Colors for output
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+NC='\033[0m' # No Color
+
+# Function to print error messages
+print_error() {
+    echo -e "${RED}ERROR: $1${NC}"
+}
+
+# Function to print success messages
+print_success() {
+    echo -e "${GREEN}SUCCESS: $1${NC}"
+}
+
+# Function to print warning messages
+print_warning() {
+    echo -e "${YELLOW}WARNING: $1${NC}"
+}
+
+# Get the commit message from the staged commit message file
+COMMIT_MSG_FILE="$1"
+
+# If no commit message file is provided (e.g., during amend), check the current commit
+if [ -z "$COMMIT_MSG_FILE" ] || [ ! -f "$COMMIT_MSG_FILE" ]; then
+    # This is for testing or when called manually
+    # Get the last commit message
+    commit_msg=$(git log -1 --pretty=%B 2>/dev/null | head -n1)
+    
+    if [ -z "$commit_msg" ]; then
+        print_warning "No commit message to validate"
+        exit 0
+    fi
+else
+    # Read the commit message from the file
+    commit_msg=$(head -n1 "$COMMIT_MSG_FILE")
+fi
+
+# Skip merge commits
+if echo "$commit_msg" | grep -q "^Merge "; then
+    exit 0
+fi
+
+# Check if commit message matches the pattern
+if ! echo "$commit_msg" | grep -qE "$COMMIT_REGEX"; then
+    echo ""
+    print_error "Commit message validation failed!"
+    echo ""
+    echo "Your commit message:"
+    echo "  $commit_msg"
+    echo ""
+    echo "============================================================="
+    echo ""
+    echo "REQUIRED COMMIT MESSAGE FORMAT:"
+    echo ""
+    echo '  Option 1 (Simple): <type>: JIRA-XXX <description>'
+    echo "    Types: feat, fix, update, test"
+    echo "    Example: feat: JIRA-123 Add user authentication"
+    echo ""
+    echo '  Option 2 (Conventional Commits): <type>(<scope>): <description>'
+    echo "    Types: build, chore, ci, docs, feat, fix, perf, refactor, revert, style, test"
+    echo "    Example: feat(auth): add OAuth2 integration"
+    echo ""
+    echo "============================================================="
+    echo ""
+    echo "COMMIT TYPE GUIDE:"
+    echo ""
+    echo "  feat:     New feature or functionality"
+    echo "  fix:      Bug fix"
+    echo "  update:   Updates to existing functionality"
+    echo "  build:    Changes to build system or dependencies"
+    echo "  chore:    Maintenance tasks, tooling changes"
+    echo "  ci:       Continuous integration changes"
+    echo "  docs:     Documentation only changes"
+    echo "  perf:     Performance improvements"
+    echo "  refactor: Code restructuring without changing functionality"
+    echo "  revert:   Reverting previous commits"
+    echo "  style:    Code style changes (formatting, semicolons, etc)"
+    echo "  test:     Adding or updating tests"
+    echo ""
+    echo "============================================================="
+    echo ""
+    echo "TIPS:"
+    echo "  - To fix this commit message, run: git commit --amend"
+    echo '  - To bypass this check: git commit --no-verify (NOT recommended)'
+    echo ""
+    echo "Current regex pattern being used:"
+    echo "  $COMMIT_REGEX"
+    echo ""
+    echo "To modify the validation pattern, edit:"
+    echo '  scripts/git-hooks/pre-commit (line 8 or 11)'
+    echo ""
+    exit 1
+fi
+
+print_success "Commit message validated successfully!"
+exit 0
