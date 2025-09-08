@@ -27,12 +27,6 @@
   "git.enableSmartCommit": true,
   "git.confirmSync": false,
   "git.autofetch": true,
-<<<<<<< HEAD
-  "git.defaultCloneDirectory": "C:\\repos",
-  "git.enableCommitSigning": false,
-  "gitlens.hovers.currentLine.over": "line",
-  "gitlens.codeLens.enabled": false,
-=======
   "git.autofetchPeriod": 180,
   "git.autoStash": true,
   "git.branchProtection": ["main", "master", "develop"],
@@ -66,7 +60,6 @@
   "gitlens.graph.layout": "editor",
   "gitlens.graph.minimap.enabled": true,
   "gitlens.statusBar.enabled": true,
->>>>>>> 9aba5cc (update: CLEANUP-001 Remove unused pre-commit.disabled file)
   
   // Ruby & InSpec Configuration
   "ruby.useLanguageServer": true,
@@ -194,14 +187,11 @@
     "foxundermoon.shell-format",
     "timonwong.shellcheck"
   ],
-<<<<<<< HEAD
-=======
   "remote.SSH.host": "your.remote.host",
   "remote.SSH.username": "your_username",
   "remote.SSH.password": "your_password",
   "remote.SSH.key": "path/to/your/private/key",
   "remote.SSH.port": 22,
->>>>>>> 9aba5cc (update: CLEANUP-001 Remove unused pre-commit.disabled file)
   
   // DevOps Tools Integration
   "docker.dockerPath": "docker",
