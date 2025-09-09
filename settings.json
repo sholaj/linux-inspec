@@ -62,7 +62,7 @@
   "gitlens.statusBar.enabled": true,
   
   // Ruby & InSpec Configuration
-  "ruby.useLanguageServer": true,
+  "ruby.useLanguageServer": false,
   "ruby.lint": {
     "rubocop": true,
     "ruby": true
