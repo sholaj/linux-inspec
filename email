@@ -1,0 +1,19 @@
+Dear DB Team,
+I hope this email finds you well.
+I am writing to follow up on the service account that was recently created for our Ansible Automation Platform (AAP) project to conduct database scanning operations. The service account was approved via SailPoint Request ID 0010407971.
+Service Account Details:
+	•	Owner Identity: CHFAPP86770
+	•	Account Type: Process Account (UNIX)
+	•	Purpose: Accessing CORP databases via Ansible inspection
+	•	Environment: DEV
+	•	Password Vault: CyberArk
+As we proceed with implementing the Ansible AAP solution to replace our current conductor server-based scanning approach, we need to configure connectivity to our databases (Oracle, MSSQL, and Sybase).
+Could you please provide the following information:
+	1.	Confirmation that the service account has been provisioned for MSSQL database access
+	2.	The specific database instances/servers the account has access to
+	3.	Any connection requirements or restrictions we should be aware of
+	4.	Confirmation of similar access for Oracle and Sybase databases
+This information is critical for us to properly configure our Ansible inventory and connection parameters for the database scanning automation.
+Please let me know if you need any additional information from our side.
+Thank you for your support.
+Best regards
