@@ -1,19 +1,58 @@
-Dear DB Team,
+**Subject:** Requirement Request: Service Account Integration with AAP2 via Noah CCP
+
+Hi Mate,
+
 I hope this email finds you well.
-I am writing to follow up on the service account that was recently created for our Ansible Automation Platform (AAP) project to conduct database scanning operations. The service account was approved via SailPoint Request ID 0010407971.
-Service Account Details:
-	•	Owner Identity: CHFAPP86770
-	•	Account Type: Process Account (UNIX)
-	•	Purpose: Accessing CORP databases via Ansible inspection
-	•	Environment: DEV
-	•	Password Vault: CyberArk
-As we proceed with implementing the Ansible AAP solution to replace our current conductor server-based scanning approach, we need to configure connectivity to our databases (Oracle, MSSQL, and Sybase).
-Could you please provide the following information:
-	1.	Confirmation that the service account has been provisioned for MSSQL database access
-	2.	The specific database instances/servers the account has access to
-	3.	Any connection requirements or restrictions we should be aware of
-	4.	Confirmation of similar access for Oracle and Sybase databases
-This information is critical for us to properly configure our Ansible inventory and connection parameters for the database scanning automation.
-Please let me know if you need any additional information from our side.
-Thank you for your support.
+
+The service account for our database scanning project has been successfully created and approved (12345678). I need your help to integrate this account with AAP2 using Noah Central Credential Provider (CCP) - the industry best practice for enterprise credential management.
+
+**Service Account Details:**
+- Account Identifier: 12345678
+- Password Vault: Noah
+- Target Databases: Oracle, MSSQL, Sybase
+- Environment: DEV
+
+**Technical Approach - Noah CCP Integration:**
+
+We'll use Noah's Central Credential Provider API for programmatic password retrieval. This approach provides:
+- Automatic password rotation handling
+- Zero credential exposure in AAP2 logs
+- Complete audit trail across both platforms
+- Certificate-based authentication for security
+
+**What You Need to Accomplish:**
+
+1. **Register AAP2 with Noah:**
+   - Get an Application ID (AppID) assigned for AAP2
+   - Configure safe permissions for the AppID to access 12345678
+   - Obtain client certificates for CCP authentication
+
+2. **Create AAP2 Custom Credential Type:**
+   - Configure a custom credential type in AAP2 that interfaces with Noah CCP API
+   - Parameters needed: Noah URL, AppID, Safe Name, Object Name (12345678), Certificate paths
+   - Implement credential injectors for playbook variables
+
+3. **Develop Integration Script:**
+   - Create a Python script that calls Noah CCP REST API: `/AIMWebService/api/Accounts`
+   - Script should use certificate authentication and return password to AAP2 securely
+   - Install script on all AAP2 execution nodes
+
+4. **Testing Requirements:**
+   - Validate CCP connectivity from AAP2 execution nodes
+   - Test credential retrieval and database connectivity
+   - Verify no credentials appear in AAP2 logs (use no_log: true)
+   - Confirm audit trails in both AAP2 and Noah
+
+**Key Integration Points:**
+- Playbooks will use `lookup('pipe', Noah_password_script)` to retrieve passwords at runtime
+- All credential-handling tasks must have `no_log: true` to prevent exposure
+- The integration must handle password rotation transparently without playbook changes
+
+**Coordination Needed:**
+You'll likely need to work with the Security team for Noah AppID registration and certificate generation. Adam from the AAP2 team can help with the custom credential type configuration.
+
+Let me know if you have any questions or need clarification on any of these requirements. This is critical for enabling our RBAC-compliant, automated database scanning workflow.
+
+Thanks for taking this on!
+
 Best regards
