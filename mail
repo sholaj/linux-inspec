@@ -29,115 +29,83 @@ The framework operates on an **inventory-based architecture** where:
 
 ---
 
-### 2.2 Architecture Diagram (Mermaid)
+### 2.2 Architecture Diagram
 
-```mermaid
-flowchart TB
-    subgraph AAP["Ansible Automation Platform 2"]
-        JT[Job Template]
-        EE[Execution Environment<br/>InSpec + DB Clients]
-        INV[Inventory<br/>mssql_servers<br/>oracle_databases<br/>sybase_databases]
-        APMD[APMD Service Account<br/>AAP Credential]
-    end
-
-    subgraph ROLES["Ansible Roles"]
-        MSSQL[mssql_inspec]
-        ORACLE[oracle_inspec]
-        SYBASE[sybase_inspec]
-    end
-
-    subgraph DB_TARGETS["Database Targets"]
-        direction LR
-        MSSQL_DB[(MSSQL Server<br/>2017/2019/2022<br/>Port 1733)]:::mssql
-        ORACLE_DB[(Oracle DB<br/>12c/19c<br/>Port 1521)]:::oracle
-        SYBASE_DB[(Sybase ASE<br/>15/16<br/>Port 5000)]:::sybase
-    end
-
-    subgraph RESULTS["Results Management"]
-        JSON[JSON Results<br/>PLATFORM_NIST_*.json]
-        SPLUNK[Splunk HEC<br/>Optional]
-        REPORTS[Summary Reports]
-    end
-
-    JT -->|SSH Port 22| EE
-    EE --> INV
-    EE --> APMD
-
-    EE -->|Execute| MSSQL
-    EE -->|Execute| ORACLE
-    EE -->|Execute| SYBASE
-
-    MSSQL -->|TCP 1733<br/>sqlcmd<br/>APMD Account| MSSQL_DB
-    ORACLE -->|TCP 1521<br/>sqlplus<br/>APMD Account| ORACLE_DB
-    SYBASE -->|TCP 5000<br/>isql<br/>APMD Account| SYBASE_DB
-
-    MSSQL --> JSON
-    ORACLE --> JSON
-    SYBASE --> JSON
-
-    JSON --> SPLUNK
-    JSON --> REPORTS
-
-    classDef mssql fill:#1f77b4,stroke:#0d3a5a,color:#fff
-    classDef oracle fill:#d62728,stroke:#5a0d0d,color:#fff
-    classDef sybase fill:#9467bd,stroke:#3f2a61,color:#fff
+```
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                    ANSIBLE AUTOMATION PLATFORM 2 (AAP2)                         │
+│  ┌──────────────────┐    ┌─────────────────┐    ┌────────────────────────┐    │
+│  │  Job Templates   │───▶│  Execution Env  │───▶│   Service Account      │    │
+│  │  - run_mssql     │    │  - InSpec       │    │   - SSH Connectivity   │    │
+│  │  - run_oracle    │    │  - sqlcmd       │    │   - DB Authentication  │    │
+│  │  - run_sybase    │    │  - sqlplus      │    │                        │    │
+│  │                  │    │  - isql         │    │                        │    │
+│  └──────────────────┘    └─────────────────┘    └────────────────────────┘    │
+│                                   │                                             │
+│                                   │ SSH Port 22                                 │
+└───────────────────────────────────┼─────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌─────────────────────────────────────────────────────────────────────────────────┐
+│                         DELEGATE HOST / EXECUTION NODE                          │
+│  ┌─────────────────────────────────────────────────────────────────────────┐   │
+│  │                           ANSIBLE ROLES                                  │   │
+│  │  ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐        │   │
+│  │  │  mssql_inspec   │  │  oracle_inspec  │  │  sybase_inspec  │        │   │
+│  │  │  - validate     │  │  - validate     │  │  - validate     │        │   │
+│  │  │  - setup        │  │  - setup        │  │  - setup        │        │   │
+│  │  │  - execute      │  │  - execute      │  │  - execute      │        │   │
+│  │  │  - process      │  │  - process      │  │  - process      │        │   │
+│  │  └────────┬────────┘  └────────┬────────┘  └────────┬────────┘        │   │
+│  └───────────┼─────────────────────┼─────────────────────┼─────────────────┘   │
+└──────────────┼─────────────────────┼─────────────────────┼─────────────────────┘
+               │                     │                     │
+        TCP 1733 (sqlcmd)     TCP 1521 (sqlplus)   TCP 5000 (isql)
+               │                     │                     │
+               ▼                     ▼                     ▼
+     ┌──────────────────┐  ┌──────────────────┐  ┌──────────────────┐
+     │  MSSQL SERVER    │  │  ORACLE DATABASE │  │  SYBASE ASE      │
+     │  ────────────    │  │  ────────────    │  │  ────────────    │
+     │  SQL Server      │  │  Oracle 12c/19c  │  │  Sybase 15/16    │
+     │  2017/2019/2022  │  │  Port: 1521      │  │  Port: 5000      │
+     │  Port: 1733      │  │  Service: XE     │  │  Service: ASE    │
+     │                  │  │                  │  │                  │
+     │  InSpec Controls │  │  InSpec Controls │  │  InSpec Controls │
+     │  ✓ Auditing      │  │  ✓ Auditing      │  │  ✓ Auditing      │
+     │  ✓ Encryption    │  │  ✓ Encryption    │  │  ✓ Encryption    │
+     │  ✓ Access        │  │  ✓ Access        │  │  ✓ Access        │
+     └────────┬─────────┘  └────────┬─────────┘  └────────┬─────────┘
+              │                     │                     │
+              └─────────────────────┴─────────────────────┘
+                                    │
+                                    ▼
+              ┌─────────────────────────────────────────────┐
+              │         RESULTS MANAGEMENT                  │
+              │  ┌──────────────────────────────────────┐  │
+              │  │  JSON Results (Local Storage)        │  │
+              │  │  /tmp/compliance_scans/              │  │
+              │  │  ├── mssql/                          │  │
+              │  │  │   └── MSSQL_NIST_*.json           │  │
+              │  │  ├── oracle/                         │  │
+              │  │  │   └── ORACLE_NIST_*.json          │  │
+              │  │  └── sybase/                         │  │
+              │  │      └── SYBASE_NIST_*.json          │  │
+              │  └──────────────────────────────────────┘  │
+              │                    │                        │
+              │                    ├──────────────────┐     │
+              │                    ▼                  ▼     │
+              │  ┌──────────────────────────┐  ┌──────────┐│
+              │  │  Summary Reports (TXT)   │  │  Splunk  ││
+              │  │  - Compliance Scores     │  │   HEC    ││
+              │  │  - Pass/Fail Counts      │  │ Optional ││
+              │  │  - Failed Control Details│  │HTTPS:8088││
+              │  └──────────────────────────┘  └──────────┘│
+              └─────────────────────────────────────────────┘
 ```
 
 ---
 
-### 2.3 Architecture Diagram (ASCII)
-
-```
-+----------------------------------+
-|  Ansible Automation Platform 2   |
-|  - Job Templates                 |
-|  - Execution Environment (EE)    |
-|  - Inventory Management          |
-|  - APMD Service Account          |
-+-----------------+----------------+
-                  | SSH Port 22
-                  | (APMD Account)
-                  v
-+----------------------------------+
-|      Delegate Host / EE          |
-|  - InSpec Binary                 |
-|  - sqlcmd (MSSQL)                |
-|  - sqlplus (Oracle)              |
-|  - isql (Sybase)                 |
-|  - Role Execution                |
-+--------+----------+--------+-----+
-         |          |        |
-   TCP 1733    TCP 1521  TCP 5000
-   (APMD)      (APMD)    (APMD)
-         |          |        |
-         v          v        v
-   +---------+ +---------+ +---------+
-   |  MSSQL  | | Oracle  | | Sybase  |
-   | Server  | |   DB    | |   ASE   |
-   | 2017+   | | 12c/19c | |  15/16  |
-   +---------+ +---------+ +---------+
-         |          |        |
-         +----------+--------+
-                    |
-                    v
-         +---------------------+
-         | Results Management  |
-         | - JSON Files        |
-         | - Summary Reports   |
-         | - Splunk (Optional) |
-         +---------------------+
-                    |
-              HTTPS 8088
-                    v
-         +---------------------+
-         |  Splunk HEC         |
-         |  (Optional)         |
-         +---------------------+
-```
-
----
-
-### 2.4 Connectivity Matrix
+### 2.3 Connectivity Matrix
 
 | Component | Source | Destination | Protocol | Port | Description |
 |-----------|--------|-------------|----------|------|-------------|
@@ -153,50 +121,107 @@ flowchart TB
 
 ### 3.1 High-Level Workflow
 
-```mermaid
-sequenceDiagram
-    participant User
-    participant AAP2
-    participant EE as Execution Environment
-    participant Role as Platform Role
-    participant DB as Database
-    participant Splunk
-
-    User->>AAP2: Launch Job Template
-    AAP2->>EE: Deploy via SSH (APMD Account)
-    EE->>EE: Load Inventory
-    EE->>EE: Select Platform Role
-
-    alt MSSQL Platform
-        EE->>Role: Execute mssql_inspec
-    else Oracle Platform
-        EE->>Role: Execute oracle_inspec
-    else Sybase Platform
-        EE->>Role: Execute sybase_inspec
-    end
-
-    Role->>Role: Validate Parameters
-    Role->>Role: Setup Directories
-    Role->>DB: Test Connectivity (APMD Account)
-
-    alt Connection Success
-        Role->>DB: Execute InSpec Profile
-        DB->>Role: Return Results
-        Role->>Role: Process JSON Results
-    else Connection Failure
-        Role->>Role: Generate "Unreachable" JSON
-    end
-
-    Role->>EE: Save Results to /tmp/compliance_scans/
-    Role->>Role: Generate Summary Report
-
-    opt Splunk Enabled
-        Role->>Splunk: Forward Results via HEC
-    end
-
-    EE->>AAP2: Job Complete
-    AAP2->>User: Display Results & Summary
 ```
+┌──────────┐      ┌──────────┐      ┌─────────────────┐      ┌──────────────┐      ┌──────────┐      ┌─────────┐
+│   User   │      │   AAP2   │      │   Execution     │      │   Platform   │      │ Database │      │ Splunk  │
+│          │      │          │      │   Environment   │      │     Role     │      │          │      │   HEC   │
+└────┬─────┘      └────┬─────┘      └────────┬────────┘      └──────┬───────┘      └────┬─────┘      └────┬────┘
+     │                 │                     │                       │                   │                 │
+     │ 1. Launch Job   │                     │                       │                   │                 │
+     │ Template        │                     │                       │                   │                 │
+     ├────────────────>│                     │                       │                   │                 │
+     │                 │                     │                       │                   │                 │
+     │                 │ 2. Deploy via SSH   │                       │                   │                 │
+     │                 │ (Service Account)   │                       │                   │                 │
+     │                 ├────────────────────>│                       │                   │                 │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │ 3. Load Inventory     │                   │                 │
+     │                 │                     │ & Select Platform     │                   │                 │
+     │                 │                     ├───┐                   │                   │                 │
+     │                 │                     │   │                   │                   │                 │
+     │                 │                     │<──┘                   │                   │                 │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │ 4. Execute Role       │                   │                 │
+     │                 │                     │ (mssql_inspec/        │                   │                 │
+     │                 │                     │  oracle_inspec/       │                   │                 │
+     │                 │                     │  sybase_inspec)       │                   │                 │
+     │                 │                     ├──────────────────────>│                   │                 │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │                       │ 5. Validate Params│                 │
+     │                 │                     │                       │ & Setup Dirs      │                 │
+     │                 │                     │                       ├───┐               │                 │
+     │                 │                     │                       │   │               │                 │
+     │                 │                     │                       │<──┘               │                 │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │                       │ 6. Test           │                 │
+     │                 │                     │                       │ Connectivity      │                 │
+     │                 │                     │                       ├──────────────────>│                 │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │                       │ ┌─────────────────┴──────────────┐  │
+     │                 │                     │                       │ │ IF CONNECTION SUCCESS:         │  │
+     │                 │                     │                       │ │                                │  │
+     │                 │                     │                       │ 7. Execute InSpec │  │
+     │                 │                     │                       │    Controls       │  │
+     │                 │                     │                       ├──────────────────>│  │
+     │                 │                     │                       │                   │  │
+     │                 │                     │                       │ 8. Return Results │  │
+     │                 │                     │                       │<──────────────────┤  │
+     │                 │                     │                       │                   │  │
+     │                 │                     │                       │ 9. Process JSON   │  │
+     │                 │                     │                       ├───┐               │  │
+     │                 │                     │                       │   │               │  │
+     │                 │                     │                       │<──┘               │  │
+     │                 │                     │                       │ │                                │  │
+     │                 │                     │                       │ └────────────────┬───────────────┘  │
+     │                 │                     │                       │ │ ELSE CONNECTION FAILURE:       │  │
+     │                 │                     │                       │ │                                │  │
+     │                 │                     │                       │ │ Generate "Unreachable" JSON    │  │
+     │                 │                     │                       │ └────────────────────────────────┘  │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │ 10. Save Results      │                   │                 │
+     │                 │                     │     /tmp/compliance   │                   │                 │
+     │                 │                     │<──────────────────────┤                   │                 │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │                       │ 11. Generate      │                 │
+     │                 │                     │                       │     Summary Report│                 │
+     │                 │                     │                       ├───┐               │                 │
+     │                 │                     │                       │   │               │                 │
+     │                 │                     │                       │<──┘               │                 │
+     │                 │                     │                       │                   │                 │
+     │                 │                     │                       │ ┌─────────────────┴──────────────┐  │
+     │                 │                     │                       │ │ IF SPLUNK ENABLED:             │  │
+     │                 │                     │                       │ │                                │  │
+     │                 │                     │                       │ │ 12. Forward Results via HEC    │  │
+     │                 │                     │                       │ │     (HTTPS:8088)               │  │
+     │                 │                     │                       ├────────────────────────────────────>│
+     │                 │                     │                       │ │                                │  │
+     │                 │                     │                       │ └────────────────────────────────┘  │
+     │                 │                     │                       │                   │                 │
+     │                 │ 13. Job Complete    │                       │                   │                 │
+     │                 │<────────────────────┤                       │                   │                 │
+     │                 │                     │                       │                   │                 │
+     │ 14. Display     │                     │                       │                   │                 │
+     │     Results     │                     │                       │                   │                 │
+     │<────────────────┤                     │                       │                   │                 │
+     │                 │                     │                       │                   │                 │
+     ▼                 ▼                     ▼                       ▼                   ▼                 ▼
+```
+
+**Execution Flow Summary:**
+1. User triggers job template in AAP2
+2. AAP2 deploys execution environment via SSH using service account
+3. Execution environment loads inventory and selects appropriate platform role
+4. Platform-specific role (mssql_inspec, oracle_inspec, or sybase_inspec) is executed
+5. Role validates parameters and sets up result directories
+6. Database connectivity test performed using service account credentials
+7. If connection succeeds: InSpec controls are executed against the database
+8. Database returns scan results
+9. Role processes JSON output and applies naming conventions
+10. Results saved to local filesystem (/tmp/compliance_scans/)
+11. Summary report generated with compliance metrics
+12. Optional: Results forwarded to Splunk HEC endpoint (if enabled)
+13. Job completion status returned to AAP2
+14. User views results and summary in AAP2 UI
 
 ### 3.2 Detailed Step-by-Step Flow
 
