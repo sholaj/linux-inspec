@@ -1,0 +1,119 @@
+---
+# execute.yml - FIXED VERSION
+# InSpec execution tasks for MSSQL with proper PATH handling
+#
+# This file resolves the "sqlcmd: command not found" error by exporting
+# PATH inside the shell block, ensuring all child processes (including
+# InSpec's mssql_session subprocess) inherit the correct PATH.
+#
+# Location: mssql_inspec/tasks/execute.yml
+
+# ============================================================================
+# ENVIRONMENT CONFIGURATION
+# ============================================================================
+# Define paths as variables for easy customization per environment
+
+- name: Set environment paths
+  set_fact:
+    # Path to sqlcmd binary directory
+    sqlcmd_bin_path: "{{ sqlcmd_bin_path | default('/opt/mssql-tools/bin') }}"
+    # Path to Sybase tools (if needed)
+    sybase_bin_path: "{{ sybase_bin_path | default('/tools/ver/sybase/OCS-16_0/bin') }}"
+    # Oracle library path (for LD_LIBRARY_PATH)
+    oracle_lib_path: "{{ oracle_lib_path | default('/tools/ver/oracle-19.16.0.0-64') }}"
+  run_once: true
+
+# ============================================================================
+# PRE-EXECUTION VALIDATION
+# ============================================================================
+
+- name: Verify sqlcmd is accessible on delegate host
+  shell: |
+    export PATH={{ sqlcmd_bin_path }}:{{ sybase_bin_path }}:/usr/local/bin:/usr/bin:/bin:$PATH
+    command -v sqlcmd >/dev/null 2>&1 && echo "FOUND" || echo "NOT_FOUND"
+  args:
+    executable: /bin/bash
+  register: sqlcmd_check
+  delegate_to: "{{ inspec_delegate_host }}"
+  changed_when: false
+  run_once: true
+
+- name: Display sqlcmd verification result
+  debug:
+    msg: "{{ sqlcmd_check.stdout == 'FOUND' | ternary('✅ sqlcmd verified at ' + sqlcmd_bin_path, '❌ sqlcmd not found - check path configuration') }}"
+  run_once: true
+
+- name: Fail if sqlcmd not found
+  fail:
+    msg: |
+      sqlcmd binary not found on delegate host {{ inspec_delegate_host }}.
+      Expected location: {{ sqlcmd_bin_path }}/sqlcmd
+      
+      Please verify:
+      1. mssql-tools package is installed
+      2. sqlcmd_bin_path variable is set correctly
+      3. The delegate host has access to the sqlcmd binary
+  when: sqlcmd_check.stdout != 'FOUND'
+
+# ============================================================================
+# INSPEC EXECUTION - FIXED VERSION
+# ============================================================================
+# 
+# KEY FIX: Export PATH inside the shell block so child processes inherit it.
+# The Ansible 'environment' directive does NOT work because InSpec's 
+# mssql_session resource spawns a subprocess that doesn't inherit those vars.
+#
+
+- name: Execute InSpec controls for each file
+  shell: |
+    # =======================================================================
+    # CRITICAL: Export PATH here so InSpec subprocess inherits it
+    # This is the fix for "sqlcmd: command not found" error
+    # =======================================================================
+    export PATH={{ sqlcmd_bin_path }}:{{ sybase_bin_path }}:/usr/local/bin:/usr/bin:/bin:$PATH
+    export LD_LIBRARY_PATH={{ oracle_lib_path }}:$LD_LIBRARY_PATH
+    
+    # Execute InSpec control
+    /usr/bin/inspec exec {{ item.path }} \
+      --input usernm='{{ mssql_username }}' \
+              passwd='{{ mssql_password }}' \
+              hostnm='{{ mssql_server }}' \
+              servicenm='{{ mssql_service | default('') }}' \
+              port='{{ mssql_port }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  register: inspec_results
+  loop: "{{ control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: false
+  failed_when: false
+  # Set no_log based on debug mode - hide password in normal operation
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
+  # Timeout configuration
+  async: "{{ inspec_command_timeout | default(1800) }}"
+  poll: 30
+  delegate_to: "{{ inspec_delegate_host }}"
+
+# ============================================================================
+# RESULT PROCESSING
+# ============================================================================
+
+- name: Display execution summary
+  debug:
+    msg: |
+      InSpec Execution Summary:
+      -------------------------
+      Controls executed: {{ inspec_results.results | length }}
+      Successful: {{ inspec_results.results | selectattr('rc', 'equalto', 0) | list | length }}
+      Failed: {{ inspec_results.results | rejectattr('rc', 'equalto', 0) | list | length }}
+  when: inspec_debug_mode | default(false)
+
+- name: Process InSpec results
+  include_tasks: process_results.yml
+  loop: "{{ inspec_results.results }}"
+  loop_control:
+    index_var: idx
+    label: "Processing result {{ idx + 1 }}"
