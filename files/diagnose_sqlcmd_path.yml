@@ -1,0 +1,263 @@
+---
+# diagnose_sqlcmd_path.yml
+# Diagnostic playbook to identify sqlcmd PATH issues in AAP2 environment
+#
+# Usage:
+#   ansible-playbook -i inventory.yml diagnose_sqlcmd_path.yml -e "inspec_delegate_host=<DELEGATE_HOST>"
+#
+# This playbook will:
+#   1. Check if sqlcmd exists at known locations
+#   2. Display the current PATH in different execution contexts
+#   3. Test if InSpec can find and use sqlcmd
+#   4. Identify the root cause of "sqlcmd: command not found" errors
+
+- name: Diagnose sqlcmd PATH Issues
+  hosts: localhost
+  gather_facts: no
+  
+  vars:
+    # Define the delegate host - override with -e "inspec_delegate_host=your_host"
+    inspec_delegate_host: "{{ inspec_delegate_host | default('localhost') }}"
+    
+    # Known sqlcmd locations to check
+    sqlcmd_possible_paths:
+      - /opt/mssql-tools/bin/sqlcmd
+      - /opt/mssql-tools18/bin/sqlcmd
+      - /usr/bin/sqlcmd
+      - /usr/local/bin/sqlcmd
+      - /tools/ver/sybase/OCS-16_0/bin/sqlcmd
+
+  tasks:
+    - name: "=========================================="
+      debug:
+        msg: "STEP 1: VERIFY DELEGATE HOST CONNECTIVITY"
+
+    - name: Check delegate host is reachable
+      ping:
+      delegate_to: "{{ inspec_delegate_host }}"
+      register: ping_result
+
+    - name: Display delegate host status
+      debug:
+        msg: "✅ Delegate host '{{ inspec_delegate_host }}' is reachable"
+      when: ping_result is success
+
+    - name: "=========================================="
+      debug:
+        msg: "STEP 2: CHECK SQLCMD BINARY LOCATIONS"
+
+    - name: Check if sqlcmd exists at known locations
+      stat:
+        path: "{{ item }}"
+      loop: "{{ sqlcmd_possible_paths }}"
+      register: sqlcmd_stat_results
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display sqlcmd location results
+      debug:
+        msg: "{{ item.item }}: {{ item.stat.exists | ternary('✅ EXISTS', '❌ NOT FOUND') }}{{ item.stat.exists | ternary(' (executable: ' + (item.stat.executable | string) + ')', '') }}"
+      loop: "{{ sqlcmd_stat_results.results }}"
+      loop_control:
+        label: "{{ item.item }}"
+
+    - name: Find actual sqlcmd location using find command
+      shell: |
+        find /opt /usr /tools -name "sqlcmd" -type f 2>/dev/null | head -5
+      args:
+        executable: /bin/bash
+      register: find_sqlcmd
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Display found sqlcmd locations
+      debug:
+        msg: |
+          📍 sqlcmd binaries found on system:
+          {{ find_sqlcmd.stdout | default('No sqlcmd binaries found') }}
+
+    - name: "=========================================="
+      debug:
+        msg: "STEP 3: ANALYZE PATH IN DIFFERENT CONTEXTS"
+
+    - name: Get PATH in Ansible task context (environment directive)
+      shell: echo $PATH
+      environment:
+        PATH: "/opt/mssql-tools/bin:/usr/local/bin:/usr/bin:/bin"
+      register: path_env_directive
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+
+    - name: Get PATH in raw shell context
+      shell: |
+        echo "Raw shell PATH: $PATH"
+      args:
+        executable: /bin/bash
+      register: path_raw_shell
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+
+    - name: Get PATH after export in shell block
+      shell: |
+        export PATH=/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:/usr/local/bin:/usr/bin:/bin:$PATH
+        echo "Exported PATH: $PATH"
+      args:
+        executable: /bin/bash
+      register: path_exported
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+
+    - name: Display PATH comparison
+      debug:
+        msg: |
+          
+          📊 PATH COMPARISON:
+          ==================
+          
+          1️⃣ Ansible environment directive:
+             {{ path_env_directive.stdout }}
+          
+          2️⃣ Raw shell (no export):
+             {{ path_raw_shell.stdout }}
+          
+          3️⃣ After export in shell block:
+             {{ path_exported.stdout }}
+
+    - name: "=========================================="
+      debug:
+        msg: "STEP 4: TEST SQLCMD ACCESSIBILITY"
+
+    - name: Test sqlcmd WITHOUT PATH export (will likely fail)
+      shell: |
+        sqlcmd -? 2>&1 | head -3
+      args:
+        executable: /bin/bash
+      register: sqlcmd_no_export
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Test sqlcmd WITH PATH export (should work)
+      shell: |
+        export PATH=/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:$PATH
+        sqlcmd -? 2>&1 | head -3
+      args:
+        executable: /bin/bash
+      register: sqlcmd_with_export
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Test sqlcmd with full path (should always work)
+      shell: |
+        /opt/mssql-tools/bin/sqlcmd -? 2>&1 | head -3
+      args:
+        executable: /bin/bash
+      register: sqlcmd_full_path
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Display sqlcmd test results
+      debug:
+        msg: |
+          
+          🔧 SQLCMD ACCESSIBILITY TESTS:
+          ==============================
+          
+          1️⃣ Without PATH export:
+             {{ sqlcmd_no_export.rc == 0 | ternary('✅ SUCCESS', '❌ FAILED: ' + sqlcmd_no_export.stderr | default(sqlcmd_no_export.stdout) | trim) }}
+          
+          2️⃣ With PATH export in shell:
+             {{ sqlcmd_with_export.rc == 0 | ternary('✅ SUCCESS', '❌ FAILED: ' + sqlcmd_with_export.stderr | default(sqlcmd_with_export.stdout) | trim) }}
+          
+          3️⃣ Using full path:
+             {{ sqlcmd_full_path.rc == 0 | ternary('✅ SUCCESS', '❌ FAILED: ' + sqlcmd_full_path.stderr | default(sqlcmd_full_path.stdout) | trim) }}
+
+    - name: "=========================================="
+      debug:
+        msg: "STEP 5: TEST INSPEC ENVIRONMENT"
+
+    - name: Check if InSpec is installed
+      shell: |
+        /usr/bin/inspec version 2>&1
+      args:
+        executable: /bin/bash
+      register: inspec_version
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Display InSpec status
+      debug:
+        msg: |
+          
+          🔍 INSPEC STATUS:
+          =================
+          {{ inspec_version.rc == 0 | ternary('✅ InSpec installed: ' + inspec_version.stdout | trim, '❌ InSpec not found or error: ' + inspec_version.stderr | default('unknown error')) }}
+
+    - name: Test InSpec subprocess PATH inheritance (simulates mssql_session)
+      shell: |
+        export PATH=/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:/usr/local/bin:/usr/bin:/bin:$PATH
+        /usr/bin/ruby -e "puts 'Ruby subprocess PATH: ' + ENV['PATH']" 2>/dev/null || echo "Ruby not available for test"
+      args:
+        executable: /bin/bash
+      register: ruby_subprocess_path
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+
+    - name: Display subprocess inheritance test
+      debug:
+        msg: |
+          
+          🧪 SUBPROCESS PATH INHERITANCE:
+          ===============================
+          {{ ruby_subprocess_path.stdout }}
+          
+          ℹ️  This simulates how InSpec's mssql_session resource spawns sqlcmd.
+              If PATH is visible here, it will be inherited by sqlcmd.
+
+    - name: "=========================================="
+      debug:
+        msg: "STEP 6: DIAGNOSIS SUMMARY"
+
+    - name: Set diagnosis facts
+      set_fact:
+        sqlcmd_exists: "{{ sqlcmd_stat_results.results | selectattr('stat.exists', 'equalto', true) | list | length > 0 }}"
+        sqlcmd_path: "{{ (sqlcmd_stat_results.results | selectattr('stat.exists', 'equalto', true) | map(attribute='item') | list | first) | default('NOT FOUND') }}"
+        needs_path_export: "{{ sqlcmd_no_export.rc != 0 and sqlcmd_with_export.rc == 0 }}"
+
+    - name: Display final diagnosis
+      debug:
+        msg: |
+          
+          ╔══════════════════════════════════════════════════════════════╗
+          ║                    DIAGNOSIS SUMMARY                         ║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║                                                              ║
+          ║  Delegate Host: {{ inspec_delegate_host | center(43) }}║
+          ║                                                              ║
+          ║  sqlcmd Binary:                                              ║
+          ║    Location: {{ sqlcmd_path | center(47) }}║
+          ║    Exists: {{ sqlcmd_exists | string | center(49) }}║
+          ║                                                              ║
+          ║  PATH Export Required: {{ needs_path_export | string | center(36) }}║
+          ║                                                              ║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║  RECOMMENDED ACTION:                                         ║
+          ║                                                              ║
+          {% if needs_path_export %}
+          ║  ⚠️  Export PATH inside shell block in execute.yml:          ║
+          ║                                                              ║
+          ║  shell: |                                                    ║
+          ║    export PATH={{ sqlcmd_path | dirname }}:$PATH             ║
+          ║    /usr/bin/inspec exec ...                                  ║
+          {% elif not sqlcmd_exists %}
+          ║  ❌ sqlcmd not found! Install mssql-tools package:           ║
+          ║     sudo yum install mssql-tools                             ║
+          {% else %}
+          ║  ✅ No action needed - sqlcmd is accessible                  ║
+          {% endif %}
+          ║                                                              ║
+          ╚══════════════════════════════════════════════════════════════╝
