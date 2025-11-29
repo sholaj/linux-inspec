@@ -1,0 +1,37 @@
+---
+# InSpec execution tasks for MSSQL
+
+- name: Execute InSpec controls for each file (with timeout)
+  shell: |
+    /usr/bin/inspec exec {{ item.path }} \
+      --input usernm='{{ mssql_username }}' \
+              passwd='{{ mssql_password }}' \
+              hostnm='{{ mssql_server }}' \
+              servicenm='{{ mssql_service | default('') }}' \
+              port='{{ mssql_port }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ mssql_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+    INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
+
+  register: inspec_results
+  loop: "{{ control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: false
+  failed_when: false
+  no_log: "{{ not inspec_debug_mode | default(true) }}"
+  async: "{{ inspec_command_timeout | default(1800) }}"
+  poll: 30
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Process InSpec results
+  include_tasks: process_results.yml
+  loop: "{{ inspec_results.results }}"
+  loop_control:
+    index_var: idx
+    label: "Processing result {{ idx + 1 }}"

@@ -1,0 +1,60 @@
+---
+# SSH setup tasks for Sybase InSpec execution
+# Based on original script SSH logic: --ssh://oracle:edcp!cv0576@ -o oracle/.ssh/authorized_keys
+
+- name: Create SSH keys directory for Sybase
+  file:
+    path: "{{ sybase_controls_base_dir }}/SSH_keys"
+    state: directory
+    mode: '0700'
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Deploy SSH private key for Sybase access (from vault)
+  copy:
+    content: "{{ vault_sybase_ssh_private_key | default('# SSH key not provided in vault') }}"
+    dest: "{{ sybase_ssh_key_path }}"
+    mode: '0600'
+  no_log: true
+  when: vault_sybase_ssh_private_key is defined
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Test SSH connectivity to Sybase host
+  shell: |
+    ssh -o ConnectTimeout=10 \
+        -o StrictHostKeyChecking=no \
+        -o UserKnownHostsFile=/dev/null \
+        -p {{ sybase_ssh_port }} \
+        {{ sybase_ssh_user }}@{{ sybase_server }} \
+        "echo 'SSH connection test successful'"
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ sybase_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
+    SYBASE: "{{ sybase_environment.SYBASE }}"
+    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
+    SSH_AUTH_SOCK: "{{ sybase_environment.SSH_AUTH_SOCK }}"
+  register: ssh_test
+  changed_when: false
+  failed_when: false
+  when: sybase_use_ssh | default(true)
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Display SSH connection test results
+  debug:
+    msg: |
+      SSH Connection Test for Sybase:
+      Target: {{ sybase_ssh_user }}@{{ sybase_server }}:{{ sybase_ssh_port }}
+      Status: {{ ssh_test.rc == 0 | ternary('SUCCESS', 'FAILED') }}
+      {% if ssh_test.rc != 0 %}
+      Error: {{ ssh_test.stderr | default('Unknown SSH error') }}
+      {% endif %}
+  when:
+    - sybase_use_ssh | default(true)
+    - inspec_debug_mode | default(false)
+
+- name: Set SSH connection string for InSpec (matching original script pattern)
+  set_fact:
+    sybase_ssh_connection: "--ssh://{{ sybase_ssh_user }}:{{ sybase_ssh_password }}@{{ sybase_server }} -o {{ sybase_ssh_key_path }}"
+  when: sybase_use_ssh | default(true)
+  no_log: true

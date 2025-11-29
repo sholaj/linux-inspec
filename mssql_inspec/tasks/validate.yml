@@ -1,0 +1,37 @@
+---
+# Validation tasks for MSSQL InSpec role
+
+- name: Handle sensitive connection parameters
+  block:
+    - name: Set database connection parameters
+      set_fact:
+        mssql_connection:
+          server: "{{ mssql_server }}"
+          port: "{{ mssql_port }}"
+          database: "{{ mssql_database }}"
+          username: "{{ mssql_username }}"
+          password: "{{ mssql_password }}"
+          version: "{{ mssql_version }}"
+
+    - name: Validate required parameters
+      assert:
+        that:
+          - mssql_server is defined
+          - mssql_port is defined
+          - mssql_database is defined
+          - mssql_username is defined
+          - mssql_password is defined
+          - mssql_version is defined
+        fail_msg: "Required MSSQL connection parameters are missing"
+  no_log: true
+
+- name: Check if MSSQL version directory exists
+  stat:
+    path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+  register: version_dir_check
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Fail if MSSQL version directory doesn't exist
+  fail:
+    msg: "MSSQL version {{ mssql_version }} is not supported. Directory MSSQL{{ mssql_version }}_ruby not found."
+  when: not version_dir_check.stat.exists

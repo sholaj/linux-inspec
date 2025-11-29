@@ -1,0 +1,58 @@
+---
+# Oracle cleanup and reporting tasks
+
+- name: Generate and display Oracle summary report
+  block:
+    - name: Generate Oracle summary report
+      template:
+        src: oracle_summary_report.j2
+        dest: "{{ inspec_results_dir }}/oracle_summary_{{ ansible_date_time.epoch }}.txt"
+      register: oracle_summary_report_result
+
+    - name: Read Oracle summary report content
+      slurp:
+        src: "{{ oracle_summary_report_result.dest }}"
+      register: oracle_summary_content
+
+    - name: Display Oracle summary report
+      debug:
+        msg: "{{ oracle_summary_content.content | b64decode }}"
+  when:
+    - generate_summary_report | default(true)
+    - oracle_inspec_results is defined
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Send Oracle results to Splunk (if enabled)
+  include_tasks: splunk_integration.yml
+  loop: "{{ oracle_inspec_results.results | default([]) }}"
+  loop_control:
+    loop_var: splunk_result
+  vars:
+    inspec_result_json: "{{ splunk_result.stdout | default('') }}"
+  when:
+    - send_to_splunk | default(false)
+    - splunk_hec_url is defined
+    - splunk_hec_token is defined
+    - oracle_inspec_results is defined
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Clean up Oracle temporary files
+  file:
+    path: "{{ oracle_temp_dir.path }}"
+    state: absent
+  when: oracle_temp_dir is defined
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Display Oracle scan completion summary
+  debug:
+    msg: |
+      Oracle {{ oracle_version }} compliance scan completed
+      ====================================================
+      Server: {{ oracle_server }}:{{ oracle_port }}
+      Database: {{ oracle_database }}
+      Service: {{ oracle_service | default('N/A') }}
+      Controls executed: {{ oracle_control_files.files | length }}
+      Results directory: {{ inspec_results_dir }}
+      Platform pattern: ORACLE_NIST_*_{{ oracle_server }}_{{ oracle_database }}_{{ oracle_version }}_*.json

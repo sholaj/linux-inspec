@@ -1,0 +1,133 @@
+---
+# Ansible Playbook to Convert Flat File to Inventory
+# Replaces the Python script convert_flatfile_to_inventory.py
+# Supports MSSQL, Oracle, and Sybase databases
+
+- name: Convert Database Flat File to Ansible Inventory
+  hosts: localhost
+  gather_facts: yes
+  vars:
+    # Default variables - can be overridden via extra vars
+    input_file: "{{ flatfile_input | default('databases.txt') }}"
+    output_file: "{{ inventory_output | default('inventory.yml') }}"
+    vault_file: "{{ vault_output | default('vault.yml') }}"
+    default_username: "{{ username | default('nist_scan_user') }}"
+    generate_vault: "{{ create_vault | default(true) }}"
+
+    # Initialize inventory structure
+    inventory_data:
+      all:
+        children:
+          mssql_servers:
+            hosts: {}
+          oracle_databases:
+            hosts: {}
+          sybase_databases:
+            hosts: {}
+        vars:
+          base_results_dir: "/tmp/compliance_scans"
+          ansible_connection: "local"
+          inspec_debug_mode: false
+          ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+    # Password tracking
+    vault_passwords: {}
+    platform_counts:
+      mssql: 0
+      oracle: 0
+      sybase: 0
+
+  tasks:
+    - name: Display conversion configuration
+      debug:
+        msg: |
+          🔄 Database Flat File to Inventory Conversion
+          ============================================
+          Input file: {{ input_file }}
+          Output inventory: {{ output_file }}
+          Vault file: {{ vault_file }}
+          Default username: {{ default_username }}
+          Generate vault: {{ generate_vault }}
+
+          Hello World from Ansible Flat File Converter! 🌍
+
+    - name: Check if input file exists
+      stat:
+        path: "{{ input_file }}"
+      register: input_file_stat
+
+    - name: Fail if input file doesn't exist
+      fail:
+        msg: "Input file {{ input_file }} not found"
+      when: not input_file_stat.stat.exists
+
+    - name: Read flat file content
+      slurp:
+        src: "{{ input_file }}"
+      register: flat_file_content
+
+    - name: Parse flat file lines
+      set_fact:
+        flat_file_lines: "{{ (flat_file_content.content | b64decode).split('\n') }}"
+
+    - name: Process each line in flat file
+      include_tasks: process_flatfile_line.yml
+      loop: "{{ flat_file_lines }}"
+      loop_control:
+        index_var: line_number
+        label: "Line {{ line_number + 1 }}"
+      when:
+        - item | trim | length > 0
+        - not item.strip().startswith('#')
+
+    - name: Generate inventory YAML file
+      copy:
+        content: "{{ inventory_data | to_nice_yaml }}"
+        dest: "{{ output_file }}"
+      register: inventory_written
+
+    - name: Generate vault template file
+      template:
+        src: templates/vault_template.j2
+        dest: "{{ vault_file }}"
+      when: generate_vault | bool
+      register: vault_written
+
+    - name: Display conversion summary
+      debug:
+        msg: |
+          =====================================
+          Conversion Summary
+          =====================================
+          Total database hosts: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase }}
+          MSSQL databases: {{ platform_counts.mssql }}
+          Oracle databases: {{ platform_counts.oracle }}
+          Sybase databases: {{ platform_counts.sybase }}
+
+          Files Generated:
+          ================
+          Inventory: {{ output_file }} [OK]
+          {% if generate_vault | bool %}
+          Vault: {{ vault_file }} [OK]
+          {% endif %}
+
+          Usage Examples:
+          ===============
+          # MSSQL Scanning
+          ansible-playbook -i {{ output_file }} run_mssql_inspec.yml -e @{{ vault_file }}
+
+          # Oracle Scanning
+          ansible-playbook -i {{ output_file }} run_oracle_inspec.yml -e @{{ vault_file }}
+
+          # Sybase Scanning
+          ansible-playbook -i {{ output_file }} run_sybase_inspec.yml -e @{{ vault_file }}
+
+          # Encrypt vault file
+          ansible-vault encrypt {{ vault_file }} --vault-password-file .vaultpass
+
+          Next Steps:
+          ===========
+          1. DB team updates {{ vault_file }} with actual passwords
+          2. Encrypt vault file with ansible-vault
+          3. Run compliance scans by platform
+          =====================================

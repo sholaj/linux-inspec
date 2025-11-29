@@ -1,0 +1,33 @@
+---
+# Oracle InSpec Role Default Variables
+
+# Oracle connection defaults
+oracle_username: "nist_scan_user"
+oracle_port: 1521
+oracle_version: "19c"
+oracle_password: "{{ lookup('vars', 'vault_' + oracle_host_id + '_password') }}"
+
+# Default paths and directories
+base_results_dir: "/tmp/compliance_scans"
+oracle_controls_base_dir: "{{ role_path }}/files"
+
+# InSpec execution settings
+inspec_command_timeout: 1800  # 30 minutes
+inspec_debug_mode: false
+generate_summary_report: true
+inspec_delegate_host: "localhost"
+
+# Oracle-specific settings
+oracle_use_tns: false
+oracle_tns_admin: ""
+oracle_service_type: "service_name"  # or "sid"
+
+# Error handling
+create_error_reports: true
+continue_on_errors: true
+
+# Splunk integration
+send_to_splunk: false
+splunk_hec_url: ""
+splunk_hec_token: ""
+splunk_index: "compliance_scans"

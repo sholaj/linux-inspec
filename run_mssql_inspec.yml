@@ -1,0 +1,174 @@
+---
+# MSSQL InSpec Compliance Scanning Playbook
+# Compatible with Ansible Automation Platform (AAP)
+- name: Execute InSpec MSSQL Compliance Scans
+  hosts: mssql_servers
+  gather_facts: yes
+  strategy: "{{ execution_strategy | default('linear') }}"
+  serial: "{{ batch_size | default(5) }}"
+
+  vars:
+    # Global settings - can be overridden by AAP extra vars
+    inspec_delegate_host: "{{ controller_delegate_host | default('localhost') }}"
+    scan_timestamp: "{{ ansible_date_time.epoch }}"
+    enable_debug: false
+    # Timeout settings for lengthy scans
+    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"  # Default 30 minutes per control
+    async_timeout: "{{ async_scan_timeout | default(3600) }}"    # Default 1 hour for async execution
+    poll_interval: "{{ async_poll_interval | default(30) }}"      # Check status every 30 seconds
+    # AAP compatibility
+    job_id: "{{ tower_job_id | default('local') }}"
+    project_name: "{{ project_name | default('mssql_compliance') }}"
+    # Splunk integration
+    send_to_splunk: "{{ splunk_enabled | default(false) }}"
+    splunk_hec_url: "{{ splunk_hec_url | default('') }}"
+    splunk_hec_token: "{{ splunk_hec_token | default('') }}"
+    splunk_index: "{{ splunk_index | default('compliance_scans') }}"
+
+  pre_tasks:
+    - name: Ensure base results directory exists
+      file:
+        path: "{{ base_results_dir }}"
+        state: directory
+        mode: '0755'
+      run_once: true
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display scan configuration
+      debug:
+        msg: |
+          Starting MSSQL Compliance Scans
+          ================================
+          Total servers in group: {{ groups['mssql_servers'] | length }}
+          Results directory: {{ base_results_dir }}
+          Timestamp: {{ scan_timestamp }}
+          Debug mode: {{ enable_debug }}
+          Batch size: {{ batch_size | default(5) }}
+      run_once: true
+      when: enable_debug
+
+  tasks:
+    - name: Display current server being scanned
+      debug:
+        msg: "Scanning {{ mssql_server }}:{{ mssql_port }} (version {{ mssql_version }}) - Server-level scan"
+      when: enable_debug
+
+    - name: Execute MSSQL InSpec compliance scan for server
+      include_role:
+        name: mssql_inspec
+      vars:
+        # Pass all server-specific variables from inventory host
+        inspec_results_dir: "{{ base_results_dir }}/{{ mssql_server | replace('.', '_') }}_{{ mssql_port }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+        # Server connection parameters come from inventory host variables:
+        # mssql_server, mssql_port, mssql_version, mssql_username, mssql_password
+        # Note: InSpec scans all databases on the server, not individual databases
+
+  post_tasks:
+    - name: Generate consolidated report
+      block:
+        - name: Find all JSON result files
+          find:
+            paths: "{{ base_results_dir }}"
+            patterns: "*.json"
+            recurse: yes
+          register: json_files
+          delegate_to: "{{ inspec_delegate_host }}"
+          run_once: true
+
+        - name: Display scan completion summary
+          debug:
+            msg: |
+              =====================================
+              MSSQL Compliance Scan Complete
+              =====================================
+              Total servers scanned: {{ groups['mssql_servers'] | length }}
+              Result files generated: {{ json_files.files | length }}
+              Results location: {{ base_results_dir }}
+
+              To view results:
+              ls -la {{ base_results_dir }}/
+              =====================================
+          run_once: true
+          delegate_to: "{{ inspec_delegate_host }}"
+      when: not ansible_check_mode
+
+    - name: Archive scan results (optional)
+      archive:
+        path: "{{ base_results_dir }}"
+        dest: "{{ base_results_dir }}_{{ scan_timestamp }}.tar.gz"
+        format: gz
+      when:
+        - archive_results | default(false)
+        - not ansible_check_mode
+      delegate_to: "{{ inspec_delegate_host }}"
+      run_once: true
+
+    - name: Send notification (optional)
+      mail:
+        to: "{{ notification_email }}"
+        subject: "MSSQL Compliance Scan Complete - {{ ansible_date_time.date }}"
+        body: |
+          MSSQL compliance scans have been completed.
+
+          Scan Details:
+          - Total servers: {{ groups['mssql_servers'] | length }}
+          - Timestamp: {{ scan_timestamp }}
+          - Results: {{ base_results_dir }}
+      when:
+        - notification_email is defined
+        - send_notifications | default(false)
+      ignore_errors: yes
+      delegate_to: "{{ inspec_delegate_host }}"
+      run_once: true
+
+    - name: Send results to Splunk (optional)
+      uri:
+        url: "{{ splunk_hec_url }}/services/collector"
+        method: POST
+        headers:
+          Authorization: "Splunk {{ splunk_hec_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          time: "{{ ansible_date_time.epoch }}"
+          index: "{{ splunk_index }}"
+          source: "mssql_compliance_scan"
+          sourcetype: "ansible:compliance"
+          event:
+            job_id: "{{ job_id }}"
+            project: "{{ project_name }}"
+            scan_timestamp: "{{ scan_timestamp }}"
+            total_servers: "{{ groups['mssql_servers'] | length }}"
+            results_location: "{{ base_results_dir }}"
+            status: "completed"
+            message: "MSSQL compliance scan completed successfully"
+        status_code: 200
+        timeout: 30
+      when:
+        - send_to_splunk | bool
+        - splunk_hec_url != ""
+        - splunk_hec_token != ""
+      delegate_to: "{{ inspec_delegate_host }}"
+      run_once: true
+      ignore_errors: yes
+
+# Example usage:
+# POC Mode:
+# ansible-playbook -i inventory.yml run_mssql_inspec.yml -e @vault.yml --vault-password-file .vaultpass
+#
+# AAP Mode (configure in AAP):
+# - Upload inventory.yml as inventory
+# - Add vault.yml as encrypted extra vars
+# - Add vault password as credential
+# - Configure Splunk variables in extra vars:
+#   splunk_enabled: true
+#   splunk_hec_url: "https://splunk.company.com:8088"
+#   splunk_index: "compliance_scans"
+#   (splunk_hec_token configured as credential)
+#
+# Additional examples:
+# ansible-playbook -i inventory.yml run_mssql_inspec.yml --limit "sqlserver01_*"
+# ansible-playbook -i inventory.yml run_mssql_inspec.yml --extra-vars "batch_size=10"

@@ -1,0 +1,38 @@
+---
+# Oracle Splunk integration tasks
+
+- name: Send Oracle compliance results to Splunk HEC
+  uri:
+    url: "{{ splunk_hec_url }}/services/collector"
+    method: POST
+    headers:
+      Authorization: "Splunk {{ splunk_hec_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      time: "{{ ansible_date_time.epoch }}"
+      index: "{{ splunk_index | default('compliance_scans') }}"
+      source: "oracle_inspec_results"
+      sourcetype: "json:inspec"
+      event: "{{ inspec_result_json }}"
+    status_code: 200
+    timeout: 30
+  when:
+    - send_to_splunk | default(false) | bool
+    - splunk_hec_url is defined
+    - splunk_hec_url | length > 0
+    - splunk_hec_token is defined
+    - splunk_hec_token | length > 0
+    - inspec_result_json is defined
+    - inspec_result_json | trim | length > 0
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+  register: splunk_response
+
+- name: Log Splunk submission status
+  debug:
+    msg: "Splunk submission {{ 'successful' if splunk_response is defined and not splunk_response.failed | default(false) else 'failed' }} for {{ oracle_server }}/{{ oracle_database }}"
+  when:
+    - send_to_splunk | default(false) | bool
+    - inspec_debug_mode | default(false) | bool
+    - splunk_response is defined

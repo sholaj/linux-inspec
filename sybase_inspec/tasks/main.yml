@@ -1,0 +1,45 @@
+---
+# Main task file for Sybase InSpec role
+# Following the same modular pattern as MSSQL role with SSH support
+
+- name: Sybase InSpec Compliance Scan Starting
+  debug:
+    msg: |
+       Sybase InSpec Compliance Scan
+      ===============================
+      Server: {{ sybase_server }}:{{ sybase_port }}
+      Database: {{ sybase_database }}
+      Service: {{ sybase_service }}
+      Version: {{ sybase_version }}
+      Username: {{ sybase_username }}
+      SSH Enabled: {{ sybase_use_ssh }}
+      SSH User: {{ sybase_ssh_user | default('N/A') }}
+
+      Hello World from Sybase InSpec Role! 🌍
+      Note: This role includes SSH tunnel support as per original script!
+
+- name: Validate Sybase connection parameters and environment
+  include_tasks: validate.yml
+
+- name: Setup SSH connection for Sybase (if enabled)
+  include_tasks: ssh_setup.yml
+  when: sybase_use_ssh | default(true)
+
+- name: Setup directories and find Sybase control files
+  include_tasks: setup.yml
+
+- name: Execute Sybase InSpec controls and process results
+  include_tasks: execute.yml
+
+- name: Generate reports and cleanup
+  include_tasks: cleanup.yml
+
+- name: Sybase InSpec Compliance Scan Complete
+  debug:
+    msg: |
+      [OK] Sybase InSpec scan completed successfully!
+      Results directory: {{ inspec_results_dir }}
+      Platform: SYBASE
+      Database: {{ sybase_database }}
+      Version: {{ sybase_version }}
+      SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Disabled') }}

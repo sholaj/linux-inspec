@@ -1,0 +1,37 @@
+---
+# Main task file for Oracle InSpec role
+# Following the same modular pattern as MSSQL role
+
+- name: Oracle InSpec Compliance Scan Starting
+  debug:
+    msg: |
+       Oracle InSpec Compliance Scan
+      ================================
+      Server: {{ oracle_server }}:{{ oracle_port }}
+      Database: {{ oracle_database }}
+      Service: {{ oracle_service }}
+      Version: {{ oracle_version }}
+      Username: {{ oracle_username }}
+
+      Hello World from Oracle InSpec Role! 🌍
+
+- name: Validate Oracle connection parameters and environment
+  include_tasks: validate.yml
+
+- name: Setup directories and find Oracle control files
+  include_tasks: setup.yml
+
+- name: Execute Oracle InSpec controls and process results
+  include_tasks: execute.yml
+
+- name: Generate reports and cleanup
+  include_tasks: cleanup.yml
+
+- name: Oracle InSpec Compliance Scan Complete
+  debug:
+    msg: |
+      [OK] Oracle InSpec scan completed successfully!
+      Results directory: {{ inspec_results_dir }}
+      Platform: ORACLE
+      Database: {{ oracle_database }}
+      Version: {{ oracle_version }}

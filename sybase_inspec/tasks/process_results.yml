@@ -1,0 +1,55 @@
+---
+# Sybase result processing tasks
+
+- name: Set Sybase result file names (matching original script pattern)
+  set_fact:
+    sybase_control_file_name: "{{ sybase_control_files.files[idx].path | basename | regex_replace('\\.rb$', '') }}"
+    sybase_timestamp: "{{ ansible_date_time.epoch }}"
+    sybase_process_id: "{{ ansible_process_id | default(ansible_date_time.epoch) }}"
+    sybase_platform: "SYBASE"
+
+- name: Set Sybase result file name
+  set_fact:
+    sybase_result_file_name: "{{ sybase_platform }}_NIST_{{ sybase_process_id }}_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_{{ sybase_timestamp }}_{{ sybase_control_file_name }}"
+
+- name: Parse Sybase InSpec result status (matching original script logic)
+  set_fact:
+    # regex_search returns a list, so we take first element or default to 'unknown'
+    sybase_inspec_status: "{{ (item.stdout | regex_search('\"status\":\"([^\"]+)\"', '\\1') | first) | default('unknown') }}"
+  ignore_errors: true
+
+- name: Handle successful Sybase InSpec execution
+  block:
+    - name: Save successful Sybase results to JSON file
+      copy:
+        content: "{{ item.stdout }}"
+        dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
+      delegate_to: "{{ inspec_delegate_host }}"
+      when: sybase_inspec_status is defined and sybase_inspec_status in ['passed', 'failed', 'skipped']
+
+    - name: Log successful Sybase execution
+      debug:
+        msg: "Sybase control {{ sybase_control_file_name }} completed with status: {{ sybase_inspec_status }} (SSH: {{ sybase_use_ssh | ternary('Yes', 'No') }})"
+      when: inspec_debug_mode | default(false)
+
+- name: Handle failed Sybase InSpec execution
+  block:
+    - name: Create Sybase error report matching original script format
+      copy:
+        content: |
+          {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"Cannot connect to Sybase database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect. SSH connection may have failed.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect to Sybase","statistics":{"duration":0},"version":"N/A"}]}
+        dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
+      delegate_to: "{{ inspec_delegate_host }}"
+      when:
+        - item.rc != 0 or (sybase_inspec_status is not defined or sybase_inspec_status not in ['passed', 'failed', 'skipped'])
+
+    - name: Log Sybase connection error
+      debug:
+        msg: |
+          Sybase control {{ sybase_control_file_name }} failed to execute.
+          SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
+          Error: {{ item.stderr | default('Unknown Sybase error') }}
+          Result file: {{ sybase_result_file_name }}.json
+      when:
+        - inspec_debug_mode | default(false)
+        - (item.rc != 0 or (sybase_inspec_status is not defined or sybase_inspec_status not in ['passed', 'failed', 'skipped']))

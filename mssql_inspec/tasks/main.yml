@@ -1,0 +1,15 @@
+---
+# Main task file for MSSQL InSpec role
+# Following Ansible best practices with include_tasks
+
+- name: Validate MSSQL connection parameters and environment
+  include_tasks: validate.yml
+
+- name: Setup directories and find control files
+  include_tasks: setup.yml
+
+- name: Execute InSpec controls and process results
+  include_tasks: execute.yml
+
+- name: Generate reports and cleanup
+  include_tasks: cleanup.yml
