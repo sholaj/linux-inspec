@@ -1,0 +1,146 @@
+---
+# Sybase InSpec Compliance Scanning Playbook
+# Compatible with Ansible Automation Platform (AAP)
+# Includes SSH tunnel support as per original script
+- name: Execute InSpec Sybase Compliance Scans
+  hosts: sybase_databases
+  gather_facts: yes
+  strategy: "{{ execution_strategy | default('linear') }}"
+  serial: "{{ batch_size | default(3) }}"  # Lower default for SSH connections
+
+  vars:
+    # Global settings - can be overridden by AAP extra vars
+    inspec_delegate_host: "{{ controller_delegate_host | default('localhost') }}"
+    scan_timestamp: "{{ ansible_date_time.epoch }}"
+    enable_debug: false
+    # Timeout settings for lengthy scans (higher for SSH)
+    inspec_timeout: "{{ inspec_scan_timeout | default(2400) }}"  # Default 40 minutes per control (SSH overhead)
+    async_timeout: "{{ async_scan_timeout | default(4800) }}"    # Default 80 minutes for async execution
+    poll_interval: "{{ async_poll_interval | default(45) }}"      # Check status every 45 seconds
+    # AAP compatibility
+    job_id: "{{ tower_job_id | default('local') }}"
+    project_name: "{{ project_name | default('sybase_compliance') }}"
+    # Splunk integration
+    send_to_splunk: "{{ splunk_enabled | default(false) }}"
+    splunk_hec_url: "{{ splunk_hec_url | default('') }}"
+    splunk_hec_token: "{{ splunk_hec_token | default('') }}"
+    splunk_index: "{{ splunk_index | default('compliance_scans') }}"
+
+  pre_tasks:
+    - name: Ensure base results directory exists
+      file:
+        path: "{{ base_results_dir }}"
+        state: directory
+        mode: '0755'
+      run_once: true
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display Sybase scan configuration
+      debug:
+        msg: |
+           Sybase InSpec Compliance Scans Starting
+          ==========================================
+          Total Sybase hosts: {{ groups['sybase_databases'] | length }}
+          Results directory: {{ base_results_dir }}
+          Timestamp: {{ scan_timestamp }}
+          Debug mode: {{ enable_debug }}
+          Batch size: {{ batch_size | default(3) }}
+          SSH Support: ENABLED (as per original script)
+
+          Hello World from Sybase Compliance Scanning! 🌍
+          Note: This includes SSH tunnel support like the original NIST_for_db.ksh!
+      run_once: true
+      when: enable_debug | bool
+
+    - name: Check SSH connectivity (Sybase specific requirement)
+      shell: ssh -o ConnectTimeout=5 -o BatchMode=yes {{ sybase_ssh_user | default('oracle') }}@{{ sybase_server }} "echo 'SSH test'"
+      args:
+        executable: /bin/bash
+      register: ssh_connectivity_test
+      changed_when: false
+      failed_when: false
+      when: sybase_use_ssh | default(true)
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display SSH connectivity status
+      debug:
+        msg: |
+          SSH Connectivity Test Results:
+          {% for host in ansible_play_hosts %}
+          {{ host }}: {{ hostvars[host].ssh_connectivity_test.rc == 0 | ternary('[OK] SSH OK', '[FAIL] SSH Failed') }}
+          {% endfor %}
+      run_once: true
+      when:
+        - enable_debug | bool
+        - sybase_use_ssh | default(true)
+
+  tasks:
+    - name: Display current Sybase database being scanned
+      debug:
+        msg: "🔍 Scanning Sybase {{ sybase_server }}:{{ sybase_port }}/{{ sybase_database }} (version {{ sybase_version }}) via SSH"
+      when: enable_debug | bool
+
+    - name: Execute Sybase InSpec compliance scan for database
+      include_role:
+        name: sybase_inspec
+      vars:
+        # Pass all database-specific variables from inventory host
+        inspec_results_dir: "{{ base_results_dir }}/{{ sybase_server | replace('.', '_') }}_{{ sybase_database }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+        # Database connection parameters come from inventory host variables:
+        # sybase_server, sybase_port, sybase_database, sybase_service,
+        # sybase_version, sybase_username, sybase_password
+        # SSH parameters: sybase_ssh_user, sybase_ssh_password, sybase_use_ssh
+
+  post_tasks:
+    - name: Generate Sybase consolidated report
+      block:
+        - name: Find all Sybase JSON result files
+          find:
+            paths: "{{ base_results_dir }}"
+            patterns: "SYBASE_NIST_*.json"
+            recurse: yes
+          register: sybase_json_files
+          delegate_to: "{{ inspec_delegate_host }}"
+          run_once: true
+
+        - name: Display Sybase scan completion summary
+          debug:
+            msg: |
+              =====================================
+              Sybase Compliance Scan Complete
+              =====================================
+              Total Sybase databases scanned: {{ groups['sybase_databases'] | length }}
+              Result files generated: {{ sybase_json_files.files | length }}
+              Results location: {{ base_results_dir }}
+              SSH Mode: {{ sybase_use_ssh | default(true) | ternary('Enabled', 'Direct') }}
+
+              Sybase file pattern: SYBASE_NIST_*_*.json
+
+              To view Sybase results:
+              find {{ base_results_dir }}/ -name "SYBASE_NIST_*.json"
+
+              Original script SSH command pattern:
+              /usr/bin/inspec exec ... --ssh://oracle:password@server -o keyfile ...
+              =====================================
+          run_once: true
+          delegate_to: "{{ inspec_delegate_host }}"
+      when: not ansible_check_mode
+
+# Example usage:
+# POC Mode:
+# ansible-playbook -i sybase_inventory.yml run_sybase_inspec.yml -e @sybase_vault.yml --vault-password-file .vaultpass
+#
+# AAP Mode (configure in AAP):
+# - Upload sybase_inventory.yml as inventory
+# - Add sybase_vault.yml as encrypted extra vars
+# - Add vault password as credential
+# - Configure SSH keys in vault for Sybase connections
+#
+# SSH Testing:
+# ansible-playbook -i sybase_inventory.yml run_sybase_inspec.yml --extra-vars "enable_debug=true" --check
+#
+# Additional examples:
+# ansible-playbook -i sybase_inventory.yml run_sybase_inspec.yml --limit "sybaseserver01_*"

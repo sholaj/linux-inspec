@@ -1,0 +1,69 @@
+---
+# Sybase cleanup and reporting tasks
+
+- name: Generate and display Sybase summary report
+  block:
+    - name: Generate Sybase summary report
+      template:
+        src: sybase_summary_report.j2
+        dest: "{{ inspec_results_dir }}/sybase_summary_{{ ansible_date_time.epoch }}.txt"
+      register: sybase_summary_report_result
+
+    - name: Read Sybase summary report content
+      slurp:
+        src: "{{ sybase_summary_report_result.dest }}"
+      register: sybase_summary_content
+
+    - name: Display Sybase summary report
+      debug:
+        msg: "{{ sybase_summary_content.content | b64decode }}"
+  when:
+    - generate_summary_report | default(true)
+    - sybase_final_results is defined
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Send Sybase results to Splunk (if enabled)
+  include_tasks: splunk_integration.yml
+  loop: "{{ sybase_final_results.results | default([]) }}"
+  loop_control:
+    loop_var: splunk_result
+  vars:
+    inspec_result_json: "{{ splunk_result.stdout | default('') }}"
+  when:
+    - send_to_splunk | default(false)
+    - splunk_hec_url is defined
+    - splunk_hec_token is defined
+    - sybase_final_results is defined
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Clean up SSH private key
+  file:
+    path: "{{ sybase_ssh_key_path }}"
+    state: absent
+  when:
+    - sybase_use_ssh | default(true)
+    - sybase_ssh_key_path is defined
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Clean up Sybase temporary files
+  file:
+    path: "{{ sybase_temp_dir.path }}"
+    state: absent
+  when: sybase_temp_dir is defined
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Display Sybase scan completion summary
+  debug:
+    msg: |
+      Sybase {{ sybase_version }} compliance scan completed
+      ====================================================
+      Server: {{ sybase_server }}:{{ sybase_port }}
+      Database: {{ sybase_database }}
+      Service: {{ sybase_service | default('N/A') }}
+      SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
+      Controls executed: {{ sybase_control_files.files | length }}
+      Results directory: {{ inspec_results_dir }}
+      Platform pattern: SYBASE_NIST_*_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_*.json

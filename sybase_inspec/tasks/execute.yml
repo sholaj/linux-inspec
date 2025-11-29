@@ -1,0 +1,75 @@
+---
+# Sybase InSpec execution tasks with SSH support
+
+- name: Execute Sybase InSpec controls via SSH (matching original script)
+  shell: |
+    /usr/bin/inspec exec {{ item.path }} \
+      --ssh://{{ sybase_ssh_user }}:{{ sybase_ssh_password }}@{{ sybase_server }} \
+      -o {{ sybase_ssh_key_path }} \
+      --input usernm='{{ sybase_username }}' \
+              passwd='{{ sybase_password }}' \
+              hostnm='{{ sybase_server }}' \
+              servicenm='{{ sybase_service | default('') }}' \
+              port='{{ sybase_port }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ sybase_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
+    SYBASE: "{{ sybase_environment.SYBASE }}"
+    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
+    INSPEC_BACKEND: "{{ sybase_environment.INSPEC_BACKEND }}"
+  register: sybase_inspec_results
+  loop: "{{ sybase_control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: false
+  failed_when: false
+  no_log: "{{ not inspec_debug_mode | default(true) }}"
+  async: "{{ inspec_command_timeout | default(1800) }}"
+  poll: 30
+  when: sybase_use_ssh | default(true)
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Execute Sybase InSpec controls directly (non-SSH mode)
+  shell: |
+    /usr/bin/inspec exec {{ item.path }} \
+      --input usernm='{{ sybase_username }}' \
+              passwd='{{ sybase_password }}' \
+              hostnm='{{ sybase_server }}' \
+              servicenm='{{ sybase_service | default('') }}' \
+              port='{{ sybase_port }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ sybase_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
+    SYBASE: "{{ sybase_environment.SYBASE }}"
+    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
+    INSPEC_BACKEND: "{{ sybase_environment.INSPEC_BACKEND }}"
+  register: sybase_inspec_results_direct
+  loop: "{{ sybase_control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: false
+  failed_when: false
+  no_log: "{{ not inspec_debug_mode | default(true) }}"
+  async: "{{ inspec_command_timeout | default(1800) }}"
+  poll: 30
+  when: not (sybase_use_ssh | default(true))
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Set results variable for processing
+  set_fact:
+    sybase_final_results: "{{ sybase_use_ssh | ternary(sybase_inspec_results, sybase_inspec_results_direct) }}"
+
+- name: Process Sybase InSpec results
+  include_tasks: process_results.yml
+  loop: "{{ sybase_final_results.results }}"
+  loop_control:
+    index_var: idx
+    label: "Processing Sybase result {{ idx + 1 }}"

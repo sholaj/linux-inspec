@@ -1,0 +1,113 @@
+---
+# Oracle InSpec Compliance Scanning Playbook
+# Compatible with Ansible Automation Platform (AAP)
+- name: Execute InSpec Oracle Compliance Scans
+  hosts: oracle_databases
+  gather_facts: yes
+  strategy: "{{ execution_strategy | default('linear') }}"
+  serial: "{{ batch_size | default(5) }}"
+
+  vars:
+    # Global settings - can be overridden by AAP extra vars
+    inspec_delegate_host: "{{ controller_delegate_host | default('localhost') }}"
+    scan_timestamp: "{{ ansible_date_time.epoch }}"
+    enable_debug: false
+    # Timeout settings for lengthy scans
+    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"  # Default 30 minutes per control
+    async_timeout: "{{ async_scan_timeout | default(3600) }}"    # Default 1 hour for async execution
+    poll_interval: "{{ async_poll_interval | default(30) }}"      # Check status every 30 seconds
+    # AAP compatibility
+    job_id: "{{ tower_job_id | default('local') }}"
+    project_name: "{{ project_name | default('oracle_compliance') }}"
+    # Splunk integration
+    send_to_splunk: "{{ splunk_enabled | default(false) }}"
+    splunk_hec_url: "{{ splunk_hec_url | default('') }}"
+    splunk_hec_token: "{{ splunk_hec_token | default('') }}"
+    splunk_index: "{{ splunk_index | default('compliance_scans') }}"
+
+  pre_tasks:
+    - name: Ensure base results directory exists
+      file:
+        path: "{{ base_results_dir }}"
+        state: directory
+        mode: '0755'
+      run_once: true
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display Oracle scan configuration
+      debug:
+        msg: |
+          🔵 Oracle InSpec Compliance Scans Starting
+          ===========================================
+          Total Oracle hosts: {{ groups['oracle_databases'] | length }}
+          Results directory: {{ base_results_dir }}
+          Timestamp: {{ scan_timestamp }}
+          Debug mode: {{ enable_debug }}
+          Batch size: {{ batch_size | default(5) }}
+
+          Hello World from Oracle Compliance Scanning! 🌍
+      run_once: true
+      when: enable_debug | bool
+
+  tasks:
+    - name: Display current Oracle database being scanned
+      debug:
+        msg: "🔍 Scanning Oracle {{ oracle_server }}:{{ oracle_port }}/{{ oracle_database }} (version {{ oracle_version }})"
+      when: enable_debug | bool
+
+    - name: Execute Oracle InSpec compliance scan for database
+      include_role:
+        name: oracle_inspec
+      vars:
+        # Pass all database-specific variables from inventory host
+        inspec_results_dir: "{{ base_results_dir }}/{{ oracle_server | replace('.', '_') }}_{{ oracle_database }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+        # Database connection parameters come from inventory host variables:
+        # oracle_server, oracle_port, oracle_database, oracle_service,
+        # oracle_version, oracle_username, oracle_password
+
+  post_tasks:
+    - name: Generate Oracle consolidated report
+      block:
+        - name: Find all Oracle JSON result files
+          find:
+            paths: "{{ base_results_dir }}"
+            patterns: "ORACLE_NIST_*.json"
+            recurse: yes
+          register: oracle_json_files
+          delegate_to: "{{ inspec_delegate_host }}"
+          run_once: true
+
+        - name: Display Oracle scan completion summary
+          debug:
+            msg: |
+              =====================================
+              Oracle Compliance Scan Complete
+              =====================================
+              Total Oracle databases scanned: {{ groups['oracle_databases'] | length }}
+              Result files generated: {{ oracle_json_files.files | length }}
+              Results location: {{ base_results_dir }}
+
+              Oracle file pattern: ORACLE_NIST_*_*.json
+
+              To view Oracle results:
+              find {{ base_results_dir }}/ -name "ORACLE_NIST_*.json"
+              =====================================
+          run_once: true
+          delegate_to: "{{ inspec_delegate_host }}"
+      when: not ansible_check_mode
+
+# Example usage:
+# POC Mode:
+# ansible-playbook -i oracle_inventory.yml run_oracle_inspec.yml -e @oracle_vault.yml --vault-password-file .vaultpass
+#
+# AAP Mode (configure in AAP):
+# - Upload oracle_inventory.yml as inventory
+# - Add oracle_vault.yml as encrypted extra vars
+# - Add vault password as credential
+#
+# Additional examples:
+# ansible-playbook -i oracle_inventory.yml run_oracle_inspec.yml --limit "oracleserver01_*"
+# ansible-playbook -i oracle_inventory.yml run_oracle_inspec.yml --extra-vars "enable_debug=true"

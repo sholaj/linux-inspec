@@ -1,0 +1,78 @@
+===============================================
+Oracle InSpec Compliance Scan Summary Report
+===============================================
+Generated: {{ ansible_date_time.iso8601 }}
+===============================================
+
+Server Information:
+-------------------
+Hostname: {{ oracle_server }}
+Port: {{ oracle_port }}
+Database: {{ oracle_database }}
+Version: Oracle {{ oracle_version }}
+Service: {{ oracle_service | default('Default Service') }}
+
+Scan Results Summary:
+---------------------
+{% if oracle_inspec_results is defined and oracle_inspec_results.results | length > 0 %}
+{% set ns = namespace(passed=0, failed=0, skipped=0, errors=0, total=0) %}
+{% for result in oracle_inspec_results.results %}
+  {% if result.stdout is defined and (result.stdout | trim) %}
+    {% set json_result = result.stdout | from_json %}
+    {% if json_result.profiles is defined %}
+      {% for profile in json_result.profiles %}
+        {% if profile.controls is defined %}
+          {% for control in profile.controls %}
+            {% set ns.total = ns.total + 1 %}
+            {% if control.status == 'passed' %}
+              {% set ns.passed = ns.passed + 1 %}
+            {% elif control.status == 'failed' %}
+              {% set ns.failed = ns.failed + 1 %}
+            {% elif control.status == 'skipped' %}
+              {% set ns.skipped = ns.skipped + 1 %}
+            {% else %}
+              {% set ns.errors = ns.errors + 1 %}
+            {% endif %}
+          {% endfor %}
+        {% endif %}
+      {% endfor %}
+    {% elif json_result.controls is defined %}
+      {% for control in json_result.controls %}
+        {% set ns.total = ns.total + 1 %}
+        {% if control.status == 'passed' %}
+          {% set ns.passed = ns.passed + 1 %}
+        {% elif control.status == 'failed' %}
+          {% set ns.failed = ns.failed + 1 %}
+        {% elif control.status == 'skipped' %}
+          {% set ns.skipped = ns.skipped + 1 %}
+        {% else %}
+          {% set ns.errors = ns.errors + 1 %}
+        {% endif %}
+      {% endfor %}
+    {% else %}
+      {% set ns.errors = ns.errors + 1 %}
+    {% endif %}
+  {% else %}
+    {% set ns.errors = ns.errors + 1 %}
+  {% endif %}
+{% endfor %}
+Total Controls Executed: {{ ns.total }}
+
+Results by Status:
+  Passed:  {{ ns.passed }}
+  Failed:  {{ ns.failed }}
+  Skipped: {{ ns.skipped }}
+  Errors:  {{ ns.errors }}
+
+Compliance Score: {{ ((ns.passed / (ns.passed + ns.failed)) * 100) | round(2) if (ns.passed + ns.failed) > 0 else 0 }}%
+{% else %}
+No results available
+{% endif %}
+
+Output Directory:
+-----------------
+{{ inspec_results_dir }}
+
+===============================================
+End of Report
+===============================================

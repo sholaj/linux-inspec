@@ -1,0 +1,41 @@
+---
+# Oracle parameter validation tasks
+
+- name: Handle sensitive Oracle connection parameters
+  block:
+    - name: Set Oracle database connection parameters
+      set_fact:
+        oracle_connection:
+          server: "{{ oracle_server }}"
+          port: "{{ oracle_port }}"
+          database: "{{ oracle_database }}"
+          service: "{{ oracle_service | default('') }}"
+          username: "{{ oracle_username }}"
+          password: "{{ oracle_password }}"
+          version: "{{ oracle_version }}"
+
+    - name: Validate required Oracle parameters
+      assert:
+        that:
+          - oracle_server is defined and oracle_server | length > 0
+          - oracle_port is defined and oracle_port | int > 0
+          - oracle_database is defined and oracle_database | length > 0
+          - oracle_version is defined and oracle_version | length > 0
+          - oracle_username is defined and oracle_username | length > 0
+          - oracle_password is defined and oracle_password | length > 0
+        fail_msg: "Missing required Oracle connection parameters"
+        success_msg: "All Oracle parameters validated successfully"
+  no_log: true
+
+- name: Check if Oracle version directory exists
+  stat:
+    path: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
+  register: oracle_version_dir
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Fail if Oracle version directory doesn't exist
+  fail:
+    msg: |
+      Oracle version directory not found: {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby
+      Available versions: {{ oracle_controls_base_dir }}/ORACLE*_ruby
+  when: not oracle_version_dir.stat.exists

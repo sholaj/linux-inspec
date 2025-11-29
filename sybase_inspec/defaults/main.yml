@@ -1,0 +1,39 @@
+---
+# Sybase InSpec Role Default Variables
+
+# Sybase connection defaults
+sybase_username: "nist_scan_user"
+sybase_port: 5000
+sybase_version: "16"
+sybase_password: "{{ lookup('vars', 'vault_' + sybase_host_id + '_password') }}"
+sybase_ssh_password: "{{ vault_sybase_ssh_password | default('') }}"
+
+# SSH connection settings (unique to Sybase from original script)
+sybase_use_ssh: true
+sybase_ssh_user: "oracle"
+sybase_ssh_port: 22
+sybase_ssh_key_path: "/tmp/sybase_ssh_key"
+
+# Default paths and directories
+base_results_dir: "/tmp/compliance_scans"
+sybase_controls_base_dir: "{{ role_path }}/files"
+
+# InSpec execution settings
+inspec_command_timeout: 1800  # 30 minutes
+inspec_debug_mode: false
+generate_summary_report: true
+inspec_delegate_host: "localhost"
+
+# Sybase-specific settings
+sybase_service_name: "SAP_ASE"
+sybase_charset: "iso_1"
+
+# Error handling
+create_error_reports: true
+continue_on_errors: true
+
+# Splunk integration
+send_to_splunk: false
+splunk_hec_url: ""
+splunk_hec_token: ""
+splunk_index: "compliance_scans"

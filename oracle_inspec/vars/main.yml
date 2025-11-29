@@ -1,0 +1,84 @@
+---
+# Variables for oracle_inspec role
+
+# Supported Oracle versions
+supported_oracle_versions:
+  - "11g"
+  - "12c"
+  - "18c"
+  - "19c"
+
+# InSpec binary path
+inspec_binary_path: "/usr/bin/inspec"
+
+# Control file patterns
+control_file_pattern: "*.rb"
+
+# Result file format
+result_format: "json-min"
+
+# Environment variables matching original NIST.ksh script
+# Oracle-specific environment setup
+oracle_environment:
+  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:{{ ansible_env.PATH }}"
+  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+  ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
+  TNS_ADMIN: "{{ oracle_tns_admin | default('/tools/ver/oracle-19.16.0.0-64/network/admin') }}"
+  INSPEC_BACKEND: "oracle"
+  NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
+
+# Timestamp formats matching original script exactly
+timestamp_format: "%Y_%m%d_%H%M%S"
+touch_time_format: "%Y%m%d%H%M.%S"
+splunk_time_format: "%Y-%m-%d %H:%M:%S"
+
+# File naming patterns matching original script
+# Original: ${platform}_NIST_$$_${servernm}_${dbname}_${dbversion}_${now}_${file_prefix}.json
+file_name_template: "ORACLE_NIST_{{ ansible_process_id }}_{{ oracle_server }}_{{ oracle_database }}_{{ oracle_version }}_{{ timestamp }}"
+temp_dir_template: "ORACLE_NIST_{{ ansible_process_id }}_{{ timestamp }}_temp_files"
+
+# Directory structure matching original script
+# From NIST_for_db.ksh: ruby_dir=$script_dir/${platform}_${dbversion}_ruby
+controls_dir_pattern: "ORACLE{{ oracle_version }}_ruby"
+log_dir_pattern: "ORACLENIST"
+
+# Process execution settings
+parallelism: 3
+max_parallelism: 12
+
+# Oracle connection modes
+oracle_connection_types:
+  - "sid"
+  - "service_name"
+  - "tns"
+
+# Error messages
+error_messages:
+  missing_params: "Required Oracle connection parameters are missing"
+  inspec_not_installed: "InSpec is not installed. Please install InSpec before running this role."
+  unsupported_version: "Oracle version is not supported"
+  connection_failed: "Cannot connect to database. Please verify connection parameters."
+  password_retrieval_failed: "Unable to retrieve password from secure store"
+  ruby_dir_missing: "The directory specified as ruby_dir for Database Platform ORACLE in the script does not exist or the permissions to access the directory are insufficient."
+  oracle_home_missing: "ORACLE_HOME environment variable is not set or Oracle client is not installed"
+  tns_admin_missing: "TNS_ADMIN directory does not exist or tnsnames.ora is not configured"
+
+# JSON error templates matching original script exactly
+json_templates:
+  connection_error: |
+    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect","statistics":{"duration":0},"version":"N/A"}]}
+  cloakware_unreachable: |
+    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Not able to retrieve Cloakware Password for DBMAINT Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
+
+# InSpec execution settings
+inspec_settings:
+  reporter: "json-min"
+  no_color: true
+  backend: "oracle"
+  timeout: 300
+  
+# Oracle-specific settings
+oracle_settings:
+  connect_timeout: 30
+  read_timeout: 300
+  prefetch_rows: 100

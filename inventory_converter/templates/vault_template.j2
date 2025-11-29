@@ -1,0 +1,22 @@
+---
+# Ansible Vault file for database passwords
+# Generated on {{ ansible_date_time.date }} {{ ansible_date_time.time }}
+#
+# This file contains password placeholders for database connections
+# Replace DB_TEAM_TO_PROVIDE with actual passwords
+# Then encrypt with: ansible-vault encrypt {{ vault_file }} --vault-password-file .vaultpass
+#
+# Password variables:
+{% for var_name, placeholder in vault_passwords.items() %}
+{{ var_name }}: {{ placeholder }}
+{% endfor %}
+{% if platform_counts.sybase > 0 %}
+
+# SSH credentials for Sybase connections (as per original script)
+vault_sybase_ssh_password: DB_TEAM_TO_PROVIDE
+vault_sybase_ssh_private_key: |
+  -----BEGIN OPENSSH PRIVATE KEY-----
+  # SSH private key content goes here
+  # DB team should replace with actual SSH private key
+  -----END OPENSSH PRIVATE KEY-----
+{% endif %}

@@ -1,0 +1,39 @@
+---
+# Oracle InSpec execution tasks
+
+- name: Execute Oracle InSpec controls for each file (with timeout)
+  shell: |
+    /usr/bin/inspec exec {{ item.path }} \
+      --input usernm='{{ oracle_username }}' \
+              passwd='{{ oracle_password }}' \
+              hostnm='{{ oracle_server }}' \
+              servicenm='{{ oracle_service | default('') }}' \
+              port='{{ oracle_port }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ oracle_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
+    ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
+    TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
+    INSPEC_BACKEND: "{{ oracle_environment.INSPEC_BACKEND }}"
+    NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
+  register: oracle_inspec_results
+  loop: "{{ oracle_control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: false
+  failed_when: false
+  no_log: "{{ not inspec_debug_mode | default(true) }}"
+  async: "{{ inspec_command_timeout | default(1800) }}"
+  poll: 30
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Process Oracle InSpec results
+  include_tasks: process_results.yml
+  loop: "{{ oracle_inspec_results.results }}"
+  loop_control:
+    index_var: idx
+    label: "Processing Oracle result {{ idx + 1 }}"

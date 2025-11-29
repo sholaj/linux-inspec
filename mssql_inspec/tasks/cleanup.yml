@@ -1,0 +1,43 @@
+---
+# Cleanup tasks for MSSQL InSpec role
+
+- name: Generate and display summary report
+  block:
+    - name: Generate summary report
+      template:
+        src: summary_report.j2
+        dest: "{{ inspec_results_dir }}/summary_report_{{ ansible_date_time.epoch }}.txt"
+      register: summary_report_result
+
+    - name: Read summary report content
+      slurp:
+        src: "{{ summary_report_result.dest }}"
+      register: summary_report_content
+
+    - name: Display summary report
+      debug:
+        msg: "{{ summary_report_content.content | b64decode }}"
+  when:
+    - generate_summary_report | default(true)
+    - inspec_results is defined
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Clean up temporary directory
+  file:
+    path: "{{ inspec_temp_dir }}"
+    state: absent
+  when: cleanup_temp_files | default(true)
+  delegate_to: "{{ inspec_delegate_host }}"
+
+- name: Send results to Splunk if enabled
+  include_tasks: splunk_integration.yml
+  loop: "{{ inspec_results.results | default([]) }}"
+  loop_control:
+    loop_var: splunk_result
+  vars:
+    inspec_result_json: "{{ splunk_result.stdout | default('') }}"
+  when:
+    - send_to_splunk | default(false) | bool
+    - splunk_hec_url is defined
+    - splunk_hec_token is defined
+    - inspec_results is defined
