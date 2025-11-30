@@ -1,0 +1,430 @@
+---
+# Test playbook for MSSQL InSpec implementation
+# Validates all authentication layers and execution logic
+#
+# AUTHENTICATION LAYERS TESTED:
+# Layer 1: Ansible → Delegate Host (ansible_user via SSH)
+# Layer 2: InSpec → MSSQL Database (mssql_username/mssql_password)
+
+- name: Test MSSQL InSpec Implementation Logic
+  hosts: mssql_databases
+  gather_facts: no
+
+  vars:
+    # Import environment base from MSSQL role
+    mssql_environment_base:
+      PATH: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+      LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
+      INSPEC_BACKEND: "mssql"
+
+  pre_tasks:
+    - name: Display test configuration
+      debug:
+        msg: |
+          ================================================
+          MSSQL Implementation Logic Test
+          ================================================
+          Database Target: {{ inventory_hostname }}
+          Server: {{ mssql_server }}:{{ mssql_port }}
+          Database: {{ mssql_database }}
+          DB Username: {{ mssql_username }}
+
+          Delegate Configuration:
+          Delegate Host: {{ inspec_delegate_host }}
+
+          This test validates:
+          1. Delegation to correct host via SSH
+          2. Delegate host fact gathering
+          3. Environment variable construction
+          4. Database client tools accessibility
+          5. InSpec installation and version
+          6. Database connectivity test
+          ================================================
+      run_once: true
+
+  tasks:
+    # ========================================
+    # TEST 1: Verify Delegation Working
+    # ========================================
+    - name: Test 1.1 - Check current play target
+      debug:
+        msg: "✓ Play is targeting database server: {{ inventory_hostname }}"
+
+    - name: Test 1.2 - Get hostname where play runs
+      shell: echo "Play runs on $(hostname)"
+      register: play_hostname
+      changed_when: false
+
+    - name: Test 1.3 - Get hostname where delegated tasks run
+      shell: echo "Delegated tasks run on $(hostname)"
+      register: delegate_hostname
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+
+    - name: Test 1.4 - Verify delegation uses SSH (different hosts)
+      assert:
+        that:
+          - play_hostname.stdout != delegate_hostname.stdout
+        fail_msg: |
+          ❌ CRITICAL FAILURE: Delegation not working!
+          Play hostname: {{ play_hostname.stdout }}
+          Delegate hostname: {{ delegate_hostname.stdout }}
+
+          FIX: Check inventory - inspec_delegate_host must have:
+               ansible_connection: ssh
+               ansible_host: actual-delegate-server
+        success_msg: |
+          ✓ TEST 1 PASSED: Delegation working correctly
+          Play runs on: {{ play_hostname.stdout }}
+          Delegated tasks run on: {{ delegate_hostname.stdout }}
+
+    # ========================================
+    # TEST 2: Fact Gathering from Delegate
+    # ========================================
+    - name: Test 2.1 - Gather facts from delegate host
+      setup:
+      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_facts: true
+
+    - name: Test 2.2 - Verify delegate host facts are available
+      assert:
+        that:
+          - hostvars[inspec_delegate_host] is defined
+          - hostvars[inspec_delegate_host].ansible_env is defined
+          - hostvars[inspec_delegate_host].ansible_env.PATH is defined
+          - hostvars[inspec_delegate_host].ansible_env.HOME is defined
+        fail_msg: "❌ CRITICAL FAILURE: Delegate host facts not gathered correctly"
+        success_msg: "✓ TEST 2 PASSED: Delegate host facts gathered successfully"
+
+    # ========================================
+    # TEST 3: Environment Variable Construction
+    # ========================================
+    - name: Test 3.1 - Build MSSQL environment using delegate host facts
+      set_fact:
+        mssql_environment:
+          PATH: "{{ mssql_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
+          LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
+          INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
+
+    - name: Test 3.2 - Verify environment variables constructed
+      assert:
+        that:
+          - mssql_environment.PATH is defined
+          - mssql_environment.PATH is search('/opt/mssql-tools/bin')
+          - mssql_environment.LD_LIBRARY_PATH is defined
+          - mssql_environment.INSPEC_BACKEND == 'mssql'
+        fail_msg: "❌ CRITICAL FAILURE: Environment variables not built correctly"
+        success_msg: |
+          ✓ TEST 3 PASSED: Environment variables built correctly
+          PATH starts with: {{ mssql_environment.PATH[:100] }}...
+          LD_LIBRARY_PATH: {{ mssql_environment.LD_LIBRARY_PATH[:100] }}...
+          INSPEC_BACKEND: {{ mssql_environment.INSPEC_BACKEND }}
+
+    # ========================================
+    # TEST 4: Database Client Tools
+    # ========================================
+    - name: Test 4.1 - Check sqlcmd availability on delegate host
+      shell: command -v sqlcmd
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ mssql_environment.PATH }}"
+        LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+      register: sqlcmd_path
+      delegate_to: "{{ inspec_delegate_host }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Test 4.2 - Verify sqlcmd found
+      assert:
+        that:
+          - sqlcmd_path.rc == 0
+          - sqlcmd_path.stdout is search('sqlcmd')
+        fail_msg: |
+          ❌ CRITICAL FAILURE: sqlcmd not found on delegate host
+          PATH: {{ mssql_environment.PATH }}
+
+          FIX: Install MSSQL tools on {{ inspec_delegate_host }}
+        success_msg: "✓ TEST 4.1 PASSED: sqlcmd found at {{ sqlcmd_path.stdout }}"
+
+    - name: Test 4.3 - Check sqlcmd version
+      shell: sqlcmd -?
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ mssql_environment.PATH }}"
+        LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+      register: sqlcmd_version
+      delegate_to: "{{ inspec_delegate_host }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Test 4.4 - Display sqlcmd info
+      debug:
+        msg: |
+          ✓ TEST 4.2 PASSED: sqlcmd is functional
+          Version info: {{ sqlcmd_version.stdout_lines[0] | default('N/A') }}
+      when: sqlcmd_version.rc == 0
+
+    # ========================================
+    # TEST 5: InSpec Installation
+    # ========================================
+    - name: Test 5.1 - Check InSpec binary exists
+      stat:
+        path: /usr/bin/inspec
+      register: inspec_binary
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Test 5.2 - Verify InSpec binary found
+      assert:
+        that:
+          - inspec_binary.stat.exists
+          - inspec_binary.stat.executable
+        fail_msg: |
+          ❌ CRITICAL FAILURE: InSpec not found at /usr/bin/inspec
+
+          FIX: Install InSpec on {{ inspec_delegate_host }}
+        success_msg: "✓ TEST 5.1 PASSED: InSpec binary found and executable"
+
+    - name: Test 5.3 - Check InSpec version
+      shell: /usr/bin/inspec --version
+      args:
+        executable: /bin/bash
+      register: inspec_version
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+
+    - name: Test 5.4 - Display InSpec version
+      debug:
+        msg: |
+          ✓ TEST 5.2 PASSED: InSpec is functional
+          InSpec version: {{ inspec_version.stdout }}
+
+    # ========================================
+    # TEST 6: Database Connectivity
+    # ========================================
+    - name: Test 6.1 - Test MSSQL database connection using sqlcmd
+      shell: |
+        sqlcmd -S {{ mssql_server }},{{ mssql_port }} \
+               -U {{ mssql_username }} \
+               -P '{{ mssql_password }}' \
+               -d {{ mssql_database }} \
+               -Q "SELECT @@VERSION AS 'SQL Server Version';" \
+               -h -1 \
+               -W
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ mssql_environment.PATH }}"
+        LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+      register: db_connection_test
+      delegate_to: "{{ inspec_delegate_host }}"
+      no_log: true
+      failed_when: false
+      changed_when: false
+
+    - name: Test 6.2 - Verify database connection successful
+      assert:
+        that:
+          - db_connection_test.rc == 0
+        fail_msg: |
+          ❌ CRITICAL FAILURE: Cannot connect to MSSQL database
+          Server: {{ mssql_server }}:{{ mssql_port }}
+          Database: {{ mssql_database }}
+          Username: {{ mssql_username }}
+
+          Error output: {{ db_connection_test.stderr | default('N/A') }}
+
+          FIX: Verify:
+          1. Database server {{ mssql_server }} is accessible from {{ inspec_delegate_host }}
+          2. Database credentials in vault are correct
+          3. Database user {{ mssql_username }} has proper permissions
+          4. Firewall allows connection from delegate host
+        success_msg: |
+          ✓ TEST 6 PASSED: Database connection successful
+          Server: {{ mssql_server }}:{{ mssql_port }}
+          Database: {{ mssql_database }}
+          Authentication: Layer 2 credentials working
+
+    - name: Test 6.3 - Display SQL Server version
+      debug:
+        msg: |
+          SQL Server Version Info:
+          {{ db_connection_test.stdout_lines | join('\n') }}
+      when: db_connection_test.rc == 0
+
+    # ========================================
+    # TEST 7: InSpec MSSQL Backend
+    # ========================================
+    - name: Test 7.1 - Create simple InSpec test control
+      copy:
+        content: |
+          control 'mssql-connection-test' do
+            impact 1.0
+            title 'Test MSSQL Connection'
+            desc 'Verify InSpec can connect to MSSQL database'
+
+            describe command("sqlcmd -S #{input('hostnm')},#{input('port')} -U #{input('usernm')} -P '#{input('passwd')}' -d master -Q 'SELECT 1 AS Test;' -h -1 -W") do
+              its('exit_status') { should eq 0 }
+            end
+          end
+        dest: /tmp/test_inspec_mssql_connection.rb
+        mode: '0644'
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Test 7.2 - Execute InSpec test control
+      shell: |
+        /usr/bin/inspec exec /tmp/test_inspec_mssql_connection.rb \
+          --input usernm='{{ mssql_username }}' \
+                  passwd='{{ mssql_password }}' \
+                  hostnm='{{ mssql_server }}' \
+                  port='{{ mssql_port }}' \
+          --reporter=json-min \
+          --no-color
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ mssql_environment.PATH }}"
+        LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+        INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
+      register: inspec_test_result
+      delegate_to: "{{ inspec_delegate_host }}"
+      no_log: true
+      failed_when: false
+      changed_when: false
+
+    - name: Test 7.3 - Parse InSpec result
+      set_fact:
+        inspec_json: "{{ inspec_test_result.stdout | from_json }}"
+      when: inspec_test_result.rc == 0
+      failed_when: false
+
+    - name: Test 7.4 - Verify InSpec test passed
+      assert:
+        that:
+          - inspec_test_result.rc == 0
+          - inspec_json.controls is defined
+          - inspec_json.controls | length > 0
+        fail_msg: |
+          ❌ CRITICAL FAILURE: InSpec cannot execute MSSQL controls
+
+          InSpec exit code: {{ inspec_test_result.rc }}
+          Error: {{ inspec_test_result.stderr | default('N/A') }}
+
+          FIX: Check InSpec installation and MSSQL backend configuration
+        success_msg: |
+          ✓ TEST 7 PASSED: InSpec MSSQL execution successful
+          Controls executed: {{ inspec_json.controls | length }}
+          Status: {{ inspec_json.controls[0].results[0].status | default('unknown') }}
+
+    - name: Test 7.5 - Cleanup test control file
+      file:
+        path: /tmp/test_inspec_mssql_connection.rb
+        state: absent
+      delegate_to: "{{ inspec_delegate_host }}"
+
+  post_tasks:
+    # ========================================
+    # Final Summary
+    # ========================================
+    - name: Display comprehensive test summary
+      debug:
+        msg: |
+          ================================================
+          MSSQL IMPLEMENTATION TEST SUMMARY
+          ================================================
+          Database Configuration:
+          - Target: {{ inventory_hostname }}
+          - Server: {{ mssql_server }}:{{ mssql_port }}
+          - Database: {{ mssql_database }}
+          - DB Username: {{ mssql_username }}
+
+          Delegate Configuration:
+          - Delegate Host: {{ inspec_delegate_host }}
+          - Execution Host: {{ delegate_hostname.stdout }}
+
+          Test Results:
+          ================================================
+          {% if play_hostname.stdout != delegate_hostname.stdout %}
+          ✓ TEST 1: Delegation via SSH ...................... PASS
+          {% else %}
+          ❌ TEST 1: Delegation via SSH ...................... FAIL
+          {% endif %}
+
+          {% if hostvars[inspec_delegate_host].ansible_env is defined %}
+          ✓ TEST 2: Delegate fact gathering ................. PASS
+          {% else %}
+          ❌ TEST 2: Delegate fact gathering ................. FAIL
+          {% endif %}
+
+          {% if mssql_environment.PATH is defined and mssql_environment.PATH is search('/opt/mssql-tools/bin') %}
+          ✓ TEST 3: Environment variable construction ....... PASS
+          {% else %}
+          ❌ TEST 3: Environment variable construction ....... FAIL
+          {% endif %}
+
+          {% if sqlcmd_path.rc == 0 %}
+          ✓ TEST 4: sqlcmd accessibility .................... PASS
+          {% else %}
+          ❌ TEST 4: sqlcmd accessibility .................... FAIL
+          {% endif %}
+
+          {% if inspec_binary.stat.exists %}
+          ✓ TEST 5: InSpec installation ..................... PASS
+          {% else %}
+          ❌ TEST 5: InSpec installation ..................... FAIL
+          {% endif %}
+
+          {% if db_connection_test.rc == 0 %}
+          ✓ TEST 6: Database connectivity (Layer 2) ......... PASS
+          {% else %}
+          ❌ TEST 6: Database connectivity (Layer 2) ......... FAIL
+          {% endif %}
+
+          {% if inspec_test_result.rc == 0 %}
+          ✓ TEST 7: InSpec MSSQL execution .................. PASS
+          {% else %}
+          ❌ TEST 7: InSpec MSSQL execution .................. FAIL
+          {% endif %}
+
+          ================================================
+          {% if (play_hostname.stdout != delegate_hostname.stdout) and
+                (hostvars[inspec_delegate_host].ansible_env is defined) and
+                (sqlcmd_path.rc == 0) and
+                (inspec_binary.stat.exists) and
+                (db_connection_test.rc == 0) and
+                (inspec_test_result.rc == 0) %}
+          ✓✓✓ ALL TESTS PASSED ✓✓✓
+
+          Your MSSQL InSpec implementation is working correctly!
+
+          Authentication Layers Verified:
+          - Layer 1: Ansible → {{ inspec_delegate_host }} (SSH with ansible_user)
+          - Layer 2: InSpec → {{ mssql_server }} (DB with {{ mssql_username }})
+
+          You can now run full MSSQL compliance scans:
+          ansible-playbook -i inventory.yml run_mssql_inspec.yml -e @vault.yml
+          ================================================
+          {% else %}
+          ⚠️  SOME TESTS FAILED ⚠️
+
+          Please review the failures above and fix before running scans.
+
+          Common Issues:
+          - Test 1 fails: Check ansible_connection: ssh in inventory
+          - Test 4 fails: Install MSSQL tools on delegate host
+          - Test 5 fails: Install InSpec on delegate host
+          - Test 6 fails: Check database credentials and network access
+          - Test 7 fails: Check InSpec configuration and environment
+          ================================================
+          {% endif %}
+      run_once: true
+
+# Usage:
+# ansible-playbook -i inventory.yml test_mssql_implementation.yml -e @vault.yml
+#
+# Optional: Run with vault password file
+# ansible-playbook -i inventory.yml test_mssql_implementation.yml -e @vault.yml --vault-password-file .vaultpass
+#
+# Optional: Run in verbose mode
+# ansible-playbook -i inventory.yml test_mssql_implementation.yml -e @vault.yml -v
