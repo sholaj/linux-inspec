@@ -1,0 +1,192 @@
+---
+# Accurate delegate test - mimics actual InSpec scan execution flow
+# This test verifies that delegate_to works correctly with SSH connection
+
+- name: Test Delegate Execution Flow (AAP-Like)
+  hosts: mssql_databases
+  gather_facts: no
+
+  vars:
+    # These should come from inventory
+    # inspec_delegate_host: defined in inventory
+    test_env:
+      PATH: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+      LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
+
+  pre_tasks:
+    - name: Display test configuration
+      debug:
+        msg: |
+          ================================================
+          Delegate Execution Flow Test
+          ================================================
+          Play Target (Database Server): {{ inventory_hostname }}
+          Delegate Host: {{ inspec_delegate_host }}
+          Expected Connection: SSH to delegate host
+          ================================================
+      run_once: true
+
+  tasks:
+    - name: Test 1 - Verify we're targeting database server
+      debug:
+        msg: "✓ Play is targeting database server: {{ inventory_hostname }}"
+
+    - name: Test 2 - Check where play-level task runs (should be local/AAP2 EE)
+      shell: echo "Running on $(hostname)"
+      register: play_host
+      changed_when: false
+
+    - name: Test 3 - Check where delegated task runs (should be delegate host)
+      shell: echo "Running on $(hostname)"
+      args:
+        executable: /bin/bash
+      register: delegate_host
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+
+    - name: Test 4 - Verify delegation is working (different hosts)
+      assert:
+        that:
+          - play_host.stdout != delegate_host.stdout
+        fail_msg: |
+          ❌ FAILED: Delegate task ran on same host as play target!
+          Play target hostname: {{ play_host.stdout }}
+          Delegate hostname: {{ delegate_host.stdout }}
+
+          This means ansible_connection is not configured correctly in inventory!
+          Check that inspec-delegate-host has ansible_connection: ssh
+        success_msg: |
+          ✓ SUCCESS: Delegation working correctly
+          Play runs on: {{ play_host.stdout }}
+          Delegated tasks run on: {{ delegate_host.stdout }}
+
+    - name: Test 5 - Gather facts from delegate host (like actual scans)
+      setup:
+      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_facts: true
+
+    - name: Test 6 - Verify delegate host facts are available
+      assert:
+        that:
+          - hostvars[inspec_delegate_host].ansible_env is defined
+          - hostvars[inspec_delegate_host].ansible_env.PATH is defined
+        fail_msg: "❌ FAILED: Delegate host facts not available"
+        success_msg: "✓ SUCCESS: Delegate host facts gathered successfully"
+
+    - name: Test 7 - Build environment like actual scans
+      set_fact:
+        test_combined_env:
+          PATH: "{{ test_env.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
+          LD_LIBRARY_PATH: "{{ test_env.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
+
+    - name: Test 8 - Verify environment can be built
+      debug:
+        msg: |
+          ✓ Environment variables built successfully:
+          PATH starts with: {{ test_combined_env.PATH[:100] }}...
+          LD_LIBRARY_PATH: {{ test_combined_env.LD_LIBRARY_PATH }}
+
+    - name: Test 9 - Check sqlcmd on delegate host with environment
+      shell: command -v sqlcmd
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ test_combined_env.PATH }}"
+        LD_LIBRARY_PATH: "{{ test_combined_env.LD_LIBRARY_PATH }}"
+      register: sqlcmd_test
+      delegate_to: "{{ inspec_delegate_host }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Test 10 - Check InSpec on delegate host
+      shell: /usr/bin/inspec --version
+      args:
+        executable: /bin/bash
+      register: inspec_test
+      delegate_to: "{{ inspec_delegate_host }}"
+      failed_when: false
+      changed_when: false
+
+    - name: Test 11 - Display database client tool results
+      debug:
+        msg: |
+          Database Client Tools on Delegate Host:
+          {% if sqlcmd_test.rc == 0 %}
+          ✓ sqlcmd found at: {{ sqlcmd_test.stdout }}
+          {% else %}
+          ❌ sqlcmd NOT FOUND in PATH
+          {% endif %}
+
+          {% if inspec_test.rc == 0 %}
+          ✓ InSpec version: {{ inspec_test.stdout }}
+          {% else %}
+          ❌ InSpec NOT FOUND at /usr/bin/inspec
+          {% endif %}
+
+  post_tasks:
+    - name: Display final test summary
+      debug:
+        msg: |
+          ================================================
+          TEST SUMMARY
+          ================================================
+          Database Server Targeted: {{ inventory_hostname }}
+          Delegate Host: {{ inspec_delegate_host }}
+
+          Test Results:
+          1. ✓ Play targets database server correctly
+          2. {{ '✓' if play_host.stdout != delegate_host.stdout else '❌' }} Delegation to different host works
+          3. ✓ Delegate host facts gathered successfully
+          4. ✓ Environment variables built from delegate facts
+          5. {{ '✓' if sqlcmd_test.rc == 0 else '❌' }} sqlcmd accessible on delegate host
+          6. {{ '✓' if inspec_test.rc == 0 else '❌' }} InSpec accessible on delegate host
+
+          {% if (play_host.stdout != delegate_host.stdout) and (sqlcmd_test.rc == 0) and (inspec_test.rc == 0) %}
+          ================================================
+          ✓✓✓ ALL CRITICAL TESTS PASSED ✓✓✓
+
+          This test accurately mimics the actual scan flow:
+          - Play targets database servers
+          - Tasks delegate to inspec-delegate-host via SSH
+          - Delegate host facts are gathered
+          - Environment variables use delegate host's PATH
+          - Database tools are accessible on delegate host
+
+          You can now run actual compliance scans!
+          ================================================
+          {% else %}
+          ================================================
+          ⚠️  SOME TESTS FAILED ⚠️
+
+          {% if play_host.stdout == delegate_host.stdout %}
+          CRITICAL: Delegation not working - tasks running locally
+          Fix: Ensure inspec-delegate-host in inventory has:
+               ansible_connection: ssh
+               ansible_host: actual.hostname.or.ip
+          {% endif %}
+
+          {% if sqlcmd_test.rc != 0 %}
+          WARNING: sqlcmd not found on delegate host
+          Install MSSQL tools on {{ inspec_delegate_host }}
+          {% endif %}
+
+          {% if inspec_test.rc != 0 %}
+          WARNING: InSpec not found on delegate host
+          Install InSpec on {{ inspec_delegate_host }}
+          {% endif %}
+          ================================================
+          {% endif %}
+      run_once: true
+
+# Usage:
+# ansible-playbook -i test_inventory.yml test_delegate_execution_flow.yml
+#
+# This playbook:
+# 1. Targets mssql_databases (like actual scans)
+# 2. Delegates tasks to inspec-delegate-host
+# 3. Verifies delegation uses SSH (different hosts)
+# 4. Tests fact gathering from delegate host
+# 5. Tests environment variable construction
+# 6. Checks database client tools and InSpec accessibility
+#
+# If all tests pass, the actual scan playbooks will work correctly.

@@ -1,0 +1,69 @@
+all:
+    children:
+        mssql_databases:
+            hosts:
+                testserver01_testdb01_1433:
+                    database_platform: mssql
+                    mssql_database: testdb01
+                    mssql_host_id: testserver01_testdb01_1433
+                    mssql_port: 1433
+                    mssql_server: testserver01
+                    mssql_service: TestService
+                    mssql_username: sa
+                    mssql_version: '2019'
+            vars:
+                # Database servers are just data sources - use local connection
+                ansible_connection: local
+
+        oracle_databases:
+            hosts:
+                oracleserver01_orcl_1521:
+                    database_platform: oracle
+                    oracle_database: orcl
+                    oracle_host_id: oracleserver01_orcl_1521
+                    oracle_port: 1521
+                    oracle_server: oracleserver01
+                    oracle_service: XE
+                    oracle_username: sa
+                    oracle_version: 19c
+            vars:
+                # Database servers are just data sources - use local connection
+                ansible_connection: local
+
+        sybase_databases:
+            hosts:
+                sybaseserver01_master_5000:
+                    database_platform: sybase
+                    sybase_database: master
+                    sybase_host_id: sybaseserver01_master_5000
+                    sybase_port: 5000
+                    sybase_server: sybaseserver01
+                    sybase_service: SAP_ASE
+                    sybase_ssh_user: oracle
+                    sybase_use_ssh: true
+                    sybase_username: sa
+                    sybase_version: '16'
+            vars:
+                # Database servers are just data sources - use local connection
+                ansible_connection: local
+
+        # CRITICAL: Delegate host where InSpec runs
+        # This host must have database client tools installed (sqlcmd, sqlplus, isql)
+        inspec_delegates:
+            hosts:
+                inspec-delegate-host:
+                    # Replace with actual hostname/IP of your delegate host
+                    ansible_host: inspec-delegate-host.example.com
+                    # CRITICAL: Must use SSH connection to delegate host
+                    ansible_connection: ssh
+                    ansible_user: ansible-svc
+                    ansible_port: 22
+                    # Optional: Uncomment if using specific SSH key
+                    # ansible_ssh_private_key_file: /path/to/ssh/key
+
+    vars:
+        ansible_python_interpreter: /opt/homebrew/Cellar/ansible/12.0.0/libexec/bin/python
+        base_results_dir: /tmp/compliance_scans
+        inspec_debug_mode: false
+        # Reference to delegate host (must match hostname in inspec_delegates group)
+        inspec_delegate_host: inspec-delegate-host

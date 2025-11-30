@@ -1,0 +1,59 @@
+---
+# Test inventory for MSSQL implementation validation
+# Update with your actual values before running tests
+
+all:
+  children:
+    # MSSQL database servers (data sources)
+    mssql_databases:
+      hosts:
+        # Example MSSQL server - replace with your actual server
+        testmssql01_master_1433:
+          # Database server connection details
+          mssql_server: your-mssql-server.example.com
+          mssql_port: 1433
+          mssql_database: master
+          mssql_version: "2019"
+          mssql_service: ""
+
+          # Layer 2 credentials (InSpec → Database)
+          # These come from vault - DO NOT hardcode passwords here
+          mssql_username: "{{ vault_mssql_username }}"
+          mssql_password: "{{ vault_mssql_password }}"
+
+      vars:
+        # Database servers are metadata only - use local connection
+        ansible_connection: local
+
+    # Delegate host where InSpec executes
+    inspec_delegates:
+      hosts:
+        inspec-delegate-host:
+          # Layer 1 configuration (Ansible → Delegate Host)
+          ansible_host: your-delegate-server.example.com
+          ansible_connection: ssh
+          ansible_user: ansible-svc  # SSH user on delegate host (NOT database user!)
+          ansible_port: 22
+          # Uncomment if using SSH key
+          # ansible_ssh_private_key_file: /path/to/ssh/key
+
+  vars:
+    # Global variables
+    inspec_delegate_host: inspec-delegate-host
+    base_results_dir: /tmp/compliance_scans
+    inspec_debug_mode: false
+    inspec_command_timeout: 1800
+    ansible_python_interpreter: auto
+
+# IMPORTANT - BEFORE RUNNING TESTS:
+# ==================================
+# 1. Update ansible_host for inspec-delegate-host with actual hostname/IP
+# 2. Update mssql_server with actual MSSQL server hostname
+# 3. Create vault.yml with database credentials:
+#    vault_mssql_username: your_db_username
+#    vault_mssql_password: your_db_password
+# 4. Ensure SSH access to delegate host is configured
+# 5. Ensure delegate host has:
+#    - InSpec installed at /usr/bin/inspec
+#    - MSSQL tools installed (sqlcmd)
+#    - Network access to MSSQL server
