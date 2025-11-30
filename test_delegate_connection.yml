@@ -1,0 +1,283 @@
+---
+# Test playbook to verify SSH connection and environment setup for InSpec scans
+# This validates that the delegate_to with SSH connection fix is working correctly
+# Run this in AAP before executing actual compliance scans
+
+- name: Test Delegate Host Connection and Environment
+  hosts: localhost
+  gather_facts: yes
+
+  vars:
+    # Set this to your delegate host (e.g., inspec-delegate-host)
+    test_delegate_host: "{{ controller_delegate_host | default('inspec-delegate-host') }}"
+
+    # Environment variables from roles
+    mssql_test_env:
+      PATH: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:{{ ansible_env.PATH }}"
+      LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+
+    oracle_test_env:
+      PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:{{ ansible_env.PATH }}"
+      LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+      ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
+      TNS_ADMIN: "/tools/ver/oracle-19.16.0.0-64/network/admin"
+
+    sybase_test_env:
+      PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:{{ ansible_env.PATH }}"
+      LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/lib:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+      SYBASE: "/tools/ver/sybase"
+      SYBASE_OCS: "OCS-16_0"
+
+  tasks:
+    - name: Display test configuration
+      debug:
+        msg: |
+          ================================================
+          Delegate Host Connection Test
+          ================================================
+          Delegate Host: {{ test_delegate_host }}
+          Connection Type: {{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}
+          Current Host: {{ inventory_hostname }}
+          ================================================
+
+    - name: Test 1 - Verify connection to delegate host
+      block:
+        - name: Get hostname of delegate host
+          shell: hostname
+          args:
+            executable: /bin/bash
+          vars:
+            ansible_connection: "{{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}"
+          register: delegate_hostname
+          delegate_to: "{{ test_delegate_host }}"
+
+        - name: Display delegate host information
+          debug:
+            msg: |
+              ✓ Successfully connected to delegate host
+              Hostname: {{ delegate_hostname.stdout }}
+              Connection: {{ 'SSH' if test_delegate_host != 'localhost' else 'Local' }}
+      rescue:
+        - name: Connection failed
+          fail:
+            msg: |
+              ✗ Failed to connect to delegate host: {{ test_delegate_host }}
+              Error: {{ delegate_hostname.msg | default('Unknown error') }}
+
+    - name: Test 2 - Check InSpec is installed on delegate host
+      block:
+        - name: Check InSpec version
+          shell: /usr/bin/inspec --version
+          args:
+            executable: /bin/bash
+          vars:
+            ansible_connection: "{{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}"
+          register: inspec_version
+          changed_when: false
+          delegate_to: "{{ test_delegate_host }}"
+
+        - name: Display InSpec version
+          debug:
+            msg: |
+              ✓ InSpec is installed
+              Version: {{ inspec_version.stdout }}
+      rescue:
+        - name: InSpec not found
+          fail:
+            msg: |
+              ✗ InSpec not found at /usr/bin/inspec on {{ test_delegate_host }}
+              Please ensure InSpec is installed on the delegate host
+
+    - name: Test 3 - Check MSSQL sqlcmd binary with environment
+      block:
+        - name: Test sqlcmd availability
+          shell: command -v sqlcmd
+          args:
+            executable: /bin/bash
+          environment:
+            PATH: "{{ mssql_test_env.PATH }}"
+            LD_LIBRARY_PATH: "{{ mssql_test_env.LD_LIBRARY_PATH }}"
+          vars:
+            ansible_connection: "{{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}"
+          register: sqlcmd_check
+          changed_when: false
+          failed_when: false
+          delegate_to: "{{ test_delegate_host }}"
+
+        - name: Display sqlcmd status
+          debug:
+            msg: |
+              {% if sqlcmd_check.rc == 0 %}
+              ✓ MSSQL sqlcmd is accessible
+              Location: {{ sqlcmd_check.stdout }}
+              {% else %}
+              ✗ MSSQL sqlcmd not found in PATH
+              Searched PATH: {{ mssql_test_env.PATH }}
+              {% endif %}
+
+    - name: Test 4 - Check Oracle sqlplus binary with environment
+      block:
+        - name: Test sqlplus availability
+          shell: command -v sqlplus
+          args:
+            executable: /bin/bash
+          environment:
+            PATH: "{{ oracle_test_env.PATH }}"
+            LD_LIBRARY_PATH: "{{ oracle_test_env.LD_LIBRARY_PATH }}"
+            ORACLE_HOME: "{{ oracle_test_env.ORACLE_HOME }}"
+          vars:
+            ansible_connection: "{{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}"
+          register: sqlplus_check
+          changed_when: false
+          failed_when: false
+          delegate_to: "{{ test_delegate_host }}"
+
+        - name: Display sqlplus status
+          debug:
+            msg: |
+              {% if sqlplus_check.rc == 0 %}
+              ✓ Oracle sqlplus is accessible
+              Location: {{ sqlplus_check.stdout }}
+              ORACLE_HOME: {{ oracle_test_env.ORACLE_HOME }}
+              {% else %}
+              ✗ Oracle sqlplus not found in PATH
+              Searched PATH: {{ oracle_test_env.PATH }}
+              ORACLE_HOME: {{ oracle_test_env.ORACLE_HOME }}
+              {% endif %}
+
+    - name: Test 5 - Check Sybase isql binary with environment
+      block:
+        - name: Test isql availability
+          shell: command -v isql
+          args:
+            executable: /bin/bash
+          environment:
+            PATH: "{{ sybase_test_env.PATH }}"
+            LD_LIBRARY_PATH: "{{ sybase_test_env.LD_LIBRARY_PATH }}"
+            SYBASE: "{{ sybase_test_env.SYBASE }}"
+            SYBASE_OCS: "{{ sybase_test_env.SYBASE_OCS }}"
+          vars:
+            ansible_connection: "{{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}"
+          register: isql_check
+          changed_when: false
+          failed_when: false
+          delegate_to: "{{ test_delegate_host }}"
+
+        - name: Display isql status
+          debug:
+            msg: |
+              {% if isql_check.rc == 0 %}
+              ✓ Sybase isql is accessible
+              Location: {{ isql_check.stdout }}
+              SYBASE: {{ sybase_test_env.SYBASE }}
+              SYBASE_OCS: {{ sybase_test_env.SYBASE_OCS }}
+              {% else %}
+              ✗ Sybase isql not found in PATH
+              Searched PATH: {{ sybase_test_env.PATH }}
+              SYBASE: {{ sybase_test_env.SYBASE }}
+              {% endif %}
+
+    - name: Test 6 - Verify shell module with environment variables
+      block:
+        - name: Run test command with full environment
+          shell: |
+            echo "PATH=$PATH"
+            echo "LD_LIBRARY_PATH=$LD_LIBRARY_PATH"
+            echo "PWD=$PWD"
+            echo "USER=$USER"
+          args:
+            executable: /bin/bash
+          environment:
+            PATH: "{{ mssql_test_env.PATH }}"
+            LD_LIBRARY_PATH: "{{ mssql_test_env.LD_LIBRARY_PATH }}"
+          vars:
+            ansible_connection: "{{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}"
+          register: env_test
+          delegate_to: "{{ test_delegate_host }}"
+
+        - name: Display environment test results
+          debug:
+            msg: |
+              ✓ Environment variables are properly set
+              {{ env_test.stdout }}
+
+    - name: Test 7 - Simulate InSpec execution
+      block:
+        - name: Run InSpec with environment (dry-run)
+          shell: |
+            /usr/bin/inspec --help | head -5
+          args:
+            executable: /bin/bash
+          environment:
+            PATH: "{{ mssql_test_env.PATH }}"
+            LD_LIBRARY_PATH: "{{ mssql_test_env.LD_LIBRARY_PATH }}"
+          vars:
+            ansible_connection: "{{ 'local' if test_delegate_host == 'localhost' else 'ssh' }}"
+          register: inspec_test
+          changed_when: false
+          delegate_to: "{{ test_delegate_host }}"
+
+        - name: Display InSpec test results
+          debug:
+            msg: |
+              ✓ InSpec can be executed with environment variables
+              {{ inspec_test.stdout }}
+
+  post_tasks:
+    - name: Display final test summary
+      debug:
+        msg: |
+          ================================================
+          TEST SUMMARY
+          ================================================
+          Delegate Host: {{ test_delegate_host }}
+          Connection Method: {{ 'SSH' if test_delegate_host != 'localhost' else 'Local' }}
+
+          Tests Completed:
+          1. ✓ SSH/Local connection to delegate host
+          2. ✓ InSpec installation verification
+          3. {{ '✓' if sqlcmd_check.rc == 0 else '✗' }} MSSQL sqlcmd accessibility
+          4. {{ '✓' if sqlplus_check.rc == 0 else '✗' }} Oracle sqlplus accessibility
+          5. {{ '✓' if isql_check.rc == 0 else '✗' }} Sybase isql accessibility
+          6. ✓ Environment variable propagation
+          7. ✓ InSpec execution with environment
+
+          {% if sqlcmd_check.rc == 0 and sqlplus_check.rc == 0 and isql_check.rc == 0 %}
+          ================================================
+          ✓✓✓ ALL TESTS PASSED ✓✓✓
+
+          The delegate host is properly configured!
+          You can now run the compliance scan playbooks:
+          - run_mssql_inspec.yml
+          - run_oracle_inspec.yml
+          - run_sybase_inspec.yml
+          ================================================
+          {% else %}
+          ================================================
+          ⚠ SOME TESTS FAILED ⚠
+
+          Please verify that database client tools are installed
+          at the expected locations on {{ test_delegate_host }}
+
+          Expected locations:
+          - MSSQL sqlcmd: /opt/mssql-tools/bin/sqlcmd
+          - Oracle sqlplus: Defined by ORACLE_HOME
+          - Sybase isql: Defined by SYBASE/SYBASE_OCS
+          ================================================
+          {% endif %}
+
+# Usage:
+# POC Mode:
+# ansible-playbook test_delegate_connection.yml
+#
+# AAP Mode:
+# - Create a new Job Template in AAP
+# - Set inventory to any valid inventory
+# - Add extra vars to override delegate host if needed:
+#   controller_delegate_host: "lcptlvc0005"
+# - Run the job template
+#
+# Expected Output:
+# - Green checkmarks (✓) for successful tests
+# - Red X marks (✗) for failed tests
+# - Final summary showing whether all tests passed
