@@ -203,11 +203,11 @@
     # ========================================
     # TEST 6: Database Connectivity
     # ========================================
-    - name: Test 6.1 - Test MSSQL database connection using sqlcmd
+    - name: Test 6.1 - Test MSSQL database connection using sqlcmd (password via environment)
       shell: |
         sqlcmd -S {{ mssql_server }},{{ mssql_port }} \
                -U {{ mssql_username }} \
-               -P '{{ mssql_password }}' \
+               -P "$SQLCMD_PASSWORD" \
                -d {{ mssql_database }} \
                -Q "SELECT @@VERSION AS 'SQL Server Version';" \
                -h -1 \
@@ -217,6 +217,7 @@
       environment:
         PATH: "{{ mssql_environment.PATH }}"
         LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+        SQLCMD_PASSWORD: "{{ mssql_password }}"
       register: db_connection_test
       delegate_to: "{{ inspec_delegate_host }}"
       no_log: true
@@ -272,13 +273,13 @@
         mode: '0644'
       delegate_to: "{{ inspec_delegate_host }}"
 
-    - name: Test 7.2 - Execute InSpec test control
+    - name: Test 7.2 - Execute InSpec test control (credentials via environment)
       shell: |
         /usr/bin/inspec exec /tmp/test_inspec_mssql_connection.rb \
-          --input usernm='{{ mssql_username }}' \
-                  passwd='{{ mssql_password }}' \
-                  hostnm='{{ mssql_server }}' \
-                  port='{{ mssql_port }}' \
+          --input usernm="$INSPEC_DB_USERNAME" \
+                  passwd="$INSPEC_DB_PASSWORD" \
+                  hostnm="$INSPEC_DB_HOST" \
+                  port="$INSPEC_DB_PORT" \
           --reporter=json-min \
           --no-color
       args:
@@ -287,6 +288,10 @@
         PATH: "{{ mssql_environment.PATH }}"
         LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
         INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
+        INSPEC_DB_USERNAME: "{{ mssql_username }}"
+        INSPEC_DB_PASSWORD: "{{ mssql_password }}"
+        INSPEC_DB_HOST: "{{ mssql_server }}"
+        INSPEC_DB_PORT: "{{ mssql_port }}"
       register: inspec_test_result
       delegate_to: "{{ inspec_delegate_host }}"
       no_log: true
