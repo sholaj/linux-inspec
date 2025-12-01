@@ -57,7 +57,7 @@ The MSSQL InSpec compliance scanning solution has been successfully validated th
 - **Status**: [OK] PASSED
 - **Test**: Simulated connection failures
 - **Result**: Proper "Unreachable" JSON generated matching original script format
-- **Validation**: Error reporting maintains compatibility with original `BACKUP_for_db.ksh`
+- **Validation**: Error reporting maintains compatibility with original `NIST_for_db.ksh`
 
 ### ⚠️ Known Limitations (Environment-Specific)
 
@@ -158,7 +158,7 @@ The MSSQL InSpec compliance scanning solution is **architecturally sound and pro
 - [OK] **Maintainability**: Modular Ansible role structure
 - [OK] **Integration**: AAP-ready with Splunk forwarding
 
-The solution successfully refactors the original `BACKUP_for_db.ksh` Bash script into a modern, scalable Ansible implementation while maintaining full backward compatibility.
+The solution successfully refactors the original `NIST_for_db.ksh` Bash script into a modern, scalable Ansible implementation while maintaining full backward compatibility.
 
 ## Next Steps
 1. Deploy to AMD64 environment with actual MSSQL databases

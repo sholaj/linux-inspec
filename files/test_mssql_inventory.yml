@@ -26,16 +26,30 @@ all:
         ansible_connection: local
 
     # Delegate host where InSpec executes
+    # AUTHENTICATION: Supports both SSH key and username/password
     inspec_delegates:
       hosts:
+        # OPTION 1: SSH Key Authentication (Recommended)
         inspec-delegate-host:
           # Layer 1 configuration (Ansible → Delegate Host)
           ansible_host: your-delegate-server.example.com
           ansible_connection: ssh
           ansible_user: ansible-svc  # SSH user on delegate host (NOT database user!)
           ansible_port: 22
-          # Uncomment if using SSH key
-          # ansible_ssh_private_key_file: /path/to/ssh/key
+          # SSH Key (choose one):
+          # Method A: Specific key file
+          ansible_ssh_private_key_file: /path/to/ssh/private/key
+          # Method B: SSH agent (comment out above line, uses loaded keys)
+
+        # OPTION 2: Username/Password Authentication (Testing/Dev)
+        # Uncomment if using password instead of SSH key
+        # inspec-delegate-host:
+        #   ansible_host: your-delegate-server.example.com
+        #   ansible_connection: ssh
+        #   ansible_user: ansible-svc
+        #   ansible_port: 22
+        #   # Password (MUST be in vault for security!)
+        #   ansible_ssh_pass: "{{ vault_delegate_ssh_password }}"
 
   vars:
     # Global variables
