@@ -4,7 +4,8 @@
 # Environment variables matching original NIST.ksh script
 # From NIST.ksh: export PATH=/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:$PATH
 # From NIST.ksh: export LD_LIBRARY_PATH=/tools/ver/oracle-19.16.0.0-64
-mssql_environment:
-  PATH: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:{{ ansible_env.PATH }}"
-  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+# NOTE: These will be combined with delegate host's environment at runtime
+mssql_environment_base:
+  PATH: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
   INSPEC_BACKEND: "mssql"

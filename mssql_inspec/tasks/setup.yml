@@ -1,7 +1,11 @@
 ---
 # Setup tasks for MSSQL InSpec role
 
-- name: Setup InSpec environment on delegate host
+- name: Determine execution mode for setup
+  set_fact:
+    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 }}"
+
+- name: Setup InSpec environment on delegate host (delegate mode)
   block:
     - name: Create results directory
       file:
@@ -26,3 +30,30 @@
         msg: "Found {{ control_files.files | length }} control file(s) for MSSQL {{ mssql_version }}"
       when: inspec_debug_mode | default(false)
   delegate_to: "{{ inspec_delegate_host }}"
+  when: use_delegate_host | bool
+
+- name: Setup InSpec environment locally (local mode)
+  block:
+    - name: Create results directory
+      file:
+        path: "{{ inspec_results_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create temporary working directory
+      file:
+        path: "{{ inspec_temp_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Find all Ruby control files for specified MSSQL version
+      find:
+        paths: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+        patterns: "*.rb"
+      register: control_files
+
+    - name: Display control files to be executed
+      debug:
+        msg: "Found {{ control_files.files | length }} control file(s) for MSSQL {{ mssql_version }}"
+      when: inspec_debug_mode | default(false)
+  when: not (use_delegate_host | bool)

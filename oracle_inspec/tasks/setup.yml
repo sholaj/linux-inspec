@@ -1,7 +1,11 @@
 ---
 # Setup tasks for Oracle InSpec execution
 
-- name: Setup Oracle InSpec environment on delegate host
+- name: Determine execution mode for setup
+  set_fact:
+    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 }}"
+
+- name: Setup Oracle InSpec environment on delegate host (delegate mode)
   block:
     - name: Create Oracle results directory
       file:
@@ -37,3 +41,41 @@
         msg: "No Oracle control files found in {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
       when: oracle_control_files.files | length == 0
   delegate_to: "{{ inspec_delegate_host }}"
+  when: use_delegate_host | bool
+
+- name: Setup Oracle InSpec environment locally (local mode)
+  block:
+    - name: Create Oracle results directory
+      file:
+        path: "{{ inspec_results_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create Oracle temporary working directory
+      tempfile:
+        state: directory
+        suffix: "_oracle_inspec"
+      register: oracle_temp_dir
+
+    - name: Find all Ruby control files for specified Oracle version
+      find:
+        paths: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
+        patterns: "*.rb"
+        file_type: file
+      register: oracle_control_files
+
+    - name: Display Oracle control files to be executed
+      debug:
+        msg: |
+          Oracle {{ oracle_version }} controls to execute:
+          {% for file in oracle_control_files.files %}
+          - {{ file.path | basename }}
+          {% endfor %}
+          Total controls: {{ oracle_control_files.files | length }}
+      when: inspec_debug_mode | default(false)
+
+    - name: Fail if no Oracle control files found
+      fail:
+        msg: "No Oracle control files found in {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
+      when: oracle_control_files.files | length == 0
+  when: not (use_delegate_host | bool)

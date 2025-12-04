@@ -19,9 +19,10 @@ result_format: "json-min"
 
 # Environment variables matching original NIST.ksh script
 # Oracle-specific environment setup
-oracle_environment:
-  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:{{ ansible_env.PATH }}"
-  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+# NOTE: These will be combined with delegate host's environment at runtime
+oracle_environment_base:
+  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
   ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
   TNS_ADMIN: "{{ oracle_tns_admin | default('/tools/ver/oracle-19.16.0.0-64/network/admin') }}"
   INSPEC_BACKEND: "oracle"
@@ -68,7 +69,7 @@ json_templates:
   connection_error: |
     {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect","statistics":{"duration":0},"version":"N/A"}]}
   cloakware_unreachable: |
-    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Not able to retrieve Cloakware Password for DBMAINT Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
+    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Not able to retrieve Cloakware Password for Database Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
 
 # InSpec execution settings
 inspec_settings:
