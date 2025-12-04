@@ -17,13 +17,13 @@ result_format: "json-min"
 
 # Environment variables matching original NIST.ksh script
 # Sybase-specific environment setup with SSH support
-sybase_environment:
-  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:{{ ansible_env.PATH }}"
-  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/lib:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+# NOTE: These will be combined with delegate host's environment at runtime
+sybase_environment_base:
+  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/lib"
   SYBASE: "/tools/ver/sybase"
   SYBASE_OCS: "OCS-16_0"
   INSPEC_BACKEND: "sybase"
-  SSH_AUTH_SOCK: "{{ ansible_env.SSH_AUTH_SOCK | default('') }}"
 
 # Timestamp formats matching original script exactly
 timestamp_format: "%Y_%m%d_%H%M%S"
@@ -76,7 +76,7 @@ json_templates:
   connection_error: |
     {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"Cannot connect to database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect","statistics":{"duration":0},"version":"N/A"}]}
   cloakware_unreachable: |
-    {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"Not able to retrieve Cloakware Password for DBMAINT Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
+    {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"Not able to retrieve Cloakware Password for Database Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
   ssh_error: |
     {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"SSH connection failed for Sybase database access","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"SSH connection failed","statistics":{"duration":0},"version":"N/A"}]}
 

@@ -1,14 +1,52 @@
 ---
 # InSpec execution tasks for MSSQL
+#
+# EXECUTION MODES:
+# Mode 1: Delegate/Bastion Mode (when inspec_delegate_host is defined)
+#   - Ansible SSHs to delegate host using ansible_user (from inventory)
+#   - InSpec runs on delegate host
+#   - InSpec connects to database using mssql_username/mssql_password (from vault)
+#
+# Mode 2: Local/Direct Mode (when inspec_delegate_host is undefined or empty)
+#   - InSpec runs directly on AAP2 execution node or local machine
+#   - InSpec connects to database using mssql_username/mssql_password (from vault)
+#
+# These are DIFFERENT execution paths based on infrastructure setup
 
-- name: Execute InSpec controls for each file (with timeout)
+- name: Determine execution mode
+  set_fact:
+    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 }}"
+
+- name: Gather facts from delegate host (delegate mode only)
+  setup:
+  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_facts: true
+  when: use_delegate_host | bool
+
+- name: Build environment variables using delegate host facts (delegate mode)
+  set_fact:
+    mssql_environment:
+      PATH: "{{ mssql_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
+      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
+  when: use_delegate_host | bool
+
+- name: Build environment variables for local execution (local mode)
+  set_fact:
+    mssql_environment:
+      PATH: "{{ mssql_environment_base.PATH }}:{{ ansible_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
+      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
+  when: not (use_delegate_host | bool)
+
+- name: Execute InSpec controls on delegate host (delegate mode)
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --input usernm='{{ mssql_username }}' \
-              passwd='{{ mssql_password }}' \
-              hostnm='{{ mssql_server }}' \
-              servicenm='{{ mssql_service | default('') }}' \
-              port='{{ mssql_port }}' \
+      --input usernm="$INSPEC_DB_USERNAME" \
+              passwd="$INSPEC_DB_PASSWORD" \
+              hostnm="$INSPEC_DB_HOST" \
+              servicenm="$INSPEC_DB_SERVICE" \
+              port="$INSPEC_DB_PORT" \
       --reporter=json-min \
       --no-color
   args:
@@ -17,17 +55,70 @@
     PATH: "{{ mssql_environment.PATH }}"
     LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
     INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
-
+    INSPEC_DB_USERNAME: "{{ mssql_username }}"
+    INSPEC_DB_PASSWORD: "{{ mssql_password }}"
+    INSPEC_DB_HOST: "{{ mssql_server }}"
+    INSPEC_DB_SERVICE: "{{ mssql_service | default('') }}"
+    INSPEC_DB_PORT: "{{ mssql_port }}"
   register: inspec_results
   loop: "{{ control_files.files }}"
   loop_control:
     label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: false
-  no_log: "{{ not inspec_debug_mode | default(true) }}"
+  no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
   delegate_to: "{{ inspec_delegate_host }}"
+  when: use_delegate_host | bool
+
+- name: Execute InSpec controls locally (local mode)
+  shell: |
+    /usr/bin/inspec exec {{ item.path }} \
+      --input usernm="$INSPEC_DB_USERNAME" \
+              passwd="$INSPEC_DB_PASSWORD" \
+              hostnm="$INSPEC_DB_HOST" \
+              servicenm="$INSPEC_DB_SERVICE" \
+              port="$INSPEC_DB_PORT" \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ mssql_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+    INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
+    INSPEC_DB_USERNAME: "{{ mssql_username }}"
+    INSPEC_DB_PASSWORD: "{{ mssql_password }}"
+    INSPEC_DB_HOST: "{{ mssql_server }}"
+    INSPEC_DB_SERVICE: "{{ mssql_service | default('') }}"
+    INSPEC_DB_PORT: "{{ mssql_port }}"
+  register: inspec_results
+  loop: "{{ control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: false
+  failed_when: false
+  no_log: true
+  async: "{{ inspec_command_timeout | default(1800) }}"
+  poll: 30
+  when: not (use_delegate_host | bool)
+
+- name: Display sanitized execution summary (debug mode only)
+  debug:
+    msg: |
+      InSpec Execution Summary
+      ========================
+      Database: {{ mssql_server }}:{{ mssql_port }}
+      Username: {{ mssql_username }}
+      Password: [PROTECTED - passed via environment variable]
+      Control: {{ item.item.path | basename }}
+      Status: {{ 'PASS' if item.rc == 0 else 'FAIL' }}
+      Exit Code: {{ item.rc }}
+  loop: "{{ inspec_results.results }}"
+  loop_control:
+    label: "{{ item.item.path | basename }}"
+  when: inspec_debug_mode | default(false)
 
 - name: Process InSpec results
   include_tasks: process_results.yml

@@ -11,24 +11,62 @@
     input_file: "{{ flatfile_input | default('databases.txt') }}"
     output_file: "{{ inventory_output | default('inventory.yml') }}"
     vault_file: "{{ vault_output | default('vault.yml') }}"
-    default_username: "{{ username | default('nist_scan_user') }}"
+    default_username: "{{ username | default('db_scan_user') }}"
     generate_vault: "{{ create_vault | default(true) }}"
 
-    # Initialize inventory structure
-    inventory_data:
+    # Execution mode configuration
+    # Set use_delegate_mode=true for bastion/delegate architecture
+    # Set use_delegate_mode=false for local/direct execution
+    use_delegate_mode: "{{ delegate_mode | default(true) }}"
+
+    # Delegate host configuration (only used when use_delegate_mode=true)
+    delegate_host_address: "{{ inspec_delegate_address | default('delegate-host.example.com') }}"
+    delegate_host_user: "{{ inspec_delegate_user | default('automation-user') }}"
+
+    # Initialize inventory structure - will be customized based on execution mode
+    inventory_data_base:
       all:
         children:
           mssql_servers:
             hosts: {}
+            vars:
+              # Database servers are just data sources - use local connection
+              ansible_connection: "local"
           oracle_databases:
             hosts: {}
+            vars:
+              # Database servers are just data sources - use local connection
+              ansible_connection: "local"
           sybase_databases:
             hosts: {}
+            vars:
+              # Database servers are just data sources - use local connection
+              ansible_connection: "local"
         vars:
           base_results_dir: "/tmp/compliance_scans"
-          ansible_connection: "local"
           inspec_debug_mode: false
           ansible_python_interpreter: "{{ ansible_playbook_python }}"
+
+    # Delegate host configuration (only added when use_delegate_mode=true)
+    delegate_config:
+      inspec_delegates:
+        hosts:
+          delegate-host:
+            # Replace with actual hostname/IP of your delegate host
+            ansible_host: "{{ delegate_host_address }}"
+            # CRITICAL: Must use SSH connection to delegate host
+            ansible_connection: "ssh"
+            ansible_user: "{{ delegate_host_user }}"
+            ansible_port: 22
+            # SSH Authentication - Choose ONE method:
+            # OPTION 1: SSH Key (Recommended for production)
+            # ansible_ssh_private_key_file: /path/to/ssh/private/key
+            # OPTION 2: Password (Testing/dev - MUST use vault!)
+            # ansible_password: "{{ vault_delegate_password }}"
+            # SSH Host Key Checking (optional):
+            # ansible_ssh_common_args: '-o StrictHostKeyChecking=yes'  # Strict (recommended)
+            # ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'  # Accept new
+            # ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'  # Disable (NOT for production!)
 
     # Password tracking
     vault_passwords: {}
@@ -38,6 +76,16 @@
       sybase: 0
 
   tasks:
+    - name: Initialize inventory data based on execution mode (delegate mode)
+      set_fact:
+        inventory_data: "{{ inventory_data_base | combine({'all': {'children': inventory_data_base.all.children | combine(delegate_config), 'vars': inventory_data_base.all.vars | combine({'inspec_delegate_host': 'delegate-host'})}}, recursive=True) }}"
+      when: use_delegate_mode | bool
+
+    - name: Initialize inventory data for local mode (no delegate)
+      set_fact:
+        inventory_data: "{{ inventory_data_base }}"
+      when: not (use_delegate_mode | bool)
+
     - name: Display conversion configuration
       debug:
         msg: |
@@ -46,10 +94,39 @@
           Input file: {{ input_file }}
           Output inventory: {{ output_file }}
           Vault file: {{ vault_file }}
-          Default username: {{ default_username }}
+          Default DB username: {{ default_username }}
           Generate vault: {{ generate_vault }}
+          Execution mode: {{ use_delegate_mode | ternary('Delegate/Bastion', 'Local/Direct') }}
 
-          Hello World from Ansible Flat File Converter! 🌍
+          {% if use_delegate_mode | bool %}
+          Delegate Host Configuration (Layer 1 - Ansible SSH):
+          =====================================================
+          Address: {{ delegate_host_address }}
+          SSH User: {{ delegate_host_user }}
+          Connection: SSH
+          Purpose: Ansible connects here to run InSpec
+
+          Database Credentials (Layer 2 - InSpec → DB):
+          ==============================================
+          Username: {{ default_username }} (and variants)
+          Password: To be provided in {{ vault_file }}
+          Purpose: InSpec uses these to connect to databases
+
+          IMPORTANT: {{ delegate_host_user }} is NOT the database user!
+                     {{ delegate_host_user }} = SSH user for delegate host
+                     {{ default_username }} = Database connection user
+          {% else %}
+          Local Execution Mode:
+          =====================
+          InSpec will run directly on AAP2 execution node or local machine
+          No delegate/bastion host required
+
+          Database Credentials:
+          =====================
+          Username: {{ default_username }} (and variants)
+          Password: To be provided in {{ vault_file }}
+          Purpose: InSpec uses these to connect directly to databases
+          {% endif %}
 
     - name: Check if input file exists
       stat:
@@ -99,10 +176,20 @@
           =====================================
           Conversion Summary
           =====================================
+          Execution Mode: {{ use_delegate_mode | ternary('Delegate/Bastion', 'Local/Direct') }}
           Total database hosts: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase }}
           MSSQL databases: {{ platform_counts.mssql }}
           Oracle databases: {{ platform_counts.oracle }}
           Sybase databases: {{ platform_counts.sybase }}
+
+          {% if use_delegate_mode | bool %}
+          Delegate Host:
+          ==============
+          Host: delegate-host
+          Address: {{ delegate_host_address }}
+          Connection: SSH
+          User: {{ delegate_host_user }}
+          {% endif %}
 
           Files Generated:
           ================
@@ -111,10 +198,69 @@
           Vault: {{ vault_file }} [OK]
           {% endif %}
 
+          {% if use_delegate_mode | bool %}
+          IMPORTANT - Authentication Layers:
+          ===================================
+          This setup uses TWO authentication layers:
+
+          Layer 1 (Ansible → Delegate Host):
+            - SSH user: {{ delegate_host_user }}
+            - Configure in AAP2 as Machine Credential
+            - This is NOT the database user!
+
+          Layer 2 (InSpec → Database):
+            - DB user: {{ default_username }} (in {{ vault_file }})
+            - Configure in AAP2 as Vault Credential
+            - These are database connection credentials
+
+          IMPORTANT - Before Running Scans:
+          ==================================
+          1. Update delegate host address in {{ output_file }}:
+             Replace '{{ delegate_host_address }}' with actual hostname/IP
+
+          2. Ensure delegate host has:
+             - InSpec installed at /usr/bin/inspec
+             - Database client tools (sqlcmd, sqlplus, isql)
+             - SSH access configured for {{ delegate_host_user }}
+
+          3. Update {{ vault_file }} with database passwords:
+             - These are DATABASE credentials, not SSH credentials
+             - DB team should provide actual passwords for {{ default_username }}
+
+          4. Test delegate connection:
+             ansible-playbook -i {{ output_file }} test_delegate_execution_flow.yml
+
+          {% else %}
+          IMPORTANT - Local Execution Mode:
+          ==================================
+          InSpec will run directly on the AAP2 execution node or your local machine.
+
+          Requirements:
+          1. InSpec must be installed at /usr/bin/inspec
+          2. Database client tools must be available (sqlcmd, sqlplus, isql)
+          3. Network access to database servers from execution host
+
+          Database Credentials:
+          =====================
+          - DB user: {{ default_username }} (in {{ vault_file }})
+          - Configure in AAP2 as Vault Credential
+          - InSpec connects directly to databases
+
+          Update {{ vault_file }} with actual database passwords
+          {% endif %}
+
           Usage Examples:
           ===============
-          # MSSQL Scanning
+          {% if use_delegate_mode | bool %}
+          # Test delegate connection FIRST
+          ansible-playbook -i {{ output_file }} test_delegate_execution_flow.yml
+
+          # MSSQL Scanning (after test passes)
           ansible-playbook -i {{ output_file }} run_mssql_inspec.yml -e @{{ vault_file }}
+          {% else %}
+          # MSSQL Scanning (local execution)
+          ansible-playbook -i {{ output_file }} run_mssql_inspec.yml -e @{{ vault_file }}
+          {% endif %}
 
           # Oracle Scanning
           ansible-playbook -i {{ output_file }} run_oracle_inspec.yml -e @{{ vault_file }}
@@ -127,7 +273,34 @@
 
           Next Steps:
           ===========
-          1. DB team updates {{ vault_file }} with actual passwords
+          {% if use_delegate_mode | bool %}
+          1. Update {{ output_file }} - Layer 1 (SSH to delegate):
+             - Set actual delegate host address (ansible_host)
+             - Verify SSH user (ansible_user) is correct
+             - This user needs SSH access to delegate host
+
+          2. Update {{ vault_file }} - Layer 2 (Database connections):
+             - DB team provides DATABASE passwords
+             - These are for {{ default_username }} to connect to databases
+             - NOT the same as the SSH user above!
+
+          3. Encrypt vault file with ansible-vault
+
+          4. Test delegate connection first (CRITICAL)
+
+          5. Run compliance scans by platform
+
+          Remember: {{ delegate_host_user }} ≠ {{ default_username }}
+          One is for SSH, the other is for database connections!
+          {% else %}
+          1. Update {{ vault_file }} with DATABASE passwords:
+             - DB team provides actual passwords for {{ default_username }}
+             - These are for direct database connections
+
           2. Encrypt vault file with ansible-vault
-          3. Run compliance scans by platform
+
+          3. Ensure InSpec and database tools are installed locally
+
+          4. Run compliance scans by platform
+          {% endif %}
           =====================================

@@ -2,6 +2,20 @@
 # SSH setup tasks for Sybase InSpec execution
 # Based on original script SSH logic: --ssh://oracle:edcp!cv0576@ -o oracle/.ssh/authorized_keys
 
+- name: Gather facts from delegate host for SSH setup
+  setup:
+  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_facts: true
+
+- name: Build Sybase environment variables using delegate host facts
+  set_fact:
+    sybase_environment:
+      PATH: "{{ sybase_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
+      SYBASE: "{{ sybase_environment_base.SYBASE }}"
+      SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
+      SSH_AUTH_SOCK: "{{ hostvars[inspec_delegate_host].ansible_env.SSH_AUTH_SOCK | default('') }}"
+
 - name: Create SSH keys directory for Sybase
   file:
     path: "{{ sybase_controls_base_dir }}/SSH_keys"
@@ -53,8 +67,4 @@
     - sybase_use_ssh | default(true)
     - inspec_debug_mode | default(false)
 
-- name: Set SSH connection string for InSpec (matching original script pattern)
-  set_fact:
-    sybase_ssh_connection: "--ssh://{{ sybase_ssh_user }}:{{ sybase_ssh_password }}@{{ sybase_server }} -o {{ sybase_ssh_key_path }}"
-  when: sybase_use_ssh | default(true)
-  no_log: true
+# SSH connection string no longer needed - credentials passed via environment variables in execute.yml

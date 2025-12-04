@@ -38,11 +38,22 @@
       when: sybase_use_ssh | default(true)
   no_log: true
 
-- name: Check if Sybase version directory exists
+- name: Determine execution mode for validation
+  set_fact:
+    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 }}"
+
+- name: Check if Sybase version directory exists (delegate mode)
   stat:
     path: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
   register: sybase_version_dir
   delegate_to: "{{ inspec_delegate_host }}"
+  when: use_delegate_host | bool
+
+- name: Check if Sybase version directory exists (local mode)
+  stat:
+    path: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
+  register: sybase_version_dir
+  when: not (use_delegate_host | bool)
 
 - name: Fail if Sybase version directory doesn't exist
   fail:
