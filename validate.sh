@@ -29,9 +29,9 @@
 
 # export SUBSCRIPTION="12345678-1234-1234-1234-123456789abc"
 
-# export AZURE_MONITOR_ID="/subscriptions/…/microsoft.monitor/accounts/my-amw"
+# export AZURE_MONITOR_ID="/subscriptions/.../microsoft.monitor/accounts/my-amw"
 
-# export GRAFANA_ID="/subscriptions/…/Microsoft.Dashboard/grafana/my-grafana"
+# export GRAFANA_ID="/subscriptions/.../Microsoft.Dashboard/grafana/my-grafana"
 
 # ./validate_monitoring_enhanced.sh
 
@@ -179,8 +179,8 @@ echo "Export these variables before running:"
 echo '  export CLUSTER_NAME="your-cluster-name"'
 echo '  export RESOURCE_GROUP="your-resource-group"'
 echo '  export SUBSCRIPTION="your-subscription-id"'
-echo '  export AZURE_MONITOR_ID="/subscriptions/…/microsoft.monitor/accounts/…"'
-echo '  export GRAFANA_ID="/subscriptions/…/Microsoft.Dashboard/grafana/…"'
+echo '  export AZURE_MONITOR_ID="/subscriptions/.../microsoft.monitor/accounts/..."'
+echo '  export GRAFANA_ID="/subscriptions/.../Microsoft.Dashboard/grafana/..."'
 exit 2
 fi
 
@@ -610,7 +610,7 @@ else
 fi
 
 else
-log_fail "No DCE configured in DCR - searching for available DCEs…"
+log_fail "No DCE configured in DCR - searching for available DCEs..."
 
 # Search for existing DCEs in the subscription
 ALL_DCES=$(az monitor data-collection endpoint list \
