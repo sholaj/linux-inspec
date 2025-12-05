@@ -23,15 +23,15 @@
 
 # USAGE:
 
-# export CLUSTER_NAME=“my-cluster”
+# export CLUSTER_NAME="my-cluster"
 
-# export RESOURCE_GROUP=“my-rg”
+# export RESOURCE_GROUP="my-rg"
 
-# export SUBSCRIPTION=“12345678-1234-1234-1234-123456789abc”
+# export SUBSCRIPTION="12345678-1234-1234-1234-123456789abc"
 
-# export AZURE_MONITOR_ID=”/subscriptions/…/microsoft.monitor/accounts/my-amw”
+# export AZURE_MONITOR_ID="/subscriptions/…/microsoft.monitor/accounts/my-amw"
 
-# export GRAFANA_ID=”/subscriptions/…/Microsoft.Dashboard/grafana/my-grafana”
+# export GRAFANA_ID="/subscriptions/…/Microsoft.Dashboard/grafana/my-grafana"
 
 # ./validate_monitoring_enhanced.sh
 
@@ -39,24 +39,24 @@
 
 set -euo pipefail
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Colors and Formatting
 
-#—————————————————————————––
-RED=’\033[0;31m’
-GREEN=’\033[0;32m’
-YELLOW=’\033[1;33m’
-BLUE=’\033[0;34m’
-CYAN=’\033[0;36m’
-BOLD=’\033[1m’
-NC=’\033[0m’
+#------------------------------------------------------
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+BLUE='\033[0;34m'
+CYAN='\033[0;36m'
+BOLD='\033[1m'
+NC='\033[0m'
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Counters and Result Arrays
 
-#—————————————————————————––
+#------------------------------------------------------
 TOTAL=0
 PASSED=0
 FAILED=0
@@ -65,262 +65,261 @@ WARNINGS=0
 declare -a FAILED_ITEMS=()
 declare -a REMEDIATION=()
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Logging Functions
 
-#—————————————————————————––
+#------------------------------------------------------
 log_info() {
-echo -e “${BLUE}[INFO]${NC} $1”
+echo -e "${BLUE}[INFO]${NC} $1"
 }
 
 log_pass() {
-echo -e “${GREEN}[PASS]${NC} $1”
+echo -e "${GREEN}[PASS]${NC} $1"
 ((PASSED++))
 ((TOTAL++))
 }
 
 log_fail() {
-echo -e “${RED}[FAIL]${NC} $1”
-FAILED_ITEMS+=(”$1”)
+echo -e "${RED}[FAIL]${NC} $1"
+FAILED_ITEMS+=("$1")
 ((FAILED++))
 ((TOTAL++))
 }
 
 log_warn() {
-echo -e “${YELLOW}[WARN]${NC} $1”
+echo -e "${YELLOW}[WARN]${NC} $1"
 ((WARNINGS++))
 ((TOTAL++))
 }
 
 log_section() {
-echo “”
-echo -e “${BOLD}======================================================================${NC}”
-echo -e “${BOLD}  $1${NC}”
-echo -e “${BOLD}======================================================================${NC}”
+echo ""
+echo -e "${BOLD}======================================================================${NC}"
+echo -e "${BOLD}  $1${NC}"
+echo -e "${BOLD}======================================================================${NC}"
 }
 
 log_subsection() {
-echo “”
-echo -e “${BOLD}— $1 —${NC}”
+echo ""
+echo -e "${BOLD}-- $1 --${NC}"
 }
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Header
 
-#—————————————————————————––
-echo “”
-echo -e “${BOLD}+====================================================================+${NC}”
-echo -e “${BOLD}|     AKS MONITORING PIPELINE VALIDATION v2.2                       |${NC}”
-echo -e “${BOLD}|     Enhanced DCE (Data Collection Endpoint) Checks                |${NC}”
-echo -e “${BOLD}+====================================================================+${NC}”
-echo “”
+#------------------------------------------------------
+echo ""
+echo -e "${BOLD}+====================================================================+${NC}"
+echo -e "${BOLD}|     AKS MONITORING PIPELINE VALIDATION v2.2                       |${NC}"
+echo -e "${BOLD}|     Enhanced DCE (Data Collection Endpoint) Checks                |${NC}"
+echo -e "${BOLD}+====================================================================+${NC}"
+echo ""
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Validate Required Variables
 
-#—————————————————————————––
-log_section “REQUIRED VARIABLES”
+#------------------------------------------------------
+log_section "REQUIRED VARIABLES"
 
 missing=()
 
-if [[ -z “${CLUSTER_NAME:-}” ]]; then
-missing+=(“CLUSTER_NAME”)
+if [[ -z "${CLUSTER_NAME:-}" ]]; then
+missing+=("CLUSTER_NAME")
 else
-log_pass “CLUSTER_NAME = $CLUSTER_NAME”
+log_pass "CLUSTER_NAME = $CLUSTER_NAME"
 fi
 
-if [[ -z “${RESOURCE_GROUP:-}” ]]; then
-missing+=(“RESOURCE_GROUP”)
+if [[ -z "${RESOURCE_GROUP:-}" ]]; then
+missing+=("RESOURCE_GROUP")
 else
-log_pass “RESOURCE_GROUP = $RESOURCE_GROUP”
+log_pass "RESOURCE_GROUP = $RESOURCE_GROUP"
 fi
 
-if [[ -z “${SUBSCRIPTION:-}” ]]; then
-missing+=(“SUBSCRIPTION”)
+if [[ -z "${SUBSCRIPTION:-}" ]]; then
+missing+=("SUBSCRIPTION")
 else
-log_pass “SUBSCRIPTION = $SUBSCRIPTION”
+log_pass "SUBSCRIPTION = $SUBSCRIPTION"
 fi
 
-if [[ -z “${AZURE_MONITOR_ID:-}” ]]; then
-missing+=(“AZURE_MONITOR_ID”)
+if [[ -z "${AZURE_MONITOR_ID:-}" ]]; then
+missing+=("AZURE_MONITOR_ID")
 else
-log_pass “AZURE_MONITOR_ID set”
+log_pass "AZURE_MONITOR_ID set"
 # Extract name and resource group from the full ID
-AMW_NAME=$(echo “$AZURE_MONITOR_ID” | grep -oP ‘(?<=accounts/)[^/]+$’ || basename “$AZURE_MONITOR_ID”)
-AMW_RG=$(echo “$AZURE_MONITOR_ID” | grep -oP ‘(?<=resourceGroups/)[^/]+’ || echo “”)
-log_info “  Workspace Name: $AMW_NAME”
-log_info “  Workspace RG: $AMW_RG”
+AMW_NAME=$(echo "$AZURE_MONITOR_ID" | grep -oP '(?<=accounts/)[^/]+$' || basename "$AZURE_MONITOR_ID")
+AMW_RG=$(echo "$AZURE_MONITOR_ID" | grep -oP '(?<=resourceGroups/)[^/]+' || echo "")
+log_info "  Workspace Name: $AMW_NAME"
+log_info "  Workspace RG: $AMW_RG"
 fi
 
-if [[ -z “${GRAFANA_ID:-}” ]]; then
-missing+=(“GRAFANA_ID”)
+if [[ -z "${GRAFANA_ID:-}" ]]; then
+missing+=("GRAFANA_ID")
 else
-log_pass “GRAFANA_ID set”
+log_pass "GRAFANA_ID set"
 # Extract name and resource group from the full ID
-GRAF_NAME=$(echo “$GRAFANA_ID” | grep -oP ‘(?<=grafana/)[^/]+$’ || basename “$GRAFANA_ID”)
-GRAF_RG=$(echo “$GRAFANA_ID” | grep -oP ‘(?<=resourceGroups/)[^/]+’ || echo “”)
-log_info “  Grafana Name: $GRAF_NAME”
-log_info “  Grafana RG: $GRAF_RG”
+GRAF_NAME=$(echo "$GRAFANA_ID" | grep -oP '(?<=grafana/)[^/]+$' || basename "$GRAFANA_ID")
+GRAF_RG=$(echo "$GRAFANA_ID" | grep -oP '(?<=resourceGroups/)[^/]+' || echo "")
+log_info "  Grafana Name: $GRAF_NAME"
+log_info "  Grafana RG: $GRAF_RG"
 fi
 
 # Exit if any variables are missing
 
 if [[ ${#missing[@]} -gt 0 ]]; then
-echo “”
-echo -e “${RED}${BOLD}ERROR: Missing required variables:${NC}”
-for var in “${missing[@]}”; do
-echo -e “  ${RED}x${NC} $var”
+echo ""
+echo -e "${RED}${BOLD}ERROR: Missing required variables:${NC}"
+for var in "${missing[@]}"; do
+echo -e "  ${RED}x${NC} $var"
 done
-echo “”
-echo “Export these variables before running:”
-echo “  export CLUSTER_NAME="your-cluster-name"”
-echo “  export RESOURCE_GROUP="your-resource-group"”
-echo “  export SUBSCRIPTION="your-subscription-id"”
-echo “  export AZURE_MONITOR_ID="/subscriptions/…/microsoft.monitor/accounts/…"”
-echo “  export GRAFANA_ID="/subscriptions/…/Microsoft.Dashboard/grafana/…"”
+echo ""
+echo "Export these variables before running:"
+echo '  export CLUSTER_NAME="your-cluster-name"'
+echo '  export RESOURCE_GROUP="your-resource-group"'
+echo '  export SUBSCRIPTION="your-subscription-id"'
+echo '  export AZURE_MONITOR_ID="/subscriptions/…/microsoft.monitor/accounts/…"'
+echo '  export GRAFANA_ID="/subscriptions/…/Microsoft.Dashboard/grafana/…"'
 exit 2
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Prerequisites Check
 
-#—————————————————————————––
-log_section “PREREQUISITES”
+#------------------------------------------------------
+log_section "PREREQUISITES"
 
 # Check Azure CLI
 
 if command -v az &>/dev/null; then
-log_pass “Azure CLI installed”
+log_pass "Azure CLI installed"
 else
-log_fail “Azure CLI not installed”
+log_fail "Azure CLI not installed"
 exit 2
 fi
 
 # Check jq
 
 if command -v jq &>/dev/null; then
-log_pass “jq installed”
+log_pass "jq installed"
 else
-log_fail “jq not installed - required for JSON parsing”
+log_fail "jq not installed - required for JSON parsing"
 exit 2
 fi
 
 # Check Azure authentication
 
 if az account show &>/dev/null; then
-log_pass “Authenticated to Azure”
+log_pass "Authenticated to Azure"
 else
-log_fail “Not authenticated - run ‘az login’ first”
+log_fail "Not authenticated - run 'az login' first"
 exit 2
 fi
 
 # Set subscription
 
-if az account set –subscription “$SUBSCRIPTION” &>/dev/null; then
-log_pass “Subscription set: $SUBSCRIPTION”
+if az account set --subscription "$SUBSCRIPTION" &>/dev/null; then
+log_pass "Subscription set: $SUBSCRIPTION"
 else
-log_fail “Failed to set subscription: $SUBSCRIPTION”
+log_fail "Failed to set subscription: $SUBSCRIPTION"
 exit 2
 fi
 
 # Check kubectl (optional)
 
-SKIP_KUBECTL=“false”
+SKIP_KUBECTL="false"
 if command -v kubectl &>/dev/null; then
-log_pass “kubectl installed”
+log_pass "kubectl installed"
 else
-log_warn “kubectl not available - skipping in-cluster checks”
-SKIP_KUBECTL=“true”
+log_warn "kubectl not available - skipping in-cluster checks"
+SKIP_KUBECTL="true"
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Phase 1: Cluster Validation
 
-#—————————————————————————––
-log_section “PHASE 1: CLUSTER VALIDATION”
+#------------------------------------------------------
+log_section "PHASE 1: CLUSTER VALIDATION"
 
-log_subsection “Cluster Existence”
+log_subsection "Cluster Existence"
 
-CLUSTER_JSON=$(az aks show   
-–name “$CLUSTER_NAME”   
-–resource-group “$RESOURCE_GROUP”   
-–output json 2>/dev/null) || {
-log_fail “Cluster ‘$CLUSTER_NAME’ not found in resource group ‘$RESOURCE_GROUP’”
+CLUSTER_JSON=$(az aks show \
+--name "$CLUSTER_NAME" \
+--resource-group "$RESOURCE_GROUP" \
+--output json 2>/dev/null) || {
+log_fail "Cluster '$CLUSTER_NAME' not found in resource group '$RESOURCE_GROUP'"
 exit 1
 }
 
-log_pass “Cluster exists: $CLUSTER_NAME”
+log_pass "Cluster exists: $CLUSTER_NAME"
 
 # Extract cluster details
 
-CLUSTER_ID=$(echo “$CLUSTER_JSON” | jq -r ‘.id’)
-CLUSTER_LOC=$(echo “$CLUSTER_JSON” | jq -r ‘.location’)
-CLUSTER_STATE=$(echo “$CLUSTER_JSON” | jq -r ‘.provisioningState’)
-CLUSTER_POWER=$(echo “$CLUSTER_JSON” | jq -r ‘.powerState.code’)
-K8S_VERSION=$(echo “$CLUSTER_JSON” | jq -r ‘.kubernetesVersion’)
+CLUSTER_ID=$(echo "$CLUSTER_JSON" | jq -r '.id')
+CLUSTER_LOC=$(echo "$CLUSTER_JSON" | jq -r '.location')
+CLUSTER_STATE=$(echo "$CLUSTER_JSON" | jq -r '.provisioningState')
+CLUSTER_POWER=$(echo "$CLUSTER_JSON" | jq -r '.powerState.code')
+K8S_VERSION=$(echo "$CLUSTER_JSON" | jq -r '.kubernetesVersion')
 
-log_info “  Location: $CLUSTER_LOC”
-log_info “  Kubernetes Version: $K8S_VERSION”
-log_info “  Provisioning State: $CLUSTER_STATE”
-log_info “  Power State: $CLUSTER_POWER”
+log_info "  Location: $CLUSTER_LOC"
+log_info "  Kubernetes Version: $K8S_VERSION"
+log_info "  Provisioning State: $CLUSTER_STATE"
+log_info "  Power State: $CLUSTER_POWER"
 
 # Validate cluster state
 
-if [[ “$CLUSTER_STATE” == “Succeeded” ]]; then
-log_pass “Cluster provisioned successfully”
+if [[ "$CLUSTER_STATE" == "Succeeded" ]]; then
+log_pass "Cluster provisioned successfully"
 else
-log_fail “Cluster provisioning state: $CLUSTER_STATE”
+log_fail "Cluster provisioning state: $CLUSTER_STATE"
 fi
 
-if [[ “$CLUSTER_POWER” == “Running” ]]; then
-log_pass “Cluster is running”
+if [[ "$CLUSTER_POWER" == "Running" ]]; then
+log_pass "Cluster is running"
 else
-log_fail “Cluster not running: $CLUSTER_POWER”
+log_fail "Cluster not running: $CLUSTER_POWER"
 fi
 
-log_subsection “Azure Monitor Configuration”
+log_subsection "Azure Monitor Configuration"
 
 # Check Azure Monitor Metrics enabled
 
-METRICS_ENABLED=$(echo “$CLUSTER_JSON” | jq -r ‘.azureMonitorProfile.metrics.enabled // false’)
-if [[ “$METRICS_ENABLED” == “true” ]]; then
-log_pass “Azure Monitor Metrics is ENABLED”
+METRICS_ENABLED=$(echo "$CLUSTER_JSON" | jq -r '.azureMonitorProfile.metrics.enabled // false')
+if [[ "$METRICS_ENABLED" == "true" ]]; then
+log_pass "Azure Monitor Metrics is ENABLED"
 else
-log_fail “Azure Monitor Metrics is NOT enabled”
-REMEDIATION+=(“Enable metrics: az aks update -n $CLUSTER_NAME -g $RESOURCE_GROUP –enable-azure-monitor-metrics –azure-monitor-workspace-resource-id $AZURE_MONITOR_ID”)
+log_fail "Azure Monitor Metrics is NOT enabled"
+REMEDIATION+=("Enable metrics: az aks update -n $CLUSTER_NAME -g $RESOURCE_GROUP --enable-azure-monitor-metrics --azure-monitor-workspace-resource-id $AZURE_MONITOR_ID")
 fi
 
 # Check Container Insights (OMS Agent)
 
-OMS_ENABLED=$(echo “$CLUSTER_JSON” | jq -r ‘.addonProfiles.omsagent.enabled // false’)
-if [[ “$OMS_ENABLED” == “true” ]]; then
-log_pass “Container Insights (OMS Agent) is ENABLED”
+OMS_ENABLED=$(echo "$CLUSTER_JSON" | jq -r '.addonProfiles.omsagent.enabled // false')
+if [[ "$OMS_ENABLED" == "true" ]]; then
+log_pass "Container Insights (OMS Agent) is ENABLED"
 else
-log_warn “Container Insights not enabled - logs won’t flow to Log Analytics”
+log_warn "Container Insights not enabled - logs won't flow to Log Analytics"
 fi
 
-# Store kubelet identity for RBAC checks
+# Store kubelet identity for RBAC checks (currently not used)
+# shellcheck disable=SC2034
+KUBELET_ID=$(echo "$CLUSTER_JSON" | jq -r '.identityProfile.kubeletidentity.objectId // empty')
 
-KUBELET_ID=$(echo “$CLUSTER_JSON” | jq -r ‘.identityProfile.kubeletidentity.objectId // empty’)
-
-#—————————————————————————––
+#------------------------------------------------------
 
 # Phase 2: In-Cluster Agents
 
-#—————————————————————————––
-log_section “PHASE 2: IN-CLUSTER AGENTS”
+#------------------------------------------------------
+log_section "PHASE 2: IN-CLUSTER AGENTS"
 
-if [[ “$SKIP_KUBECTL” == “true” ]]; then
-log_warn “Skipping in-cluster checks (kubectl not available)”
+if [[ "$SKIP_KUBECTL" == "true" ]]; then
+log_warn "Skipping in-cluster checks (kubectl not available)"
 else
-log_subsection “Cluster Credentials”
+log_subsection "Cluster Credentials"
 
-```
 # Try to get credentials
 if az aks get-credentials \
     --name "$CLUSTER_NAME" \
@@ -397,38 +396,36 @@ if [[ "$SKIP_KUBECTL" != "true" ]]; then
         SKIP_KUBECTL="true"
     fi
 fi
-```
 
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Phase 3: Data Collection Rules (DCR)
 
-#—————————————————————————––
-log_section “PHASE 3: DATA COLLECTION RULES (DCR)”
+#------------------------------------------------------
+log_section "PHASE 3: DATA COLLECTION RULES (DCR)"
 
-log_subsection “DCR Associations”
+log_subsection "DCR Associations"
 
 # List DCR associations for the cluster
 
-DCR_ASSOC=$(az monitor data-collection rule association list   
-–resource “$CLUSTER_ID”   
-–output json 2>/dev/null) || DCR_ASSOC=”[]”
+DCR_ASSOC=$(az monitor data-collection rule association list \
+--resource "$CLUSTER_ID" \
+--output json 2>/dev/null) || DCR_ASSOC="[]"
 
-DCR_COUNT=$(echo “$DCR_ASSOC” | jq ‘length’)
+DCR_COUNT=$(echo "$DCR_ASSOC" | jq 'length')
 
 # Initialize variables for chain validation
 
-DCE_IN_DCR=””
-AMW_DEST=””
-DCR_NAME=””
-DCR_RG=””
+DCE_IN_DCR=""
+AMW_DEST=""
+DCR_NAME=""
+DCR_RG=""
 
-if [[ “$DCR_COUNT” -gt 0 ]]; then
-log_pass “Found $DCR_COUNT DCR association(s)”
+if [[ "$DCR_COUNT" -gt 0 ]]; then
+log_pass "Found $DCR_COUNT DCR association(s)"
 
-```
 # List all associations
 echo "$DCR_ASSOC" | jq -r '.[] | "  - \(.name) -> \(.dataCollectionRuleId | split("/") | .[-1])"'
 
@@ -496,7 +493,7 @@ if [[ -n "$DCR_NAME" && -n "$DCR_RG" ]]; then
         
         if [[ -n "$AMW_DEST" ]]; then
             log_pass "DCR has Azure Monitor Workspace destination"
-            log_info "  Destination: $(basename $AMW_DEST)"
+            log_info "  Destination: $(basename "$AMW_DEST")"
             
             # Check if it matches the provided AZURE_MONITOR_ID
             if [[ "$AMW_DEST" == "$AZURE_MONITOR_ID" ]]; then
@@ -514,13 +511,11 @@ if [[ -n "$DCR_NAME" && -n "$DCR_RG" ]]; then
         log_fail "Could not retrieve DCR details for: $DCR_NAME"
     fi
 fi
-```
 
 else
-log_fail “NO DCR associations found for cluster - THIS IS LIKELY YOUR PROBLEM”
-REMEDIATION+=(“Associate a DCR to the cluster: az monitor data-collection rule association create –name prometheus-assoc –resource ‘$CLUSTER_ID’ –data-collection-rule-id ‘<DCR_ID>’”)
+log_fail "NO DCR associations found for cluster - THIS IS LIKELY YOUR PROBLEM"
+REMEDIATION+=("Associate a DCR to the cluster: az monitor data-collection rule association create --name prometheus-assoc --resource '$CLUSTER_ID' --data-collection-rule-id '<DCR_ID>'")
 
-```
 # Search for available DCRs
 log_info "Searching for available DCRs in subscription..."
 AVAILABLE_DCRS=$(az monitor data-collection rule list \
@@ -533,25 +528,23 @@ if [[ "$AVAIL_COUNT" -gt 0 ]]; then
     log_info "Found $AVAIL_COUNT DCR(s) in subscription:"
     echo "$AVAILABLE_DCRS" | jq -r '.[] | "  - \(.name) (location: \(.location))"' | head -5
 fi
-```
 
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Phase 4: Data Collection Endpoint (DCE) - ENHANCED VALIDATION
 
-#—————————————————————————––
-log_section “PHASE 4: DATA COLLECTION ENDPOINT (DCE)”
+#------------------------------------------------------
+log_section "PHASE 4: DATA COLLECTION ENDPOINT (DCE)"
 
 # Initialize DCE validation variables
 
-METRICS_EP=””
+METRICS_EP=""
 
-if [[ -n “${DCE_NAME:-}” && -n “${DCE_RG:-}” ]]; then
-log_subsection “Validating DCE: $DCE_NAME”
+if [[ -n "${DCE_NAME:-}" && -n "${DCE_RG:-}" ]]; then
+log_subsection "Validating DCE: $DCE_NAME"
 
-```
 DCE_DETAILS=$(az monitor data-collection endpoint show \
     --name "$DCE_NAME" \
     --resource-group "$DCE_RG" \
@@ -615,12 +608,10 @@ else
     log_fail "DCE '$DCE_NAME' not found in resource group '$DCE_RG'"
     REMEDIATION+=("Create DCE or verify the dataCollectionEndpointId in DCR is correct")
 fi
-```
 
 else
-log_fail “No DCE configured in DCR - searching for available DCEs…”
+log_fail "No DCE configured in DCR - searching for available DCEs…"
 
-```
 # Search for existing DCEs in the subscription
 ALL_DCES=$(az monitor data-collection endpoint list \
     --subscription "$SUBSCRIPTION" \
@@ -650,84 +641,82 @@ else
     log_fail "NO Data Collection Endpoints found in subscription"
     REMEDIATION+=("Create DCE: az monitor data-collection endpoint create --name dce-$CLUSTER_LOC --resource-group $RESOURCE_GROUP --location $CLUSTER_LOC --public-network-access Enabled")
 fi
-```
 
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # DCE-DCR-AMW Chain Validation Summary
 
-#—————————————————————————––
-log_subsection “Complete Data Flow Chain Validation”
+#------------------------------------------------------
+log_subsection "Complete Data Flow Chain Validation"
 
-echo “”
-log_info “Checking complete metrics flow chain:”
-echo “”
+echo ""
+log_info "Checking complete metrics flow chain:"
+echo ""
 
 CHAIN_OK=true
 
 # Check 1: DCR Association
 
-if [[ “$DCR_COUNT” -gt 0 ]]; then
-echo -e “  ${GREEN}[OK]${NC} DCR Association exists”
+if [[ "$DCR_COUNT" -gt 0 ]]; then
+echo -e "  ${GREEN}[OK]${NC} DCR Association exists"
 else
-echo -e “  ${RED}[X]${NC} DCR Association MISSING”
+echo -e "  ${RED}[X]${NC} DCR Association MISSING"
 CHAIN_OK=false
 fi
 
 # Check 2: DCE in DCR
 
-if [[ -n “${DCE_IN_DCR:-}” ]]; then
-echo -e “  ${GREEN}[OK]${NC} DCE configured in DCR: $DCE_NAME”
+if [[ -n "${DCE_IN_DCR:-}" ]]; then
+echo -e "  ${GREEN}[OK]${NC} DCE configured in DCR: $DCE_NAME"
 else
-echo -e “  ${RED}[X]${NC} DCE NOT configured in DCR”
+echo -e "  ${RED}[X]${NC} DCE NOT configured in DCR"
 CHAIN_OK=false
 fi
 
 # Check 3: DCE Metrics Ingestion Endpoint
 
-if [[ -n “${METRICS_EP:-}” ]]; then
-echo -e “  ${GREEN}[OK]${NC} DCE metrics ingestion endpoint available”
+if [[ -n "${METRICS_EP:-}" ]]; then
+echo -e "  ${GREEN}[OK]${NC} DCE metrics ingestion endpoint available"
 else
-echo -e “  ${RED}[X]${NC} DCE metrics ingestion endpoint MISSING”
+echo -e "  ${RED}[X]${NC} DCE metrics ingestion endpoint MISSING"
 CHAIN_OK=false
 fi
 
 # Check 4: AMW Destination
 
-if [[ -n “${AMW_DEST:-}” ]]; then
-echo -e “  ${GREEN}[OK]${NC} Azure Monitor Workspace destination configured”
+if [[ -n "${AMW_DEST:-}" ]]; then
+echo -e "  ${GREEN}[OK]${NC} Azure Monitor Workspace destination configured"
 else
-echo -e “  ${RED}[X]${NC} Azure Monitor Workspace destination MISSING”
+echo -e "  ${RED}[X]${NC} Azure Monitor Workspace destination MISSING"
 CHAIN_OK=false
 fi
 
-echo “”
-if [[ “$CHAIN_OK” == “true” ]]; then
-log_pass “Complete DCE-DCR-AMW chain is properly configured”
+echo ""
+if [[ "$CHAIN_OK" == "true" ]]; then
+log_pass "Complete DCE-DCR-AMW chain is properly configured"
 else
-log_fail “DCE-DCR-AMW chain has gaps - metrics cannot flow end-to-end”
+log_fail "DCE-DCR-AMW chain has gaps - metrics cannot flow end-to-end"
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Phase 5: Azure Monitor Workspace
 
-#—————————————————————————––
-log_section “PHASE 5: AZURE MONITOR WORKSPACE”
+#------------------------------------------------------
+log_section "PHASE 5: AZURE MONITOR WORKSPACE"
 
-log_subsection “Workspace Validation”
+log_subsection "Workspace Validation"
 
-AMW_DETAILS=$(az monitor account show   
-–name “$AMW_NAME”   
-–resource-group “$AMW_RG”   
-–output json 2>/dev/null) || AMW_DETAILS=””
+AMW_DETAILS=$(az monitor account show \
+--name "$AMW_NAME" \
+--resource-group "$AMW_RG" \
+--output json 2>/dev/null) || AMW_DETAILS=""
 
-if [[ -n “$AMW_DETAILS” ]]; then
-log_pass “Azure Monitor Workspace exists: $AMW_NAME”
+if [[ -n "$AMW_DETAILS" ]]; then
+log_pass "Azure Monitor Workspace exists: $AMW_NAME"
 
-```
 # Check provisioning state
 AMW_STATE=$(echo "$AMW_DETAILS" | jq -r '.provisioningState')
 if [[ "$AMW_STATE" == "Succeeded" ]]; then
@@ -754,30 +743,28 @@ if [[ -n "$QUERY_EP" ]]; then
 else
     log_warn "No Prometheus query endpoint found"
 fi
-```
 
 else
-log_fail “Azure Monitor Workspace ‘$AMW_NAME’ not found in resource group ‘$AMW_RG’”
+log_fail "Azure Monitor Workspace '$AMW_NAME' not found in resource group '$AMW_RG'"
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Phase 6: Grafana Integration
 
-#—————————————————————————––
-log_section “PHASE 6: GRAFANA INTEGRATION”
+#------------------------------------------------------
+log_section "PHASE 6: GRAFANA INTEGRATION"
 
-log_subsection “Grafana Instance”
+log_subsection "Grafana Instance"
 
-GRAF_DETAILS=$(az grafana show   
-–name “$GRAF_NAME”   
-–resource-group “$GRAF_RG”   
-–output json 2>/dev/null) || GRAF_DETAILS=””
+GRAF_DETAILS=$(az grafana show \
+--name "$GRAF_NAME" \
+--resource-group "$GRAF_RG" \
+--output json 2>/dev/null) || GRAF_DETAILS=""
 
-if [[ -n “$GRAF_DETAILS” ]]; then
-log_pass “Grafana instance exists: $GRAF_NAME”
+if [[ -n "$GRAF_DETAILS" ]]; then
+log_pass "Grafana instance exists: $GRAF_NAME"
 
-```
 # Check provisioning state
 GRAF_STATE=$(echo "$GRAF_DETAILS" | jq -r '.properties.provisioningState')
 if [[ "$GRAF_STATE" == "Succeeded" ]]; then
@@ -839,26 +826,24 @@ if [[ -n "$GRAF_IDENTITY" ]]; then
 else
     log_warn "Could not determine Grafana managed identity"
 fi
-```
 
 else
-log_fail “Grafana instance ‘$GRAF_NAME’ not found in resource group ‘$GRAF_RG’”
+log_fail "Grafana instance '$GRAF_NAME' not found in resource group '$GRAF_RG'"
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Phase 7: Network Connectivity
 
-#—————————————————————————––
-log_section “PHASE 7: NETWORK CONNECTIVITY”
+#------------------------------------------------------
+log_section "PHASE 7: NETWORK CONNECTIVITY"
 
-if [[ “$SKIP_KUBECTL” != “true” ]]; then
-log_info “Required endpoints for metrics ingestion:”
-log_info “  - *.monitor.azure.com”
-log_info “  - *.ingest.monitor.azure.com”
-log_info “  - ${CLUSTER_LOC}.monitoring.azure.com”
+if [[ "$SKIP_KUBECTL" != "true" ]]; then
+log_info "Required endpoints for metrics ingestion:"
+log_info "  - *.monitor.azure.com"
+log_info "  - *.ingest.monitor.azure.com"
+log_info "  - ${CLUSTER_LOC}.monitoring.azure.com"
 
-```
 if [[ -n "${METRICS_EP:-}" ]]; then
     log_info "  - $METRICS_EP (DCE endpoint)"
 fi
@@ -873,75 +858,74 @@ if [[ "$NET_POL" -gt 0 ]]; then
 else
     log_pass "No NetworkPolicies found (egress unrestricted)"
 fi
-```
 
 else
-log_warn “Skipping network checks (kubectl not available)”
+log_warn "Skipping network checks (kubectl not available)"
 fi
 
-#—————————————————————————––
+#------------------------------------------------------
 
 # Summary Report
 
-#—————————————————————————––
-log_section “VALIDATION SUMMARY”
+#------------------------------------------------------
+log_section "VALIDATION SUMMARY"
 
-echo “”
-echo -e “${BOLD}Configuration:${NC}”
-echo “  Cluster:            $CLUSTER_NAME”
-echo “  Cluster Location:   $CLUSTER_LOC”
-echo “  Resource Group:     $RESOURCE_GROUP”
-echo “  Subscription:       $SUBSCRIPTION”
-echo “  AMW:                $AMW_NAME”
-echo “  Grafana:            $GRAF_NAME”
-echo “  DCR:                ${DCR_NAME:-NOT FOUND}”
-echo “  DCE:                ${DCE_NAME:-NOT CONFIGURED}”
-echo “”
-echo -e “${BOLD}Results:${NC}”
-echo -e “  ${GREEN}Passed:${NC}   $PASSED”
-echo -e “  ${RED}Failed:${NC}   $FAILED”
-echo -e “  ${YELLOW}Warnings:${NC} $WARNINGS”
-echo -e “  Total:    $TOTAL”
-echo “”
+echo ""
+echo -e "${BOLD}Configuration:${NC}"
+echo "  Cluster:            $CLUSTER_NAME"
+echo "  Cluster Location:   $CLUSTER_LOC"
+echo "  Resource Group:     $RESOURCE_GROUP"
+echo "  Subscription:       $SUBSCRIPTION"
+echo "  AMW:                $AMW_NAME"
+echo "  Grafana:            $GRAF_NAME"
+echo "  DCR:                ${DCR_NAME:-NOT FOUND}"
+echo "  DCE:                ${DCE_NAME:-NOT CONFIGURED}"
+echo ""
+echo -e "${BOLD}Results:${NC}"
+echo -e "  ${GREEN}Passed:${NC}   $PASSED"
+echo -e "  ${RED}Failed:${NC}   $FAILED"
+echo -e "  ${YELLOW}Warnings:${NC} $WARNINGS"
+echo -e "  Total:    $TOTAL"
+echo ""
 
 # Determine overall status
 
-if [[ “$FAILED” -eq 0 ]]; then
-echo -e “${GREEN}${BOLD}STATUS: HEALTHY${NC}”
-echo “All critical checks passed. Monitoring pipeline should be functioning.”
-elif [[ “$FAILED” -le 3 ]]; then
-echo -e “${YELLOW}${BOLD}STATUS: DEGRADED${NC}”
-echo “Some issues detected. Review failed checks below.”
+if [[ "$FAILED" -eq 0 ]]; then
+echo -e "${GREEN}${BOLD}STATUS: HEALTHY${NC}"
+echo "All critical checks passed. Monitoring pipeline should be functioning."
+elif [[ "$FAILED" -le 3 ]]; then
+echo -e "${YELLOW}${BOLD}STATUS: DEGRADED${NC}"
+echo "Some issues detected. Review failed checks below."
 else
-echo -e “${RED}${BOLD}STATUS: UNHEALTHY${NC}”
-echo “Multiple issues detected. Monitoring pipeline is likely not functioning.”
+echo -e "${RED}${BOLD}STATUS: UNHEALTHY${NC}"
+echo "Multiple issues detected. Monitoring pipeline is likely not functioning."
 fi
 
 # List failed items
 
 if [[ ${#FAILED_ITEMS[@]} -gt 0 ]]; then
-echo “”
-echo -e “${RED}${BOLD}Failed Checks:${NC}”
-for item in “${FAILED_ITEMS[@]}”; do
-echo -e “  ${RED}x${NC} $item”
+echo ""
+echo -e "${RED}${BOLD}Failed Checks:${NC}"
+for item in "${FAILED_ITEMS[@]}"; do
+echo -e "  ${RED}x${NC} $item"
 done
 fi
 
 # List remediation steps
 
 if [[ ${#REMEDIATION[@]} -gt 0 ]]; then
-echo “”
-echo -e “${CYAN}${BOLD}Remediation Steps:${NC}”
+echo ""
+echo -e "${CYAN}${BOLD}Remediation Steps:${NC}"
 i=1
-for step in “${REMEDIATION[@]}”; do
-echo “  $i. $step”
+for step in "${REMEDIATION[@]}"; do
+echo "  $i. $step"
 ((i++))
 done
 fi
 
-echo “”
-echo -e “${BOLD}======================================================================${NC}”
+echo ""
+echo -e "${BOLD}======================================================================${NC}"
 
 # Exit with appropriate code
 
-[[ “$FAILED” -gt 0 ]] && exit 1 || exit 0
+[[ "$FAILED" -gt 0 ]] && exit 1 || exit 0
