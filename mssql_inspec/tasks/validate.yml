@@ -25,24 +25,15 @@
         fail_msg: "Required MSSQL connection parameters are missing"
   no_log: true
 
-- name: Determine execution mode for validation
-  set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 }}"
-
-- name: Check if MSSQL version directory exists (delegate mode)
+# This consolidated approach eliminates the contradiction
+- name: Check if MSSQL version directory exists
   stat:
     path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
   register: version_dir_check
-  delegate_to: "{{ inspec_delegate_host }}"
-  when: use_delegate_host | bool
-
-- name: Check if MSSQL version directory exists (local mode)
-  stat:
-    path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
-  register: version_dir_check
-  when: not (use_delegate_host | bool)
+  # Delegate to the appropriate host based on whether delegate host is configured
+  delegate_to: "{{ inspec_delegate_host | default(omit) }}"
 
 - name: Fail if MSSQL version directory doesn't exist
   fail:
-    msg: "MSSQL version {{ mssql_version }} is not supported. Directory MSSQL{{ mssql_version }}_ruby not found."
+    msg: "MSSQL version {{ mssql_version }} is not supported. Directory MSSQL{{ mssql_version }}_ruby not found in {{ role_path }}/files/"
   when: not version_dir_check.stat.exists
