@@ -5,7 +5,7 @@
 - name: Oracle InSpec Compliance Scan Starting
   debug:
     msg: |
-       Oracle InSpec Compliance Scan
+      Oracle InSpec Compliance Scan
       ================================
       Server: {{ oracle_server }}:{{ oracle_port }}
       Database: {{ oracle_database }}
