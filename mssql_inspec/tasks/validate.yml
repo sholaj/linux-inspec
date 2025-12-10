@@ -25,15 +25,3 @@
         fail_msg: "Required MSSQL connection parameters are missing"
   no_log: true
 
-# This consolidated approach eliminates the contradiction
-- name: Check if MSSQL version directory exists
-  stat:
-    path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
-  register: version_dir_check
-  # Delegate to the appropriate host based on whether delegate host is configured
-  delegate_to: "{{ inspec_delegate_host | default(omit) }}"
-
-- name: Fail if MSSQL version directory doesn't exist
-  fail:
-    msg: "MSSQL version {{ mssql_version }} is not supported. Directory MSSQL{{ mssql_version }}_ruby not found in {{ role_path }}/files/"
-  when: not version_dir_check.stat.exists
