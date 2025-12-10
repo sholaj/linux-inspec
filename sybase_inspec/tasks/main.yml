@@ -5,7 +5,7 @@
 - name: Sybase InSpec Compliance Scan Starting
   debug:
     msg: |
-       Sybase InSpec Compliance Scan
+      Sybase InSpec Compliance Scan
       ===============================
       Server: {{ sybase_server }}:{{ sybase_port }}
       Database: {{ sybase_database }}
@@ -24,6 +24,38 @@
 - name: Setup SSH connection for Sybase (if enabled)
   include_tasks: ssh_setup.yml
   when: sybase_use_ssh | default(true)
+
+- name: Copy control files to delegate host (when using remote delegate)
+  block:
+    - name: Create temporary directory for control files on delegate host
+      tempfile:
+        state: directory
+        suffix: "_sybase_controls"
+      register: delegate_controls_dir
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Copy Sybase control files to delegate host
+      copy:
+        src: "{{ role_path }}/files/SYBASE{{ sybase_version }}_ruby/"
+        dest: "{{ delegate_controls_dir.path }}/SYBASE{{ sybase_version }}_ruby/"
+        mode: '0755'
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Set control files location for delegate host
+      set_fact:
+        sybase_controls_base_dir: "{{ delegate_controls_dir.path }}"
+  when:
+    - inspec_delegate_host is defined
+    - inspec_delegate_host | length > 0
+    - inspec_delegate_host != 'localhost'
+
+- name: Set control files location for local execution
+  set_fact:
+    sybase_controls_base_dir: "{{ role_path }}/files"
+  when: >
+    inspec_delegate_host is not defined or
+    inspec_delegate_host | length == 0 or
+    inspec_delegate_host == 'localhost'
 
 - name: Setup directories and find Sybase control files
   include_tasks: setup.yml

@@ -5,6 +5,38 @@
 - name: Validate MSSQL connection parameters and environment
   include_tasks: validate.yml
 
+- name: Copy control files to delegate host (when using remote delegate)
+  block:
+    - name: Create temporary directory for control files on delegate host
+      tempfile:
+        state: directory
+        suffix: "_mssql_controls"
+      register: delegate_controls_dir
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Copy MSSQL control files to delegate host
+      copy:
+        src: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby/"
+        dest: "{{ delegate_controls_dir.path }}/MSSQL{{ mssql_version }}_ruby/"
+        mode: '0755'
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Set control files location for delegate host
+      set_fact:
+        mssql_controls_path: "{{ delegate_controls_dir.path }}"
+  when:
+    - inspec_delegate_host is defined
+    - inspec_delegate_host | length > 0
+    - inspec_delegate_host != 'localhost'
+
+- name: Set control files location for local execution
+  set_fact:
+    mssql_controls_path: "{{ role_path }}/files"
+  when: >
+    inspec_delegate_host is not defined or
+    inspec_delegate_host | length == 0 or
+    inspec_delegate_host == 'localhost'
+
 - name: Setup directories and find control files
   include_tasks: setup.yml
 
