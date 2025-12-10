@@ -21,7 +21,7 @@
 
     - name: Find all Ruby control files for specified MSSQL version
       find:
-        paths: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+        paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
         patterns: "*.rb"
       register: control_files
 
@@ -48,7 +48,7 @@
 
     - name: Find all Ruby control files for specified MSSQL version
       find:
-        paths: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+        paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
         patterns: "*.rb"
       register: control_files
 
