@@ -5,7 +5,7 @@
 - name: Sybase InSpec Compliance Scan Starting
   debug:
     msg: |
-       Sybase InSpec Compliance Scan
+      Sybase InSpec Compliance Scan
       ===============================
       Server: {{ sybase_server }}:{{ sybase_port }}
       Database: {{ sybase_database }}
