@@ -45,6 +45,16 @@
   ignore_errors: true
   delegate_to: "{{ inspec_delegate_host }}"
 
+- name: Clean up Oracle control files directory (remote delegate only)
+  file:
+    path: "{{ delegate_controls_dir.path }}"
+    state: absent
+  when:
+    - delegate_controls_dir is defined
+    - delegate_controls_dir.path is defined
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+
 - name: Display Oracle scan completion summary
   debug:
     msg: |
