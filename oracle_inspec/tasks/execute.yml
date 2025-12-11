@@ -15,37 +15,41 @@
 
 - name: Determine execution mode
   set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
+    use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
 
-- name: Gather facts from delegate host (delegate mode only)
+- name: Gather facts from delegate host (delegate mode)
   setup:
   delegate_to: "{{ inspec_delegate_host }}"
   delegate_facts: true
   when: use_delegate_host | bool
 
-- name: Build environment variables using delegate host facts (delegate mode)
-  set_fact:
-    oracle_environment:
-      PATH: "{{ oracle_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ oracle_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
-      ORACLE_HOME: "{{ oracle_environment_base.ORACLE_HOME }}"
-      TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
-      INSPEC_BACKEND: "{{ oracle_environment_base.INSPEC_BACKEND }}"
-      NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
-  when: use_delegate_host | bool
-
-- name: Build environment variables for local execution (local mode)
-  set_fact:
-    oracle_environment:
-      PATH: "{{ oracle_environment_base.PATH }}:{{ ansible_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ oracle_environment_base.LD_LIBRARY_PATH }}:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
-      ORACLE_HOME: "{{ oracle_environment_base.ORACLE_HOME }}"
-      TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
-      INSPEC_BACKEND: "{{ oracle_environment_base.INSPEC_BACKEND }}"
-      NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
+- name: Gather local facts (local mode)
+  setup:
+    gather_subset:
+      - env
   when: not (use_delegate_host | bool)
 
-- name: Execute Oracle InSpec controls on delegate host (delegate mode)
+- name: Set target environment from delegate host
+  set_fact:
+    _target_env: "{{ hostvars[inspec_delegate_host].ansible_env }}"
+  when: use_delegate_host | bool
+
+- name: Set target environment from local host
+  set_fact:
+    _target_env: "{{ ansible_env }}"
+  when: not (use_delegate_host | bool)
+
+- name: Build environment variables
+  set_fact:
+    oracle_environment:
+      PATH: "{{ oracle_environment_base.PATH }}:{{ _target_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ oracle_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
+      ORACLE_HOME: "{{ oracle_environment_base.ORACLE_HOME }}"
+      TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
+      INSPEC_BACKEND: "{{ oracle_environment_base.INSPEC_BACKEND }}"
+      NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
+
+- name: Execute Oracle InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
       --input usernm="$INSPEC_DB_USERNAME" \
@@ -78,43 +82,7 @@
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
-  delegate_to: "{{ inspec_delegate_host }}"
-  when: use_delegate_host | bool
-
-- name: Execute Oracle InSpec controls locally (local mode)
-  shell: |
-    /usr/bin/inspec exec {{ item.path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
-      --reporter=json-min \
-      --no-color
-  args:
-    executable: /bin/bash
-  environment:
-    PATH: "{{ oracle_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
-    ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
-    TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
-    INSPEC_BACKEND: "{{ oracle_environment.INSPEC_BACKEND }}"
-    NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
-    INSPEC_DB_USERNAME: "{{ oracle_username }}"
-    INSPEC_DB_PASSWORD: "{{ oracle_password }}"
-    INSPEC_DB_HOST: "{{ oracle_server }}"
-    INSPEC_DB_SERVICE: "{{ oracle_service | default('') }}"
-    INSPEC_DB_PORT: "{{ oracle_port }}"
-  register: oracle_inspec_results
-  loop: "{{ oracle_control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  changed_when: false
-  failed_when: false
-  no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
-  when: not (use_delegate_host | bool)
+  delegate_to: "{{ inspec_delegate_host if use_delegate_host | bool else omit }}"
 
 - name: Display sanitized execution summary (debug mode only)
   debug:

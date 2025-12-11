@@ -16,37 +16,41 @@
 
 - name: Determine execution mode
   set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
+    use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
 
-- name: Gather facts from delegate host (delegate mode only)
+- name: Gather facts from delegate host (delegate mode)
   setup:
   delegate_to: "{{ inspec_delegate_host }}"
   delegate_facts: true
   when: use_delegate_host | bool
 
-- name: Build environment variables using delegate host facts (delegate mode)
-  set_fact:
-    sybase_environment:
-      PATH: "{{ sybase_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
-      SYBASE: "{{ sybase_environment_base.SYBASE }}"
-      SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
-      INSPEC_BACKEND: "{{ sybase_environment_base.INSPEC_BACKEND }}"
-      SSH_AUTH_SOCK: "{{ hostvars[inspec_delegate_host].ansible_env.SSH_AUTH_SOCK | default('') }}"
-  when: use_delegate_host | bool
-
-- name: Build environment variables for local execution (local mode)
-  set_fact:
-    sybase_environment:
-      PATH: "{{ sybase_environment_base.PATH }}:{{ ansible_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
-      SYBASE: "{{ sybase_environment_base.SYBASE }}"
-      SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
-      INSPEC_BACKEND: "{{ sybase_environment_base.INSPEC_BACKEND }}"
-      SSH_AUTH_SOCK: "{{ ansible_env.SSH_AUTH_SOCK | default('') }}"
+- name: Gather local facts (local mode)
+  setup:
+    gather_subset:
+      - env
   when: not (use_delegate_host | bool)
 
-- name: Execute Sybase InSpec controls via SSH on delegate host (delegate mode with SSH)
+- name: Set target environment from delegate host
+  set_fact:
+    _target_env: "{{ hostvars[inspec_delegate_host].ansible_env }}"
+  when: use_delegate_host | bool
+
+- name: Set target environment from local host
+  set_fact:
+    _target_env: "{{ ansible_env }}"
+  when: not (use_delegate_host | bool)
+
+- name: Build environment variables
+  set_fact:
+    sybase_environment:
+      PATH: "{{ sybase_environment_base.PATH }}:{{ _target_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
+      SYBASE: "{{ sybase_environment_base.SYBASE }}"
+      SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
+      INSPEC_BACKEND: "{{ sybase_environment_base.INSPEC_BACKEND }}"
+      SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
+
+- name: Execute Sybase InSpec controls via SSH
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
       --ssh://${INSPEC_SSH_USER}:${INSPEC_SSH_PASSWORD}@${INSPEC_DB_HOST} \
@@ -82,52 +86,10 @@
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
-  when:
-    - use_delegate_host | bool
-    - sybase_use_ssh | default(true)
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if use_delegate_host | bool else omit }}"
+  when: sybase_use_ssh | default(true)
 
-- name: Execute Sybase InSpec controls via SSH locally (local mode with SSH)
-  shell: |
-    /usr/bin/inspec exec {{ item.path }} \
-      --ssh://${INSPEC_SSH_USER}:${INSPEC_SSH_PASSWORD}@${INSPEC_DB_HOST} \
-      -o {{ sybase_ssh_key_path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
-      --reporter=json-min \
-      --no-color
-  args:
-    executable: /bin/bash
-  environment:
-    PATH: "{{ sybase_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
-    SYBASE: "{{ sybase_environment.SYBASE }}"
-    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_BACKEND: "{{ sybase_environment.INSPEC_BACKEND }}"
-    INSPEC_SSH_USER: "{{ sybase_ssh_user }}"
-    INSPEC_SSH_PASSWORD: "{{ sybase_ssh_password }}"
-    INSPEC_DB_USERNAME: "{{ sybase_username }}"
-    INSPEC_DB_PASSWORD: "{{ sybase_password }}"
-    INSPEC_DB_HOST: "{{ sybase_server }}"
-    INSPEC_DB_SERVICE: "{{ sybase_service | default('') }}"
-    INSPEC_DB_PORT: "{{ sybase_port }}"
-  register: sybase_inspec_results
-  loop: "{{ sybase_control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  changed_when: false
-  failed_when: false
-  no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
-  when:
-    - not (use_delegate_host | bool)
-    - sybase_use_ssh | default(true)
-
-- name: Execute Sybase InSpec controls directly on delegate host (delegate mode without SSH)
+- name: Execute Sybase InSpec controls directly
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
       --input usernm="$INSPEC_DB_USERNAME" \
@@ -159,46 +121,8 @@
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
-  when:
-    - use_delegate_host | bool
-    - not (sybase_use_ssh | default(true))
-  delegate_to: "{{ inspec_delegate_host }}"
-
-- name: Execute Sybase InSpec controls directly locally (local mode without SSH)
-  shell: |
-    /usr/bin/inspec exec {{ item.path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
-      --reporter=json-min \
-      --no-color
-  args:
-    executable: /bin/bash
-  environment:
-    PATH: "{{ sybase_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
-    SYBASE: "{{ sybase_environment.SYBASE }}"
-    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_BACKEND: "{{ sybase_environment.INSPEC_BACKEND }}"
-    INSPEC_DB_USERNAME: "{{ sybase_username }}"
-    INSPEC_DB_PASSWORD: "{{ sybase_password }}"
-    INSPEC_DB_HOST: "{{ sybase_server }}"
-    INSPEC_DB_SERVICE: "{{ sybase_service | default('') }}"
-    INSPEC_DB_PORT: "{{ sybase_port }}"
-  register: sybase_inspec_results_direct
-  loop: "{{ sybase_control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  changed_when: false
-  failed_when: false
-  no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
-  when:
-    - not (use_delegate_host | bool)
-    - not (sybase_use_ssh | default(true))
+  delegate_to: "{{ inspec_delegate_host if use_delegate_host | bool else omit }}"
+  when: not (sybase_use_ssh | default(true))
 
 - name: Set results variable for processing
   set_fact:
