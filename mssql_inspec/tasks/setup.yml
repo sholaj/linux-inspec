@@ -21,7 +21,7 @@
 
     - name: Find all Ruby control files for specified MSSQL version
       find:
-        paths: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+        paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
         patterns: "*.rb"
       register: control_files
 
@@ -29,6 +29,11 @@
       debug:
         msg: "Found {{ control_files.files | length }} control file(s) for MSSQL {{ mssql_version }}"
       when: inspec_debug_mode | default(false)
+
+    - name: Fail if no MSSQL control files found
+      fail:
+        msg: "No MSSQL control files found in {{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
+      when: control_files.files | length == 0
   delegate_to: "{{ inspec_delegate_host }}"
   when: use_delegate_host | bool
 
@@ -48,7 +53,7 @@
 
     - name: Find all Ruby control files for specified MSSQL version
       find:
-        paths: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+        paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
         patterns: "*.rb"
       register: control_files
 
@@ -56,4 +61,9 @@
       debug:
         msg: "Found {{ control_files.files | length }} control file(s) for MSSQL {{ mssql_version }}"
       when: inspec_debug_mode | default(false)
+
+    - name: Fail if no MSSQL control files found
+      fail:
+        msg: "No MSSQL control files found in {{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
+      when: control_files.files | length == 0
   when: not (use_delegate_host | bool)

@@ -38,7 +38,7 @@
     - name: Display Sybase scan configuration
       debug:
         msg: |
-           Sybase InSpec Compliance Scans Starting
+          Sybase InSpec Compliance Scans Starting
           ==========================================
           Total Sybase hosts: {{ groups['sybase_databases'] | length }}
           Results directory: {{ base_results_dir }}
