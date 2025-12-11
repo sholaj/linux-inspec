@@ -15,31 +15,38 @@
 
 - name: Determine execution mode
   set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
+    use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
 
-- name: Gather facts from delegate host (delegate mode only)
+- name: Gather facts from delegate host (delegate mode)
   setup:
   delegate_to: "{{ inspec_delegate_host }}"
   delegate_facts: true
   when: use_delegate_host | bool
 
-- name: Build environment variables using delegate host facts (delegate mode)
-  set_fact:
-    mssql_environment:
-      PATH: "{{ mssql_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
-      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
-  when: use_delegate_host | bool
-
-- name: Build environment variables for local execution (local mode)
-  set_fact:
-    mssql_environment:
-      PATH: "{{ mssql_environment_base.PATH }}:{{ ansible_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ ansible_env.LD_LIBRARY_PATH | default('') }}"
-      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
+- name: Gather local facts (local mode)
+  setup:
+    gather_subset:
+      - env
   when: not (use_delegate_host | bool)
 
-- name: Execute InSpec controls on delegate host (delegate mode)
+- name: Set target environment from delegate host
+  set_fact:
+    _target_env: "{{ hostvars[inspec_delegate_host].ansible_env }}"
+  when: use_delegate_host | bool
+
+- name: Set target environment from local host
+  set_fact:
+    _target_env: "{{ ansible_env }}"
+  when: not (use_delegate_host | bool)
+
+- name: Build environment variables
+  set_fact:
+    mssql_environment:
+      PATH: "{{ mssql_environment_base.PATH }}:{{ _target_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
+      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
+
+- name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
       --input usernm="$INSPEC_DB_USERNAME" \
@@ -69,40 +76,7 @@
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
-  delegate_to: "{{ inspec_delegate_host }}"
-  when: use_delegate_host | bool
-
-- name: Execute InSpec controls locally (local mode)
-  shell: |
-    /usr/bin/inspec exec {{ item.path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
-      --reporter=json-min \
-      --no-color
-  args:
-    executable: /bin/bash
-  environment:
-    PATH: "{{ mssql_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
-    INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
-    INSPEC_DB_USERNAME: "{{ mssql_username }}"
-    INSPEC_DB_PASSWORD: "{{ mssql_password }}"
-    INSPEC_DB_HOST: "{{ mssql_server }}"
-    INSPEC_DB_SERVICE: "{{ mssql_service | default('') }}"
-    INSPEC_DB_PORT: "{{ mssql_port }}"
-  register: inspec_results
-  loop: "{{ control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  changed_when: false
-  failed_when: false
-  no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
-  when: not (use_delegate_host | bool)
+  delegate_to: "{{ inspec_delegate_host if use_delegate_host | bool else omit }}"
 
 - name: Display sanitized execution summary (debug mode only)
   debug:
