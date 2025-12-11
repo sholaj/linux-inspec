@@ -55,6 +55,16 @@
   ignore_errors: true
   delegate_to: "{{ inspec_delegate_host }}"
 
+- name: Clean up Sybase control files directory (remote delegate only)
+  file:
+    path: "{{ delegate_controls_dir.path }}"
+    state: absent
+  when:
+    - delegate_controls_dir is defined
+    - delegate_controls_dir.path is defined
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host }}"
+
 - name: Display Sybase scan completion summary
   debug:
     msg: |

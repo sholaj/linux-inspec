@@ -3,7 +3,7 @@
 
 - name: Determine execution mode for setup
   set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 }}"
+    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
 
 - name: Setup InSpec environment on delegate host (delegate mode)
   block:

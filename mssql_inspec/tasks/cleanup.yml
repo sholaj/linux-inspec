@@ -29,6 +29,16 @@
   when: cleanup_temp_files | default(true)
   delegate_to: "{{ inspec_delegate_host }}"
 
+- name: Clean up control files directory (remote delegate only)
+  file:
+    path: "{{ delegate_controls_dir.path }}"
+    state: absent
+  when:
+    - cleanup_temp_files | default(true)
+    - delegate_controls_dir is defined
+    - delegate_controls_dir.path is defined
+  delegate_to: "{{ inspec_delegate_host }}"
+
 - name: Send results to Splunk if enabled
   include_tasks: splunk_integration.yml
   loop: "{{ inspec_results.results | default([]) }}"

@@ -16,12 +16,13 @@
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ hostvars[inspec_delegate_host].ansible_env.SSH_AUTH_SOCK | default('') }}"
 
-- name: Create SSH keys directory for Sybase
+- name: Ensure SSH key directory exists
   file:
-    path: "{{ sybase_controls_base_dir }}/SSH_keys"
+    path: "{{ sybase_ssh_key_path | dirname }}"
     state: directory
     mode: '0700'
   delegate_to: "{{ inspec_delegate_host }}"
+  when: sybase_ssh_key_path | dirname != '/tmp'
 
 - name: Deploy SSH private key for Sybase access (from vault)
   copy:
