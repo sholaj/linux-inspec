@@ -6,25 +6,20 @@ mssql_server: ""
 mssql_port: 1433
 mssql_database: ""
 mssql_username: "nist_scan_user"
-mssql_password: "{{ lookup('vars', 'vault_' + mssql_host_id + '_password', default='') }}"
+mssql_password: ""  # AAP2 injects via extra vars (single credential for all DBs with RBAC)
 mssql_service: ""
 mssql_version: "2019"
-mssql_host_id: "{{ inventory_hostname }}"
 
 # InSpec execution settings
 inspec_debug_mode: false
 inspec_timeout: 300  # seconds
-inspec_delegate_host: "localhost"
+inspec_delegate_host: "localhost"  # localhost = local execution, set to delegate hostname for remote
 
 # Results and logging
 inspec_results_dir: "/tmp/inspec_mssql_results_{{ ansible_date_time.epoch }}"
 inspec_temp_dir: "/tmp/inspec_mssql_temp_{{ ansible_date_time.epoch }}"
 generate_summary_report: true
 cleanup_temp_files: true
-
-# Credential management
-use_vault: false
-vault_password_file: ""
 
 # Connection settings
 trust_server_certificate: "Yes"

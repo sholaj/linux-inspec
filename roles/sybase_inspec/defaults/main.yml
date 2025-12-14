@@ -5,8 +5,8 @@
 sybase_username: "nist_scan_user"
 sybase_port: 5000
 sybase_version: "16"
-sybase_password: "{{ lookup('vars', 'vault_' + sybase_host_id + '_password') }}"
-sybase_ssh_password: "{{ vault_sybase_ssh_password | default('') }}"
+sybase_password: ""  # AAP2 injects via extra vars (single credential for all DBs with RBAC)
+sybase_ssh_password: ""  # AAP2 injects via extra vars (for SSH tunnel to Sybase servers)
 
 # SSH connection settings (unique to Sybase from original script)
 sybase_use_ssh: true
