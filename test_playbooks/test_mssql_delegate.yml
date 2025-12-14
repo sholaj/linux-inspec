@@ -22,6 +22,7 @@
         ###########################################
         ansible_host: "your-delegate-host.example.com"
         ansible_connection: ssh
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null'
         # ansible_user: injected by AAP2 machine credential
         # ansible_password: injected by AAP2 machine credential
 
@@ -59,8 +60,9 @@
           - mssql_username is defined
           - mssql_password is defined
           - mssql_password | length > 0
-          - inspec_delegate_host is defined
-        fail_msg: "Missing variables - ensure AAP2 credentials are attached"
+          - hostvars[inventory_hostname]['inspec_delegate_host'] is defined
+          - hostvars[inventory_hostname]['inspec_delegate_host'] | length > 0
+        fail_msg: "Missing variables - ensure AAP2 credentials are attached and inspec_delegate_host is set"
 
     - name: Wait for delegate host connection
       wait_for_connection:
