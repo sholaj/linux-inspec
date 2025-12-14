@@ -22,7 +22,7 @@
         ###########################################
         ansible_host: "your-delegate-host.example.com"
         ansible_connection: ssh
-        ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null'
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null"
         # ansible_user: injected by AAP2 machine credential
         # ansible_password: injected by AAP2 machine credential
 
@@ -83,7 +83,7 @@
       debug:
         msg: |
           Network Test (from {{ inspec_delegate_host }}): {{ 'PASS - Port ' ~ mssql_port ~ ' is reachable' if network_test is succeeded else 'FAIL - Cannot reach ' ~ mssql_server ~ ':' ~ mssql_port }}
-          
+
     - name: Fail if network connectivity is not available
       fail:
         msg: |
