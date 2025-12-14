@@ -3,87 +3,74 @@
 # Update with your actual values before running tests
 
 all:
+  # ========================================
+  # OPTIONAL: Remote Delegate Host
+  # Uncomment ONLY if NOT using local execution
+  # ========================================
+  # hosts:
+  #   inspec-delegate-host:
+  #     ansible_host: your-delegate-server.example.com
+  #     ansible_connection: ssh
+  #     ansible_user: ansible-svc
+  #     ansible_port: 22
+  #     # Choose ONE authentication method:
+  #     # Method A: SSH Key (Recommended for production)
+  #     ansible_ssh_private_key_file: /path/to/ssh/private/key
+  #     # Method B: Password (Testing/Dev only)
+  #     # ansible_password: "{{ vault_delegate_password }}"
+
   children:
     # MSSQL database servers (data sources)
     mssql_databases:
       hosts:
         # Example MSSQL server - replace with your actual server
-        testmssql01_master_1433:
-          # Database server connection details
+        testmssql01_1433:
           mssql_server: your-mssql-server.example.com
           mssql_port: 1433
-          mssql_database: master
           mssql_version: "2019"
-          mssql_service: ""
-
-          # Layer 2 credentials (InSpec → Database)
-          # These come from vault - DO NOT hardcode passwords here
-          mssql_username: "{{ vault_mssql_username }}"
-          mssql_password: "{{ vault_mssql_password }}"
+          database_platform: mssql
 
       vars:
-        # Database servers are metadata only - use local connection
-        ansible_connection: local
-
-    # Delegate host where InSpec executes
-    # AUTHENTICATION: Supports both SSH key and username/password
-    inspec_delegates:
-      hosts:
-        # OPTION 1: SSH Key Authentication (Recommended)
-        inspec-delegate-host:
-          # Layer 1 configuration (Ansible → Delegate Host)
-          ansible_host: your-delegate-server.example.com
-          ansible_connection: ssh
-          ansible_user: ansible-svc  # SSH user on delegate host (NOT database user!)
-          ansible_port: 22
-          # SSH Key (choose one):
-          # Method A: Specific key file
-          ansible_ssh_private_key_file: /path/to/ssh/private/key
-          # Method B: SSH agent (comment out above line, uses loaded keys)
-
-          # SSH Host Key Checking (optional):
-          # Option A: Strict checking enabled (recommended for production)
-          # ansible_ssh_common_args: '-o StrictHostKeyChecking=yes'
-          # Option B: Accept new host keys automatically
-          # ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
-          # Option C: Disable checking (NOT recommended for production!)
-          # ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-
-        # OPTION 2: Username/Password Authentication (Testing/Dev)
-        # Uncomment if using password instead of SSH key
-        # inspec-delegate-host:
-        #   ansible_host: your-delegate-server.example.com
-        #   ansible_connection: ssh
-        #   ansible_user: ansible-svc
-        #   ansible_port: 22
-        #   # Password (MUST be in vault for security!)
-        #   ansible_password: "{{ vault_delegate_password }}"
-        #
-        #   # SSH Host Key Checking (optional):
-        #   # Option A: Strict checking enabled (recommended)
-        #   # ansible_ssh_common_args: '-o StrictHostKeyChecking=yes'
-        #   # Option B: Accept new host keys automatically
-        #   # ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
-        #   # Option C: Disable checking (NOT recommended for production!)
-        #   # ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+        mssql_username: nist_scan_user
+        # mssql_password: injected by AAP2 via extra vars
+        # inspec_delegate_host: "inspec-delegate-host"  # Uncomment for remote delegate
 
   vars:
-    # Global variables
-    inspec_delegate_host: inspec-delegate-host
     base_results_dir: /tmp/compliance_scans
     inspec_debug_mode: false
     inspec_command_timeout: 1800
-    ansible_python_interpreter: auto
 
-# IMPORTANT - BEFORE RUNNING TESTS:
-# ==================================
-# 1. Update ansible_host for inspec-delegate-host with actual hostname/IP
-# 2. Update mssql_server with actual MSSQL server hostname
-# 3. Create vault.yml with database credentials:
-#    vault_mssql_username: your_db_username
-#    vault_mssql_password: your_db_password
-# 4. Ensure SSH access to delegate host is configured
-# 5. Ensure delegate host has:
+# ========================================
+# CONNECTION MODES
+# ========================================
+#
+# LOCAL EXECUTION (Default):
+#   - inspec_delegate_host is "localhost" or not set
+#   - InSpec runs on AAP2 execution node
+#   - Execution node needs: InSpec, MSSQL tools (sqlcmd), network access to DBs
+#
+# REMOTE DELEGATE EXECUTION:
+#   - Define delegate host in all.hosts section above
+#   - Set inspec_delegate_host: "<hostname>" in group vars
+#   - Ansible SSHs to delegate, runs InSpec there
+#   - Delegate needs: InSpec, MSSQL tools (sqlcmd), network access to DBs
+#
+# ========================================
+# AAP2 CREDENTIALS
+# ========================================
+#
+# Create custom credential type in AAP2:
+#   - mssql_password: Single password for all MSSQL DBs (RBAC)
+#
+# AAP2 injects this as extra var at job runtime.
+#
+# ========================================
+# BEFORE RUNNING TESTS
+# ========================================
+#
+# 1. Update mssql_server with actual MSSQL server hostname
+# 2. Ensure execution host (local or delegate) has:
 #    - InSpec installed at /usr/bin/inspec
 #    - MSSQL tools installed (sqlcmd)
 #    - Network access to MSSQL server
+# 3. For remote delegate: uncomment all.hosts section and set inspec_delegate_host

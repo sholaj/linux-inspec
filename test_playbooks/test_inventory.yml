@@ -1,100 +1,52 @@
+---
+# Test Inventory - Database Compliance Scanning
+# For local testing and validation
+
 all:
-    children:
-        mssql_databases:
-            hosts:
-                testserver01_testdb01_1433:
-                    database_platform: mssql
-                    mssql_database: testdb01
-                    mssql_host_id: testserver01_testdb01_1433
-                    mssql_port: 1433
-                    mssql_server: testserver01
-                    mssql_service: TestService
-                    mssql_username: nist_scan_user
-                    mssql_version: '2019'
-            vars:
-                # Database servers are just data sources - use local connection
-                ansible_connection: local
+  # Uncomment for remote delegate execution
+  # hosts:
+  #   inspec-delegate-host:
+  #     ansible_host: delegate.example.com
+  #     ansible_connection: ssh
+  #     ansible_user: ansible_svc
 
-        oracle_databases:
-            hosts:
-                oracleserver01_orcl_1521:
-                    database_platform: oracle
-                    oracle_database: orcl
-                    oracle_host_id: oracleserver01_orcl_1521
-                    oracle_port: 1521
-                    oracle_server: oracleserver01
-                    oracle_service: XE
-                    oracle_username: nist_scan_user
-                    oracle_version: 19c
-            vars:
-                # Database servers are just data sources - use local connection
-                ansible_connection: local
+  children:
+    mssql_databases:
+      hosts:
+        testserver01_1433:
+          mssql_server: testserver01.example.com
+          mssql_port: 1433
+          mssql_version: "2019"
+          database_platform: mssql
+      vars:
+        mssql_username: nist_scan_user
+        # inspec_delegate_host: "inspec-delegate-host"  # Uncomment for remote
 
-        sybase_databases:
-            hosts:
-                sybaseserver01_master_5000:
-                    database_platform: sybase
-                    sybase_database: master
-                    sybase_host_id: sybaseserver01_master_5000
-                    sybase_port: 5000
-                    sybase_server: sybaseserver01
-                    sybase_service: SAP_ASE
-                    sybase_ssh_user: oracle
-                    sybase_use_ssh: true
-                    sybase_username: nist_scan_user
-                    sybase_version: '16'
-            vars:
-                # Database servers are just data sources - use local connection
-                ansible_connection: local
+    oracle_databases:
+      hosts:
+        oracleserver01_orcl_1521:
+          oracle_server: oracleserver01.example.com
+          oracle_database: orcl
+          oracle_service: XE
+          oracle_port: 1521
+          oracle_version: "19"
+          database_platform: oracle
+      vars:
+        oracle_username: nist_scan_user
 
-        # CRITICAL: Delegate host where InSpec runs
-        # This host must have database client tools installed (sqlcmd, sqlplus, isql)
-        # AUTHENTICATION: Supports both SSH key and username/password
-        inspec_delegates:
-            hosts:
-                # OPTION 1: SSH Key Authentication (Recommended for production)
-                inspec-delegate-host:
-                    # Replace with actual hostname/IP of your delegate host
-                    ansible_host: inspec-delegate-host.example.com
-                    # CRITICAL: Must use SSH connection to delegate host
-                    ansible_connection: ssh
-                    ansible_user: ansible-svc
-                    ansible_port: 22
-                    # SSH Key Authentication (choose one method):
-                    # Method A: Specific key file
-                    ansible_ssh_private_key_file: /path/to/ssh/private/key
-                    # Method B: SSH agent (comment out ansible_ssh_private_key_file above)
-                    # Uses your SSH agent's loaded keys automatically
+    sybase_databases:
+      hosts:
+        sybaseserver01_master_5000:
+          sybase_server: sybaseserver01.example.com
+          sybase_database: master
+          sybase_port: 5000
+          sybase_version: "16"
+          database_platform: sybase
+      vars:
+        sybase_username: nist_scan_user
+        sybase_use_ssh: true
+        sybase_ssh_user: oracle
 
-                    # SSH Host Key Checking (optional):
-                    # Option A: Strict checking enabled (recommended for production)
-                    # ansible_ssh_common_args: '-o StrictHostKeyChecking=yes'
-                    # Option B: Accept new host keys automatically
-                    # ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
-                    # Option C: Disable checking (NOT recommended for production!)
-                    # ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-
-                # OPTION 2: Username/Password Authentication (for non-production/testing)
-                # Uncomment this section if using password authentication
-                # inspec-delegate-host:
-                #     ansible_host: inspec-delegate-host.example.com
-                #     ansible_connection: ssh
-                #     ansible_user: ansible-svc
-                #     ansible_port: 22
-                #     # Password authentication (use vault for security!)
-                #     ansible_password: "{{ vault_delegate_password }}"
-                #
-                #     # SSH Host Key Checking (optional):
-                #     # Option A: Strict checking enabled (recommended)
-                #     # ansible_ssh_common_args: '-o StrictHostKeyChecking=yes'
-                #     # Option B: Accept new host keys automatically
-                #     # ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
-                #     # Option C: Disable checking (NOT recommended for production!)
-                #     # ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
-
-    vars:
-        ansible_python_interpreter: /opt/homebrew/Cellar/ansible/12.0.0/libexec/bin/python
-        base_results_dir: /tmp/compliance_scans
-        inspec_debug_mode: false
-        # Reference to delegate host (must match hostname in inspec_delegates group)
-        inspec_delegate_host: inspec-delegate-host
+  vars:
+    base_results_dir: /tmp/compliance_scans
+    inspec_debug_mode: false

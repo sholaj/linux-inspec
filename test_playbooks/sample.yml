@@ -1,154 +1,101 @@
 ---
-# MSSQL InSpec Compliance Scanning Inventory
+# Sample Inventory - Database Compliance Scanning
+# Demonstrates both local and remote delegate execution modes
+
 all:
+  # ========================================
+  # OPTIONAL: Remote Delegate Host
+  # Uncomment ONLY if NOT using local execution
+  # ========================================
+  # hosts:
+  #   inspec-runner:
+  #     ansible_host: delegate.example.com
+  #     ansible_connection: ssh
+  #     ansible_user: ansible_svc
+  #     # ansible_ssh_private_key_file: /path/to/key  # Or use AAP2 credential
+
   children:
     # ========================================
-    # MSSQL Database Servers (Data Only)
-    # These are NOT actual hosts - just configuration metadata
+    # MSSQL Databases
     # ========================================
     mssql_databases:
       hosts:
-        # Database Server 1
-        mssql_server_01_port_1733:
-          database_platform: mssql
-          mssql_server: db-server-01
-          mssql_port: 1733
-          mssql_database: database_01
+        mssql_server_01_1433:
+          mssql_server: sqlserver01.example.com
+          mssql_port: 1433
           mssql_version: "2019"
-          mssql_service: master
-          mssql_username: scan_service_account
-          mssql_password: "{{ vault_mssql_password }}"
-        
-        # Database Server 2
-        mssql_server_02_port_1733:
           database_platform: mssql
-          mssql_server: db-server-02
-          mssql_port: 1733
-          mssql_database: database_02
-          mssql_version: "2019"
-          mssql_service: master
-          mssql_username: scan_service_account
-          mssql_password: "{{ vault_mssql_password }}"
-        
-        # Database Server 3
-        mssql_server_03_port_1733:
+
+        mssql_server_02_1433:
+          mssql_server: sqlserver02.example.com
+          mssql_port: 1433
+          mssql_version: "2017"
           database_platform: mssql
-          mssql_server: db-server-03
-          mssql_port: 1733
-          mssql_database: database_03
-          mssql_version: "2019"
-          mssql_service: master
-          mssql_username: scan_service_account
-          mssql_password: "{{ vault_mssql_password }}"
-      
+
       vars:
-        # Database hosts are metadata only - use local connection
-        # These hosts don't exist as real SSH targets
-        ansible_connection: local
-    
+        mssql_username: nist_scan_user
+        # mssql_password: injected by AAP2
+        # inspec_delegate_host: "inspec-runner"  # Uncomment for remote delegate
+
     # ========================================
-    # Delegate Host (Bastion/Jump Server)
-    # Where InSpec controls actually execute
-    # CRITICAL: This MUST be a real, reachable server!
+    # Oracle Databases
     # ========================================
-    inspec_delegates:
+    oracle_databases:
       hosts:
-        # Bastion/Jump Server - runs InSpec controls
-        bastion-server:
-          # === LAYER 1: Ansible → Delegate Host ===
-          # SSH connection from AAP2 controller to bastion server
-          
-          # Actual hostname or IP address of the bastion server
-          ansible_host: bastion-server.example.com
-          
-          # CRITICAL: Must use SSH connection
-          ansible_connection: ssh
-          
-          # SSH username for authenticating to bastion server
-          # This is the OS user account, NOT the database user
-          ansible_user: bastion_ssh_user
-          
-          # SSH port (typically 22)
-          ansible_port: 22
-          
-          # === Authentication Method: CHOOSE ONE ===
-          
-          # Method A: SSH Private Key (Recommended for production)
-          # Uncomment and set the path to your SSH private key
-          ansible_ssh_private_key_file: /path/to/ssh/private/key
-          
-          # Method B: SSH Password (For development/testing)
-          # Uncomment to use password authentication instead
-          # NOTE: Password should come from vault for security
-          # ansible_password: "{{ vault_bastion_ssh_password }}"
-          
-          # Optional: SSH host key verification settings
-          # Accept new host keys on first connection
-          ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
-  
-  # ========================================
-  # Global Configuration Variables
-  # ========================================
-  vars:
-    # Name of the delegate host (must match a hostname in inspec_delegates group)
-    inspec_delegate_host: bastion-server
-    
-    # Directory where compliance scan results will be stored
-    # Results are saved on the delegate host in this directory
-    base_results_dir: /tmp/compliance_scans
-    
-    # Enable verbose debug output during execution
-    inspec_debug_mode: false
-    
-    # Maximum execution time for InSpec controls (in seconds)
-    # 1800 seconds = 30 minutes
-    inspec_command_timeout: 1800
-    
-    # Python interpreter to use on the AAP2 controller
-    # 'auto' = automatically detect the correct Python version
-    ansible_python_interpreter: auto
+        oracle_db_01_1521:
+          oracle_server: oracledb01.example.com
+          oracle_database: ORCL
+          oracle_service: ORCL
+          oracle_port: 1521
+          oracle_version: "19"
+          database_platform: oracle
+
+      vars:
+        oracle_username: nist_scan_user
+        # oracle_password: injected by AAP2
+
+    # ========================================
+    # Sybase Databases
+    # ========================================
+    sybase_databases:
+      hosts:
+        sybase_db_01_5000:
+          sybase_server: sybasedb01.example.com
+          sybase_database: master
+          sybase_port: 5000
+          sybase_version: "16"
+          database_platform: sybase
+
+      vars:
+        sybase_username: nist_scan_user
+        sybase_use_ssh: true
+        sybase_ssh_user: oracle
+        # sybase_password: injected by AAP2
+        # sybase_ssh_password: injected by AAP2
 
 # ========================================
-# IMPORTANT CONFIGURATION NOTES
+# CONNECTION MODES
 # ========================================
 #
-# 1. DATABASE HOSTS (mssql_databases group):
-#    - These are NOT real SSH targets
-#    - They represent the databases to be scanned
-#    - ansible_connection: local means they don't need network access
-#    - Configuration includes connection details for InSpec
-#    - Variables passed to InSpec: mssql_server, mssql_port, mssql_username, etc.
+# LOCAL EXECUTION (Default):
+#   - inspec_delegate_host is "localhost" or not set
+#   - InSpec runs on AAP2 execution node
+#   - Execution node needs: InSpec, database client tools, network access to DBs
 #
-# 2. DELEGATE HOST (inspec_delegates group):
-#    - This IS a real server that must be reachable via SSH
-#    - It must have InSpec installed at /usr/bin/inspec
-#    - It must have MSSQL tools installed (sqlcmd binary)
-#    - It must have network access to all database servers
-#    - InSpec controls execute here, not on AAP2 controller
+# REMOTE DELEGATE EXECUTION:
+#   - Define delegate host in all.hosts section
+#   - Set inspec_delegate_host: "<hostname>" in group vars
+#   - Ansible SSHs to delegate, runs InSpec there
+#   - Delegate needs: InSpec, database client tools, network access to DBs
 #
-# 3. AUTHENTICATION LAYERS:
-#    Layer 1: AAP2 → Bastion Server (SSH)
-#      - Uses: ansible_user, ansible_password/ansible_ssh_private_key_file
-#      - Credentials in vault.yml
-#    
-#    Layer 2: Bastion Server → MSSQL Database (SQL Login)
-#      - Uses: mssql_username, mssql_password
-#      - Credentials in vault.yml
+# ========================================
+# AAP2 CREDENTIALS
+# ========================================
 #
-# 4. VAULT CONFIGURATION:
-#    Create vault.yml with:
-#      vault_bastion_ssh_password: your_bastion_password
-#      vault_mssql_password: your_database_password
-#    
-#    Then encrypt:
-#      ansible-vault encrypt vault.yml --vault-password-file .vaultpass
+# Create custom credential types in AAP2:
+#   - mssql_password: Single password for all MSSQL DBs (RBAC)
+#   - oracle_password: Single password for all Oracle DBs (RBAC)
+#   - sybase_password: Single password for all Sybase DBs (RBAC)
+#   - sybase_ssh_password: SSH tunnel password for Sybase
 #
-# 5. EXECUTION:
-#    Test connectivity:
-#      ansible all -i inventory.yml -m ping -e @vault.yml --vault-password-file .vaultpass
-#    
-#    Run compliance scans:
-#      ansible-playbook -i inventory.yml run_mssql_inspec.yml \
-#        -e "target_server_host=mssql_server_01_port_1733" \
-#        -e @vault.yml \
-#        --vault-password-file .vaultpass
+# AAP2 injects these as extra vars at job runtime.
