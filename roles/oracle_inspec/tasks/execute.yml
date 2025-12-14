@@ -13,31 +13,21 @@
 #
 # These are DIFFERENT execution paths based on infrastructure setup
 
-- name: Determine execution mode
+- name: Determine execution mode and target host
   set_fact:
     use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
+    inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
-- name: Gather facts from delegate host (delegate mode)
-  setup:
-  delegate_to: "{{ inspec_delegate_host }}"
-  delegate_facts: true
-  when: use_delegate_host | bool
-
-- name: Gather local facts (local mode)
+- name: Gather environment facts from execution target
   setup:
     gather_subset:
       - env
-  when: not (use_delegate_host | bool)
+  delegate_to: "{{ inspec_execution_target }}"
+  delegate_facts: true
 
-- name: Set target environment from delegate host
+- name: Set target environment from execution host
   set_fact:
-    _target_env: "{{ hostvars[inspec_delegate_host].ansible_env }}"
-  when: use_delegate_host | bool
-
-- name: Set target environment from local host
-  set_fact:
-    _target_env: "{{ ansible_env }}"
-  when: not (use_delegate_host | bool)
+    _target_env: "{{ hostvars[inspec_execution_target].ansible_env }}"
 
 - name: Build environment variables
   set_fact:
@@ -82,7 +72,7 @@
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
-  delegate_to: "{{ inspec_delegate_host if use_delegate_host | bool else omit }}"
+  delegate_to: "{{ inspec_execution_target }}"
 
 - name: Display sanitized execution summary (debug mode only)
   debug:
@@ -100,6 +90,7 @@
   loop_control:
     label: "{{ item.item.path | basename }}"
   when: inspec_debug_mode | default(false)
+  delegate_to: "{{ inspec_execution_target }}"
 
 - name: Process Oracle InSpec results
   include_tasks: process_results.yml
@@ -107,3 +98,4 @@
   loop_control:
     index_var: idx
     label: "Processing Oracle result {{ idx + 1 }}"
+  delegate_to: "{{ inspec_execution_target }}"

@@ -66,4 +66,5 @@
       fail:
         msg: "No MSSQL control files found in {{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
       when: control_files.files | length == 0
+  delegate_to: localhost
   when: not (use_delegate_host | bool)

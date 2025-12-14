@@ -80,4 +80,5 @@
       fail:
         msg: "No Sybase control files found in {{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
       when: sybase_control_files.files | length == 0
+  delegate_to: localhost
   when: not (use_delegate_host | bool)

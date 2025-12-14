@@ -44,6 +44,7 @@
       debug:
         msg: "Control {{ control_file_name }} completed with status: {{ inspec_status }}"
       when: inspec_debug_mode | default(false)
+  delegate_to: localhost
   when: not (use_delegate_host | bool)
 
 - name: Handle failed InSpec execution on delegate host (exact JSON format from original script)
@@ -77,4 +78,5 @@
       when:
         - inspec_debug_mode | default(false)
         - (item.rc != 0 or (inspec_status is not defined or inspec_status not in ['passed', 'failed', 'skipped']))
+  delegate_to: localhost
   when: not (use_delegate_host | bool)

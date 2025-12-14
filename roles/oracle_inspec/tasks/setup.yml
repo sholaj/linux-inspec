@@ -78,4 +78,5 @@
       fail:
         msg: "No Oracle control files found in {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
       when: oracle_control_files.files | length == 0
+  delegate_to: localhost
   when: not (use_delegate_host | bool)

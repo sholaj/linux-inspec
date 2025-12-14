@@ -45,6 +45,7 @@
       debug:
         msg: "Sybase control {{ sybase_control_file_name }} completed with status: {{ sybase_inspec_status }} (SSH: {{ sybase_use_ssh | ternary('Yes', 'No') }})"
       when: inspec_debug_mode | default(false)
+  delegate_to: localhost
   when: not (use_delegate_host | bool)
 
 - name: Handle failed Sybase InSpec execution on delegate host
@@ -90,4 +91,5 @@
       when:
         - inspec_debug_mode | default(false)
         - (item.rc != 0 or (sybase_inspec_status is not defined or sybase_inspec_status not in ['passed', 'failed', 'skipped']))
+  delegate_to: localhost
   when: not (use_delegate_host | bool)
