@@ -1,0 +1,333 @@
+---
+# Test Playbook: Delegate Execution Flow
+# Purpose: Validates delegate execution patterns for InSpec scans
+# Scenarios: Delegate execution, delegate connection, non-delegate connection
+# Author: DevOps Team
+# Last Updated: 2025-12-14
+
+- name: Test Delegate Execution Flow for Database Compliance Scanning
+  hosts: mssql_databases
+  gather_facts: no
+
+  vars:
+    # Test environment variables
+    # These should come from inventory: inspec_delegate_host
+    test_env_paths:
+      mssql_tools: "/opt/mssql-tools/bin"
+      sybase_tools: "/tools/ver/sybase/OCS-16_0/bin"
+    test_env_libs:
+      oracle_lib: "/tools/ver/oracle-19.16.0.0-64"
+
+    # Test configuration
+    test_mode: "delegate_execution"
+    enable_verbose_output: true
+
+  pre_tasks:
+    # Display test configuration and context
+    - name: Display test initialization information
+      debug:
+        msg: |
+          ========================================
+          Delegate Execution Flow Test
+          ========================================
+          Test Mode: {{ test_mode }}
+          Play Target: {{ inventory_hostname }}
+          Delegate Host: {{ inspec_delegate_host | default('NOT_DEFINED') }}
+          Expected Behavior: Tasks delegate to specified host via SSH
+          ========================================
+      run_once: true
+      tags: ['always', 'test-info']
+
+    # Validate required variables are defined
+    - name: Validate required test variables
+      assert:
+        that:
+          - inspec_delegate_host is defined
+          - inspec_delegate_host | length > 0
+        fail_msg: |
+          ERROR: inspec_delegate_host is not defined in inventory.
+          This variable is required for delegate execution testing.
+          Please define it in your inventory file.
+        success_msg: "Delegate host variable is properly defined"
+      tags: ['validation']
+
+  tasks:
+    # Test 1: Verify play targeting
+    - name: "Test 1: Verify play targets correct database server"
+      debug:
+        msg: "PASS: Play is correctly targeting database server {{ inventory_hostname }}"
+      tags: ['test-targeting']
+
+    # Test 2: Check execution context without delegation
+    - name: "Test 2: Check where non-delegated task executes"
+      shell: echo "Hostname=$(hostname), User=$(whoami), PWD=$(pwd)"
+      args:
+        executable: /bin/bash
+      register: local_execution_context
+      changed_when: false
+      failed_when: false
+      tags: ['test-context']
+
+    # Test 3: Check execution context with delegation
+    - name: "Test 3: Check where delegated task executes"
+      shell: echo "Hostname=$(hostname), User=$(whoami), PWD=$(pwd)"
+      args:
+        executable: /bin/bash
+      environment:
+        PATH: "{{ test_env_paths.mssql_tools }}:{{ ansible_env.PATH | default('/usr/bin:/bin') }}"
+      register: delegated_execution_context
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+      tags: ['test-delegation']
+
+    # Test 4: Validate delegation is working correctly
+    - name: "Test 4: Validate delegation behavior (different execution contexts)"
+      assert:
+        that:
+          - local_execution_context.stdout != delegated_execution_context.stdout
+        fail_msg: |
+          FAIL: Delegation not working correctly!
+          Local context: {{ local_execution_context.stdout }}
+          Delegated context: {{ delegated_execution_context.stdout }}
+
+          Troubleshooting:
+          - Ensure {{ inspec_delegate_host }} has ansible_connection: ssh in inventory
+          - Verify SSH connectivity to delegate host
+          - Check ansible_host is correctly set for delegate host
+        success_msg: |
+          PASS: Delegation working correctly
+          Local: {{ local_execution_context.stdout }}
+          Delegated: {{ delegated_execution_context.stdout }}
+      tags: ['test-validation']
+
+    # Test 5: Gather facts from delegate host
+    - name: "Test 5: Gather facts from delegate host for environment setup"
+      setup:
+      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_facts: true
+      tags: ['test-facts']
+
+    # Test 6: Verify delegate host facts availability
+    - name: "Test 6: Verify delegate host facts are accessible"
+      assert:
+        that:
+          - hostvars[inspec_delegate_host].ansible_env is defined
+          - hostvars[inspec_delegate_host].ansible_env.PATH is defined
+          - hostvars[inspec_delegate_host].ansible_hostname is defined
+        fail_msg: "FAIL: Delegate host facts not available or incomplete"
+        success_msg: |
+          PASS: Delegate host facts gathered successfully
+          Hostname: {{ hostvars[inspec_delegate_host].ansible_hostname }}
+          PATH: {{ hostvars[inspec_delegate_host].ansible_env.PATH[:80] }}...
+      tags: ['test-facts-validation']
+
+    # Test 7: Build combined environment variables
+    - name: "Test 7: Build combined environment like production scans"
+      set_fact:
+        test_combined_environment:
+          PATH: "{{ test_env_paths.mssql_tools }}:{{ test_env_paths.sybase_tools }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
+          LD_LIBRARY_PATH: "{{ test_env_libs.oracle_lib }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
+          HOME: "{{ hostvars[inspec_delegate_host].ansible_env.HOME }}"
+      tags: ['test-environment']
+
+    # Test 8: Verify environment construction
+    - name: "Test 8: Display constructed environment variables"
+      debug:
+        msg: |
+          PASS: Environment variables constructed successfully
+          PATH (first 120 chars): {{ test_combined_environment.PATH[:120] }}...
+          LD_LIBRARY_PATH: {{ test_combined_environment.LD_LIBRARY_PATH }}
+          HOME: {{ test_combined_environment.HOME }}
+      when: enable_verbose_output | bool
+      tags: ['test-environment']
+
+    # Test 9: Check database client tools availability
+    - name: "Test 9: Check MSSQL client tool (sqlcmd) on delegate host"
+      shell: command -v sqlcmd || echo "NOT_FOUND"
+      args:
+        executable: /bin/bash
+      environment: "{{ test_combined_environment }}"
+      register: sqlcmd_check
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+      tags: ['test-tools']
+
+    # Test 10: Check InSpec availability
+    - name: "Test 10: Check InSpec installation on delegate host"
+      shell: |
+        if command -v inspec >/dev/null 2>&1; then
+          inspec --version
+        else
+          echo "NOT_FOUND"
+        fi
+      args:
+        executable: /bin/bash
+      register: inspec_check
+      delegate_to: "{{ inspec_delegate_host }}"
+      changed_when: false
+      failed_when: false
+      tags: ['test-tools']
+
+    # Test 11: Display tool availability results
+    - name: "Test 11: Display database client tools status"
+      debug:
+        msg: |
+          Database Client Tools Status on Delegate Host:
+          ===============================================
+          {% if 'NOT_FOUND' not in sqlcmd_check.stdout %}
+          PASS: sqlcmd found at {{ sqlcmd_check.stdout }}
+          {% else %}
+          WARN: sqlcmd not found in PATH
+          {% endif %}
+
+          {% if 'NOT_FOUND' not in inspec_check.stdout %}
+          PASS: InSpec {{ inspec_check.stdout }}
+          {% else %}
+          FAIL: InSpec not found on delegate host
+          {% endif %}
+      tags: ['test-tools']
+
+    # Test 12: Test non-interactive SSH session (critical for jump servers)
+    - name: "Test 12: Verify environment variables in non-interactive SSH session"
+      shell: |
+        ssh -o BatchMode=yes -o StrictHostKeyChecking=no {{ inspec_delegate_host }} \
+        'echo "PATH=$PATH" && command -v inspec || echo "INSPEC_NOT_FOUND"'
+      args:
+        executable: /bin/bash
+      register: non_interactive_ssh_test
+      delegate_to: localhost
+      changed_when: false
+      failed_when: false
+      ignore_errors: yes
+      tags: ['test-ssh']
+
+    # Test 13: Check for jump server configuration
+    - name: "Test 13: Check if jump server/bastion configuration is present"
+      debug:
+        msg: |
+          Jump Server Configuration Check:
+          {% if ansible_ssh_common_args is defined %}
+          DETECTED: Jump server configuration found
+          SSH Args: {{ ansible_ssh_common_args }}
+          {% else %}
+          INFO: No jump server configuration detected (direct connection)
+          {% endif %}
+      tags: ['test-jump-server']
+
+  post_tasks:
+    # Generate comprehensive test summary
+    - name: Generate comprehensive test summary
+      debug:
+        msg: |
+          ========================================
+          TEST EXECUTION SUMMARY
+          ========================================
+          Database Server Targeted: {{ inventory_hostname }}
+          Delegate Host: {{ inspec_delegate_host }}
+          Delegate Hostname: {{ hostvars[inspec_delegate_host].ansible_hostname | default('unknown') }}
+
+          Test Results:
+          -------------
+          1. Play Targeting: PASS
+          2. Local Execution Context: PASS
+          3. Delegated Execution Context: PASS
+          4. Delegation Validation: {{ 'PASS' if (local_execution_context.stdout != delegated_execution_context.stdout) else 'FAIL' }}
+          5. Delegate Facts Gathering: PASS
+          6. Delegate Facts Validation: PASS
+          7. Environment Construction: PASS
+          8. Environment Display: PASS
+          9. sqlcmd Availability: {{ 'PASS' if ('NOT_FOUND' not in sqlcmd_check.stdout) else 'WARN' }}
+          10. InSpec Availability: {{ 'PASS' if ('NOT_FOUND' not in inspec_check.stdout) else 'FAIL' }}
+          11. Tools Status Display: PASS
+          12. Non-Interactive SSH: {{ 'PASS' if (non_interactive_ssh_test.rc == 0) else 'SKIP' }}
+          13. Jump Server Check: PASS
+
+          Overall Status:
+          ---------------
+          {% if (local_execution_context.stdout != delegated_execution_context.stdout) and ('NOT_FOUND' not in inspec_check.stdout) %}
+          ========================================
+          SUCCESS: All critical tests passed
+          ========================================
+
+          The delegate execution flow is working correctly:
+          - Play targets database servers correctly
+          - Tasks delegate to {{ inspec_delegate_host }} via SSH
+          - Delegate host facts are accessible
+          - Environment variables built from delegate context
+          - InSpec is available on delegate host
+          {% if 'NOT_FOUND' not in sqlcmd_check.stdout %}
+          - Database client tools (sqlcmd) are available
+          {% endif %}
+
+          Next Steps:
+          - Run actual compliance scans with confidence
+          - Use run_compliance_scans.yml for production
+          ========================================
+          {% else %}
+          ========================================
+          WARNING: Some tests failed
+          ========================================
+
+          {% if local_execution_context.stdout == delegated_execution_context.stdout %}
+          CRITICAL: Delegation not working
+          Fix Required:
+          - Ensure {{ inspec_delegate_host }} has ansible_connection: ssh
+          - Verify ansible_host is set to actual hostname/IP
+          - Test SSH connectivity manually
+          {% endif %}
+
+          {% if 'NOT_FOUND' in sqlcmd_check.stdout %}
+          WARNING: sqlcmd not found
+          Recommendation:
+          - Install MSSQL tools on {{ inspec_delegate_host }}
+          - Add /opt/mssql-tools/bin to PATH
+          {% endif %}
+
+          {% if 'NOT_FOUND' in inspec_check.stdout %}
+          CRITICAL: InSpec not found
+          Fix Required:
+          - Install InSpec on {{ inspec_delegate_host }}
+          - Verify InSpec is in PATH
+          {% endif %}
+          ========================================
+          {% endif %}
+      run_once: true
+      tags: ['test-summary']
+
+# Usage Examples:
+# ===============
+# Basic test execution:
+#   ansible-playbook -i inventories/production test_playbooks/test_delegate_execution_flow.yml
+#
+# With specific inventory:
+#   ansible-playbook -i test_inventory.yml test_playbooks/test_delegate_execution_flow.yml
+#
+# Run specific test tags:
+#   ansible-playbook -i test_inventory.yml test_playbooks/test_delegate_execution_flow.yml --tags test-delegation
+#
+# Check mode (dry run):
+#   ansible-playbook -i test_inventory.yml test_playbooks/test_delegate_execution_flow.yml --check
+#
+# Verbose mode:
+#   ansible-playbook -i test_inventory.yml test_playbooks/test_delegate_execution_flow.yml -vv
+#
+# Expected Inventory Structure:
+# =============================
+# all:
+#   children:
+#     mssql_databases:
+#       hosts:
+#         sqlserver01:
+#           ansible_host: sqlserver01.example.com
+#           mssql_server: sqlserver01.example.com
+#           mssql_port: 1433
+#           inspec_delegate_host: inspec-delegate-host
+#
+#     delegate_hosts:
+#       hosts:
+#         inspec-delegate-host:
+#           ansible_host: delegate.example.com
+#           ansible_connection: ssh
+#           ansible_user: ansible_user

@@ -2,6 +2,37 @@
 claude.md
 CLAUDE.md
 categories/
+.hidden/
+
+# Sensitive data - NEVER commit real credentials or hostnames
+# Vault files (contain passwords)
+*vault*.yml
+!inventory_converter/templates/vault_template.j2
+
+# Inventory files at root (may contain real hostnames)
+/test_inventory.yml
+/test_mssql_inventory.yml
+/azure_test_inventory.yml
+/azure_test_vault.yml
+/inventory_example_mssql.yml
+/inventory.yml
+/production_inventory.yml
+
+# Vault password files
+.vaultpass
+*.vaultpass
+vault_password*
+
+# SSH keys
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+
+# Database flat files (may contain server names)
+*.txt
+!requirements.txt
+!README.txt
 
 # OS generated files
 .DS_Store

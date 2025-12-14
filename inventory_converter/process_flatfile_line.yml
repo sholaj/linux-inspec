@@ -1,132 +1,109 @@
 ---
-# Task file to process individual lines from flat file
-# Called by convert_flatfile_to_inventory.yml
+# Process single line from flat file
+# Format: PLATFORM SERVER DATABASE SERVICE PORT VERSION
 
-- name: Parse flat file line components
+- name: Parse line
   set_fact:
-    line_parts: "{{ item.strip().split() }}"
+    parts: "{{ item.strip().split() }}"
 
-- name: Validate line format (must have exactly 6 fields)
+- name: Skip invalid lines
   debug:
-    msg: "Warning: Skipping invalid line {{ line_number + 1 }}: {{ item }} (expected 6 fields, got {{ line_parts | length }})"
-  when: line_parts | length != 6
+    msg: "Skipping line {{ idx + 1 }}: expected 6 fields, got {{ parts | length }}"
+  when: parts | length != 6
 
-- name: Process valid database entry
+- name: Process valid entry
+  when: parts | length == 6
   block:
-    - name: Extract database components
+    - name: Extract fields
       set_fact:
-        db_platform: "{{ line_parts[0] | upper }}"
-        db_server: "{{ line_parts[1] }}"
-        db_database: "{{ line_parts[2] }}"
-        db_service: "{{ line_parts[3] }}"
-        db_port: "{{ line_parts[4] | int }}"
-        db_version: "{{ line_parts[5] }}"
+        platform: "{{ parts[0] | upper }}"
+        server: "{{ parts[1] }}"
+        database: "{{ parts[2] }}"
+        service: "{{ parts[3] }}"
+        port: "{{ parts[4] }}"
+        version: "{{ parts[5] }}"
 
-    - name: Create unique host identifier (MSSQL uses server_port, others use server_database_port)
+    - name: Create host ID
       set_fact:
-        host_id: "{{ (db_server + '_' + db_port | string).replace('.', '_').replace('-', '_') if db_platform == 'MSSQL' else (db_server + '_' + db_database + '_' + db_port | string).replace('.', '_').replace('-', '_') }}"
+        host_id: "{{ (server + '_' + port) | replace('.', '_') | replace('-', '_') if platform == 'MSSQL' else (server + '_' + database + '_' + port) | replace('.', '_') | replace('-', '_') }}"
 
-    - name: Create password vault variable name
-      set_fact:
-        vault_password_var: "vault_{{ host_id }}_password"
-
-    - name: Check if password already exists (for MSSQL deduplication)
-      set_fact:
-        password_exists: "{{ vault_password_var in vault_passwords }}"
-
-    - name: Add password to vault collection (if not already present)
-      set_fact:
-        vault_passwords: "{{ vault_passwords | combine({vault_password_var: 'DB_TEAM_TO_PROVIDE'}) }}"
-      when: not password_exists
-
-    - name: Process MSSQL database entry
+    # MSSQL - server level (deduplicate)
+    - name: Add MSSQL host
+      when: platform == 'MSSQL' and host_id not in inventory_data.all.children.mssql_databases.hosts
       block:
-        - name: Check if MSSQL host already exists (deduplication)
-          set_fact:
-            mssql_host_exists: "{{ host_id in inventory_data.all.children.mssql_servers.hosts }}"
-
-        - name: Create MSSQL host variables (server-level, not database-level)
-          set_fact:
-            mssql_host_vars:
-              mssql_server: "{{ db_server }}"
-              mssql_port: "{{ db_port }}"
-              mssql_database: "{{ db_database }}"
-              mssql_service: "{{ db_service if db_service != 'null' else '' }}"
-              mssql_version: "{{ db_version }}"
-              mssql_username: "{{ default_username }}"
-              mssql_host_id: "{{ host_id }}"
-              database_platform: "mssql"
-
-        - name: Add MSSQL host to inventory (only if not already present)
-          set_fact:
-            inventory_data: "{{ inventory_data | combine({'all': {'children': {'mssql_servers': {'hosts': (inventory_data.all.children.mssql_servers.hosts | combine({host_id: mssql_host_vars}))}}}}, recursive=true) }}"
-          when: not mssql_host_exists
-
-        - name: Increment MSSQL count (only for new hosts)
-          set_fact:
+        - set_fact:
+            inventory_data: "{{ inventory_data | combine({
+              'all': {
+                'children': {
+                  'mssql_databases': {
+                    'hosts': inventory_data.all.children.mssql_databases.hosts | combine({
+                      host_id: {
+                        'mssql_server': server,
+                        'mssql_port': port | int,
+                        'mssql_version': version,
+                        'database_platform': 'mssql'
+                      }
+                    })
+                  }
+                }
+              }
+            }, recursive=true) }}"
+        - set_fact:
             platform_counts: "{{ platform_counts | combine({'mssql': platform_counts.mssql + 1}) }}"
-          when: not mssql_host_exists
 
-        - name: Display deduplication message
-          debug:
-            msg: "⚠️  Skipping duplicate MSSQL entry: {{ db_server }}:{{ db_port }} (database: {{ db_database }}) - already processed"
-          when: mssql_host_exists and ansible_verbosity >= 0
+    - name: Skip duplicate MSSQL
+      when: platform == 'MSSQL' and host_id in inventory_data.all.children.mssql_databases.hosts
+      debug:
+        msg: "Duplicate MSSQL: {{ server }}:{{ port }}"
 
-      when: db_platform == 'MSSQL'
-
-    - name: Process Oracle database entry
+    # Oracle - database level
+    - name: Add Oracle host
+      when: platform == 'ORACLE'
       block:
-        - name: Create Oracle host variables
-          set_fact:
-            oracle_host_vars:
-              oracle_server: "{{ db_server }}"
-              oracle_port: "{{ db_port }}"
-              oracle_database: "{{ db_database }}"
-              oracle_service: "{{ db_service if db_service != 'null' else '' }}"
-              oracle_version: "{{ db_version }}"
-              oracle_username: "{{ default_username }}"
-              oracle_host_id: "{{ host_id }}"
-              database_platform: "oracle"
-
-        - name: Add Oracle host to inventory
-          set_fact:
-            inventory_data: "{{ inventory_data | combine({'all': {'children': {'oracle_databases': {'hosts': (inventory_data.all.children.oracle_databases.hosts | combine({host_id: oracle_host_vars}))}}}}, recursive=true) }}"
-
-        - name: Increment Oracle count
-          set_fact:
+        - set_fact:
+            inventory_data: "{{ inventory_data | combine({
+              'all': {
+                'children': {
+                  'oracle_databases': {
+                    'hosts': inventory_data.all.children.oracle_databases.hosts | combine({
+                      host_id: {
+                        'oracle_server': server,
+                        'oracle_database': database,
+                        'oracle_service': service if service != 'null' else '',
+                        'oracle_port': port | int,
+                        'oracle_version': version,
+                        'database_platform': 'oracle'
+                      }
+                    })
+                  }
+                }
+              }
+            }, recursive=true) }}"
+        - set_fact:
             platform_counts: "{{ platform_counts | combine({'oracle': platform_counts.oracle + 1}) }}"
 
-      when: db_platform == 'ORACLE'
-
-    - name: Process Sybase database entry
+    # Sybase - database level
+    - name: Add Sybase host
+      when: platform == 'SYBASE'
       block:
-        - name: Create Sybase host variables
-          set_fact:
-            sybase_host_vars:
-              sybase_server: "{{ db_server }}"
-              sybase_port: "{{ db_port }}"
-              sybase_database: "{{ db_database }}"
-              sybase_service: "{{ db_service if db_service != 'null' else '' }}"
-              sybase_version: "{{ db_version }}"
-              sybase_username: "{{ default_username }}"
-              sybase_host_id: "{{ host_id }}"
-              sybase_use_ssh: true
-              sybase_ssh_user: "oracle"
-              database_platform: "sybase"
-
-        - name: Add Sybase host to inventory
-          set_fact:
-            inventory_data: "{{ inventory_data | combine({'all': {'children': {'sybase_databases': {'hosts': (inventory_data.all.children.sybase_databases.hosts | combine({host_id: sybase_host_vars}))}}}}, recursive=true) }}"
-
-        - name: Increment Sybase count
-          set_fact:
+        - set_fact:
+            inventory_data: "{{ inventory_data | combine({
+              'all': {
+                'children': {
+                  'sybase_databases': {
+                    'hosts': inventory_data.all.children.sybase_databases.hosts | combine({
+                      host_id: {
+                        'sybase_server': server,
+                        'sybase_database': database,
+                        'sybase_service': service if service != 'null' else '',
+                        'sybase_port': port | int,
+                        'sybase_version': version,
+                        'database_platform': 'sybase'
+                      }
+                    })
+                  }
+                }
+              }
+            }, recursive=true) }}"
+        - set_fact:
             platform_counts: "{{ platform_counts | combine({'sybase': platform_counts.sybase + 1}) }}"
-
-      when: db_platform == 'SYBASE'
-
-    - name: Display processed entry (debug mode)
-      debug:
-        msg: "[OK] Processed {{ db_platform }} {{ db_server }}:{{ db_port }}/{{ db_database }} ({{ db_version }}) as {{ host_id }}"
-      when: ansible_verbosity >= 1
-
-  when: line_parts | length == 6

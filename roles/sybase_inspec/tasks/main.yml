@@ -15,8 +15,8 @@
       SSH Enabled: {{ sybase_use_ssh }}
       SSH User: {{ sybase_ssh_user | default('N/A') }}
 
-      Hello World from Sybase InSpec Role! 🌍
-      Note: This role includes SSH tunnel support as per original script!
+      Starting Sybase InSpec compliance scan...
+      Note: This role includes SSH tunnel support.
 
 - name: Validate Sybase connection parameters and environment
   include_tasks: validate.yml
