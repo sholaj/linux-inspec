@@ -20,14 +20,14 @@
   when:
     - generate_summary_report | default(true)
     - inspec_results is defined
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up temporary directory
   file:
     path: "{{ inspec_temp_dir }}"
     state: absent
   when: cleanup_temp_files | default(true)
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up control files directory (remote delegate only)
   file:
@@ -37,7 +37,7 @@
     - cleanup_temp_files | default(true)
     - delegate_controls_dir is defined
     - delegate_controls_dir.path is defined
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Send results to Splunk if enabled
   include_tasks: splunk_integration.yml
@@ -51,3 +51,4 @@
     - splunk_hec_url is defined
     - splunk_hec_token is defined
     - inspec_results is defined
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"

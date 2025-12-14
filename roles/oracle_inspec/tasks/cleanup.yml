@@ -21,7 +21,7 @@
     - generate_summary_report | default(true)
     - oracle_inspec_results is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Send Oracle results to Splunk (if enabled)
   include_tasks: splunk_integration.yml
@@ -35,7 +35,7 @@
     - splunk_hec_url is defined
     - splunk_hec_token is defined
     - oracle_inspec_results is defined
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up Oracle temporary files
   file:
@@ -43,7 +43,7 @@
     state: absent
   when: oracle_temp_dir is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up Oracle control files directory (remote delegate only)
   file:
@@ -53,7 +53,7 @@
     - delegate_controls_dir is defined
     - delegate_controls_dir.path is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Display Oracle scan completion summary
   debug:

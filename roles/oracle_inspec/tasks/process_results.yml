@@ -45,6 +45,7 @@
       debug:
         msg: "Oracle control {{ oracle_control_file_name }} completed with status: {{ oracle_inspec_status }}"
       when: inspec_debug_mode | default(false)
+  delegate_to: localhost
   when: not (use_delegate_host | bool)
 
 - name: Handle failed Oracle InSpec execution on delegate host
@@ -88,4 +89,5 @@
       when:
         - inspec_debug_mode | default(false)
         - (item.rc != 0 or (oracle_inspec_status is not defined or oracle_inspec_status not in ['passed', 'failed', 'skipped']))
+  delegate_to: localhost
   when: not (use_delegate_host | bool)

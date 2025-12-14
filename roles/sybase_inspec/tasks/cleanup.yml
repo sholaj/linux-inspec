@@ -21,7 +21,7 @@
     - generate_summary_report | default(true)
     - sybase_final_results is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Send Sybase results to Splunk (if enabled)
   include_tasks: splunk_integration.yml
@@ -35,7 +35,7 @@
     - splunk_hec_url is defined
     - splunk_hec_token is defined
     - sybase_final_results is defined
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up SSH private key
   file:
@@ -45,7 +45,7 @@
     - sybase_use_ssh | default(true)
     - sybase_ssh_key_path is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up Sybase temporary files
   file:
@@ -53,7 +53,7 @@
     state: absent
   when: sybase_temp_dir is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up Sybase control files directory (remote delegate only)
   file:
@@ -63,7 +63,7 @@
     - delegate_controls_dir is defined
     - delegate_controls_dir.path is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Display Sybase scan completion summary
   debug:
