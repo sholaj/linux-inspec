@@ -2,7 +2,7 @@
 # MSSQL InSpec Compliance Scanning Playbook
 # Compatible with Ansible Automation Platform (AAP)
 - name: Execute InSpec MSSQL Compliance Scans
-  hosts: mssql_servers
+  hosts: mssql_databases
   gather_facts: yes
   strategy: "{{ execution_strategy | default('linear') }}"
   serial: "{{ batch_size | default(5) }}"
@@ -39,7 +39,7 @@
         msg: |
           Starting MSSQL Compliance Scans
           ================================
-          Total servers in group: {{ groups['mssql_servers'] | length }}
+          Total servers in group: {{ groups['mssql_databases'] | length }}
           Results directory: {{ base_results_dir }}
           Timestamp: {{ scan_timestamp }}
           Debug mode: {{ enable_debug }}
@@ -84,7 +84,7 @@
               =====================================
               MSSQL Compliance Scan Complete
               =====================================
-              Total servers scanned: {{ groups['mssql_servers'] | length }}
+              Total servers scanned: {{ groups['mssql_databases'] | length }}
               Result files generated: {{ json_files.files | length }}
               Results location: {{ base_results_dir }}
 
@@ -114,7 +114,7 @@
           MSSQL compliance scans have been completed.
 
           Scan Details:
-          - Total servers: {{ groups['mssql_servers'] | length }}
+          - Total servers: {{ groups['mssql_databases'] | length }}
           - Timestamp: {{ scan_timestamp }}
           - Results: {{ base_results_dir }}
       when:
@@ -141,7 +141,7 @@
             job_id: "{{ job_id }}"
             project: "{{ project_name }}"
             scan_timestamp: "{{ scan_timestamp }}"
-            total_servers: "{{ groups['mssql_servers'] | length }}"
+            total_servers: "{{ groups['mssql_databases'] | length }}"
             results_location: "{{ base_results_dir }}"
             status: "completed"
             message: "MSSQL compliance scan completed successfully"
@@ -165,7 +165,7 @@
 # - Add vault password as credential
 # - Configure Splunk variables in extra vars:
 #   splunk_enabled: true
-#   splunk_hec_url: "https://splunk.company.com:8088"
+#   splunk_hec_url: "https://splunk.example.com:8088"
 #   splunk_index: "compliance_scans"
 #   (splunk_hec_token configured as credential)
 #

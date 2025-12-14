@@ -13,7 +13,7 @@
       Version: {{ oracle_version }}
       Username: {{ oracle_username }}
 
-      Hello World from Oracle InSpec Role! 🌍
+      Starting Oracle InSpec compliance scan...
 
 - name: Validate Oracle connection parameters and environment
   include_tasks: validate.yml

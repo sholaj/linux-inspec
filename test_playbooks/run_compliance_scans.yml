@@ -1,0 +1,223 @@
+---
+# Multi-Platform Database Compliance Scanning Playbook
+# Supports MSSQL, Oracle, and Sybase databases
+# Based on original NIST_for_db.ksh script functionality
+
+- name: Execute Multi-Platform Database Compliance Scans
+  hosts: all
+  gather_facts: yes
+  strategy: "{{ execution_strategy | default('linear') }}"
+  serial: "{{ batch_size | default(5) }}"
+
+  vars:
+    # Global settings - can be overridden by AAP extra vars
+    scan_timestamp: "{{ ansible_date_time.epoch }}"
+    enable_debug: false
+    # Timeout settings for lengthy scans
+    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"  # Default 30 minutes per control
+    async_timeout: "{{ async_scan_timeout | default(3600) }}"    # Default 1 hour for async execution
+    poll_interval: "{{ async_poll_interval | default(30) }}"      # Check status every 30 seconds
+    # AAP compatibility
+    job_id: "{{ tower_job_id | default('local') }}"
+    project_name: "{{ project_name | default('database_compliance') }}"
+    # Splunk integration
+    send_to_splunk: "{{ splunk_enabled | default(false) }}"
+    splunk_hec_url: "{{ splunk_hec_url | default('') }}"
+    splunk_hec_token: "{{ splunk_hec_token | default('') }}"
+    splunk_index: "{{ splunk_index | default('compliance_scans') }}"
+
+  pre_tasks:
+    - name: Ensure base results directory exists
+      file:
+        path: "{{ base_results_dir }}"
+        state: directory
+        mode: '0755'
+      run_once: true
+      delegate_to: localhost
+
+    - name: Display scan configuration
+      debug:
+        msg: |
+          🚀 Multi-Platform Database Compliance Scans Starting
+          ===================================================
+          Total hosts: {{ ansible_play_hosts | length }}
+          MSSQL servers: {{ groups.get('mssql_databases', []) | length }}
+          Oracle databases: {{ groups.get('oracle_databases', []) | length }}
+          Sybase databases: {{ groups.get('sybase_databases', []) | length }}
+          Results directory: {{ base_results_dir }}
+          Timestamp: {{ scan_timestamp }}
+          Debug mode: {{ enable_debug }}
+          Batch size: {{ batch_size | default(5) }}
+      run_once: true
+      when: enable_debug
+
+    - name: Check if InSpec is installed
+      command: which inspec
+      register: inspec_check
+      changed_when: false
+      failed_when: false
+      delegate_to: localhost
+
+    - name: Fail if InSpec is not installed
+      fail:
+        msg: |
+          InSpec is not installed on this system.
+          Please install InSpec before running this playbook.
+          Installation: gem install inspec
+      when: inspec_check.rc != 0
+
+  tasks:
+    - name: Display current database being scanned
+      debug:
+        msg: |
+          🔍 Scanning Database:
+          Platform: {{ database_platform | upper }}
+          {% if database_platform == 'mssql' %}
+          Server: {{ mssql_server }}:{{ mssql_port }}
+          Database: {{ mssql_database }}
+          Version: {{ mssql_version }}
+          {% elif database_platform == 'oracle' %}
+          Server: {{ oracle_server }}:{{ oracle_port }}
+          Database: {{ oracle_database }}
+          Service: {{ oracle_service }}
+          Version: {{ oracle_version }}
+          {% elif database_platform == 'sybase' %}
+          Server: {{ sybase_server }}:{{ sybase_port }}
+          Database: {{ sybase_database }}
+          Service: {{ sybase_service }}
+          Version: {{ sybase_version }}
+          SSH: {{ sybase_use_ssh | default(true) | ternary('Enabled', 'Disabled') }}
+          {% endif %}
+      when: enable_debug
+
+    # MSSQL Server Scanning (server-level, not database-level)
+    - name: Execute MSSQL InSpec compliance scan
+      include_role:
+        name: mssql_inspec
+      vars:
+        inspec_results_dir: "{{ base_results_dir }}/{{ mssql_server | replace('.', '_') }}_{{ mssql_port }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+      when: database_platform == 'mssql'
+
+    # Oracle Database Scanning
+    - name: Execute Oracle InSpec compliance scan
+      include_role:
+        name: oracle_inspec
+      vars:
+        inspec_results_dir: "{{ base_results_dir }}/{{ oracle_server | replace('.', '_') }}_{{ oracle_database }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+      when: database_platform == 'oracle'
+
+    # Sybase Database Scanning
+    - name: Execute Sybase InSpec compliance scan
+      include_role:
+        name: sybase_inspec
+      vars:
+        inspec_results_dir: "{{ base_results_dir }}/{{ sybase_server | replace('.', '_') }}_{{ sybase_database }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+      when: database_platform == 'sybase'
+
+  post_tasks:
+    - name: Generate consolidated report
+      block:
+        - name: Find all JSON result files
+          find:
+            paths: "{{ base_results_dir }}"
+            patterns: "*.json"
+            recurse: yes
+          register: json_files
+          delegate_to: localhost
+          run_once: true
+
+        - name: Generate platform summary
+          set_fact:
+            platform_summary:
+              mssql_count: "{{ groups.get('mssql_databases', []) | length }}"
+              oracle_count: "{{ groups.get('oracle_databases', []) | length }}"
+              sybase_count: "{{ groups.get('sybase_databases', []) | length }}"
+              total_hosts: "{{ ansible_play_hosts | length }}"
+              total_results: "{{ json_files.files | length }}"
+          run_once: true
+
+        - name: Display scan completion summary
+          debug:
+            msg: |
+              =====================================
+              Multi-Platform Compliance Scan Complete
+              =====================================
+              MSSQL servers scanned: {{ platform_summary.mssql_count }}
+              Oracle databases scanned: {{ platform_summary.oracle_count }}
+              Sybase databases scanned: {{ platform_summary.sybase_count }}
+              Total hosts: {{ platform_summary.total_hosts }}
+              Result files generated: {{ platform_summary.total_results }}
+              Results location: {{ base_results_dir }}
+
+              Platform-specific file patterns:
+              - MSSQL: MSSQL_NIST_*_*.json (server-level scans)
+              - Oracle: ORACLE_NIST_*_*.json
+              - Sybase: SYBASE_NIST_*_*.json
+
+              To view results by platform:
+              find {{ base_results_dir }}/ -name "MSSQL_NIST_*.json"
+              find {{ base_results_dir }}/ -name "ORACLE_NIST_*.json"
+              find {{ base_results_dir }}/ -name "SYBASE_NIST_*.json"
+              =====================================
+          run_once: true
+          delegate_to: localhost
+      when: not ansible_check_mode
+
+    - name: Send consolidated results to Splunk (optional)
+      uri:
+        url: "{{ splunk_hec_url }}/services/collector"
+        method: POST
+        headers:
+          Authorization: "Splunk {{ splunk_hec_token }}"
+          Content-Type: "application/json"
+        body_format: json
+        body:
+          time: "{{ ansible_date_time.epoch }}"
+          index: "{{ splunk_index }}"
+          source: "multi_platform_compliance_scan"
+          sourcetype: "ansible:database:compliance"
+          event:
+            job_id: "{{ job_id }}"
+            project: "{{ project_name }}"
+            scan_timestamp: "{{ scan_timestamp }}"
+            mssql_databases: "{{ platform_summary.mssql_count }}"
+            oracle_databases: "{{ platform_summary.oracle_count }}"
+            sybase_databases: "{{ platform_summary.sybase_count }}"
+            total_hosts: "{{ platform_summary.total_hosts }}"
+            total_results: "{{ platform_summary.total_results }}"
+            results_location: "{{ base_results_dir }}"
+            status: "completed"
+            message: "Multi-platform database compliance scan completed successfully"
+        status_code: 200
+        timeout: 30
+      when:
+        - send_to_splunk | bool
+        - splunk_hec_url != ""
+        - splunk_hec_token != ""
+        - platform_summary is defined
+      delegate_to: localhost
+      run_once: true
+      ignore_errors: yes
+
+# Example usage:
+# Multi-platform scanning:
+# ansible-playbook -i inventory.yml run_compliance_scans.yml -e @vault.yml --vault-password-file .vaultpass
+#
+# Platform-specific scanning:
+# ansible-playbook -i inventory.yml run_compliance_scans.yml --limit "mssql_databases"
+# ansible-playbook -i inventory.yml run_compliance_scans.yml --limit "oracle_databases"
+# ansible-playbook -i inventory.yml run_compliance_scans.yml --limit "sybase_databases"
+#
+# Mixed platform example inventory groups:
+# [mssql_databases]      # Server-level scanning (InSpec scans all databases on server)
+# [oracle_databases]   # Database-level scanning
+# [sybase_databases]   # Database-level scanning

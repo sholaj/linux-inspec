@@ -1,0 +1,22 @@
+all:
+    children:
+        mssql_databases:
+            hosts:
+                sqlsrv_dbcompliance_1759089344_database_windows_net_testdb01_1433:
+                    database_platform: mssql
+                    mssql_database: testdb01
+                    mssql_host_id: sqlsrv_dbcompliance_1759089344_database_windows_net_testdb01_1433
+                    mssql_port: 1433
+                    mssql_server: sqlsrv-dbcompliance-1759089344.database.windows.net
+                    mssql_service: testdb01
+                    mssql_username: sqladmin
+                    mssql_version: '2019'
+        oracle_databases:
+            hosts: {}
+        sybase_databases:
+            hosts: {}
+    vars:
+        ansible_connection: local
+        ansible_python_interpreter: /opt/homebrew/Cellar/ansible/12.0.0/libexec/bin/python
+        base_results_dir: /tmp/compliance_scans
+        inspec_debug_mode: false

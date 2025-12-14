@@ -45,7 +45,7 @@ parallelism: 3
 max_parallelism: 12
 
 # SSH configuration for Sybase (unique feature)
-# From NIST_for_db.ksh: --ssh://oracle:edcp!cv0576@ -o oracle/.ssh/authorized_keys
+# SSH connection for InSpec to Sybase server
 ssh_settings:
   enabled: true
   default_user: "oracle"
@@ -88,7 +88,7 @@ inspec_settings:
   timeout: 300
 
 # SSH command patterns matching original script
-# From NIST_for_db.ksh: /usr/bin/inspec exec ... --ssh://oracle:edcp!cv0576@ -o oracle/.ssh/authorized_keys
+# InSpec SSH command template for Sybase connections
 ssh_command_patterns:
   inspec_ssh_template: "--ssh://{{ sybase_ssh_user }}:{{ vault_sybase_ssh_password }}@{{ sybase_server }} -o {{ sybase_ssh_keyfile }}"
   ssh_options:

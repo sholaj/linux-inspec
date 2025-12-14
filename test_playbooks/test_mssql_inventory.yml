@@ -41,6 +41,14 @@ all:
           ansible_ssh_private_key_file: /path/to/ssh/private/key
           # Method B: SSH agent (comment out above line, uses loaded keys)
 
+          # SSH Host Key Checking (optional):
+          # Option A: Strict checking enabled (recommended for production)
+          # ansible_ssh_common_args: '-o StrictHostKeyChecking=yes'
+          # Option B: Accept new host keys automatically
+          # ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
+          # Option C: Disable checking (NOT recommended for production!)
+          # ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
         # OPTION 2: Username/Password Authentication (Testing/Dev)
         # Uncomment if using password instead of SSH key
         # inspec-delegate-host:
@@ -49,7 +57,15 @@ all:
         #   ansible_user: ansible-svc
         #   ansible_port: 22
         #   # Password (MUST be in vault for security!)
-        #   ansible_ssh_pass: "{{ vault_delegate_ssh_password }}"
+        #   ansible_password: "{{ vault_delegate_password }}"
+        #
+        #   # SSH Host Key Checking (optional):
+        #   # Option A: Strict checking enabled (recommended)
+        #   # ansible_ssh_common_args: '-o StrictHostKeyChecking=yes'
+        #   # Option B: Accept new host keys automatically
+        #   # ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
+        #   # Option C: Disable checking (NOT recommended for production!)
+        #   # ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
 
   vars:
     # Global variables
