@@ -40,26 +40,6 @@
       INSPEC_BACKEND: "{{ sybase_environment_base.INSPEC_BACKEND }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
 
-- name: Verify isql is available in PATH
-  shell: |
-    set -e
-    echo "Checking for isql in PATH..."
-    which isql > /dev/null 2>&1
-    echo "OK isql is available"
-  args:
-    executable: /bin/bash
-  environment:
-    PATH: "{{ sybase_environment.PATH }}"
-  delegate_to: "{{ inspec_execution_target }}"
-  changed_when: false
-  register: isql_validation
-  ignore_errors: true
-
-- name: Fail if isql is not available
-  fail:
-    msg: "CRITICAL ERROR: isql not found in PATH"
-  when: isql_validation is failed
-
 - name: Execute Sybase InSpec controls via SSH
   shell: |
     /usr/bin/inspec exec {{ item.path }} \

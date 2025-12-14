@@ -36,39 +36,6 @@
       LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
       INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
 
-- name: Verify sqlcmd is available in PATH
-  shell: |
-    set -e
-    echo "Checking for sqlcmd in PATH..."
-    which sqlcmd && sqlcmd -? > /dev/null 2>&1
-    echo "✓ sqlcmd is available"
-  args:
-    executable: /bin/bash
-  environment:
-    PATH: "{{ mssql_environment.PATH }}"
-  delegate_to: "{{ inspec_execution_target }}"
-  changed_when: false
-  register: sqlcmd_validation
-
-- name: Fail if sqlcmd is not available
-  fail:
-    msg: |
-      CRITICAL ERROR: sqlcmd not found!
-      
-      The InSpec role requires Microsoft SQL Server tools to be installed.
-      Expected location: /opt/mssql-tools/bin/sqlcmd
-      
-      Current PATH: {{ mssql_environment.PATH }}
-      
-      Installation instructions:
-      - RHEL/CentOS: sudo yum install mssql-tools
-      - Ubuntu/Debian: sudo apt-get install mssql-tools
-      - macOS: brew install mssql-tools
-      
-      After installation, verify with:
-      /opt/mssql-tools/bin/sqlcmd -?
-  when: sqlcmd_validation is failed
-
 - name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
