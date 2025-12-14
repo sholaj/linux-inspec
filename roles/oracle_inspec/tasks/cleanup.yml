@@ -35,7 +35,6 @@
     - splunk_hec_url is defined
     - splunk_hec_token is defined
     - oracle_inspec_results is defined
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Clean up Oracle temporary files
   file:

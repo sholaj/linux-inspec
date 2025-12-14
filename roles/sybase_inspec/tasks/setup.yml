@@ -4,8 +4,9 @@
 - name: Determine execution mode for setup
   set_fact:
     use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
+    inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
-- name: Setup Sybase InSpec environment on delegate host (delegate mode)
+- name: Setup Sybase InSpec environment
   block:
     - name: Create Sybase results directory
       file:
@@ -41,44 +42,4 @@
       fail:
         msg: "No Sybase control files found in {{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
       when: sybase_control_files.files | length == 0
-  delegate_to: "{{ inspec_delegate_host }}"
-  when: use_delegate_host | bool
-
-- name: Setup Sybase InSpec environment locally (local mode)
-  block:
-    - name: Create Sybase results directory
-      file:
-        path: "{{ inspec_results_dir }}"
-        state: directory
-        mode: '0755'
-
-    - name: Create Sybase temporary working directory
-      tempfile:
-        state: directory
-        suffix: "_sybase_inspec"
-      register: sybase_temp_dir
-
-    - name: Find all Ruby control files for specified Sybase version
-      find:
-        paths: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
-        patterns: "*.rb"
-        file_type: file
-      register: sybase_control_files
-
-    - name: Display Sybase control files to be executed
-      debug:
-        msg: |
-          Sybase {{ sybase_version }} controls to execute:
-          {% for file in sybase_control_files.files %}
-          - {{ file.path | basename }}
-          {% endfor %}
-          Total controls: {{ sybase_control_files.files | length }}
-          SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
-      when: inspec_debug_mode | default(false)
-
-    - name: Fail if no Sybase control files found
-      fail:
-        msg: "No Sybase control files found in {{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
-      when: sybase_control_files.files | length == 0
-  delegate_to: localhost
-  when: not (use_delegate_host | bool)
+  delegate_to: "{{ inspec_execution_target }}"
