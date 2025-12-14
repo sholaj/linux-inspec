@@ -3,14 +3,15 @@
 # Compatible with Ansible Automation Platform (AAP)
 - name: Execute InSpec Oracle Compliance Scans
   hosts: oracle_databases
-  gather_facts: yes
+  gather_facts: false
+  connection: local
   strategy: "{{ execution_strategy | default('linear') }}"
   serial: "{{ batch_size | default(5) }}"
 
   vars:
     # Global settings - can be overridden by AAP extra vars
     inspec_delegate_host: "{{ controller_delegate_host | default('localhost') }}"
-    scan_timestamp: "{{ ansible_date_time.epoch }}"
+    scan_timestamp: "{{ controller_time.epoch | default(ansible_date_time.epoch) }}"
     enable_debug: false
     # Timeout settings for lengthy scans
     inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"  # Default 30 minutes per control
@@ -26,6 +27,23 @@
     splunk_index: "{{ splunk_index | default('compliance_scans') }}"
 
   pre_tasks:
+    - name: Gather controller facts for timestamps
+      setup:
+        gather_subset:
+          - min
+          - hardware
+          - network
+          - virtual
+          - env
+      delegate_to: localhost
+      run_once: true
+      register: controller_facts
+
+    - name: Set controller time fact
+      set_fact:
+        controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
+      run_once: true
+
     - name: Ensure base results directory exists
       file:
         path: "{{ base_results_dir }}"
