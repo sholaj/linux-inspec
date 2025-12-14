@@ -39,6 +39,41 @@
       INSPEC_BACKEND: "{{ oracle_environment_base.INSPEC_BACKEND }}"
       NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
 
+- name: Verify SQL*Plus is available in PATH
+  shell: |
+    set -e
+    echo "Checking for sqlplus in PATH..."
+    which sqlplus > /dev/null 2>&1
+    echo "✓ sqlplus is available"
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ oracle_environment.PATH }}"
+  delegate_to: "{{ inspec_execution_target }}"
+  changed_when: false
+  register: sqlplus_validation
+  ignore_errors: true
+
+- name: Fail if SQL*Plus is not available
+  fail:
+    msg: |
+      CRITICAL ERROR: sqlplus not found!
+      
+      The Oracle InSpec role requires Oracle client tools to be installed.
+      Expected tool: sqlplus
+      
+      Current PATH: {{ oracle_environment.PATH }}
+      ORACLE_HOME: {{ oracle_environment.ORACLE_HOME | default('not set') }}
+      
+      Installation instructions:
+      - Download from: https://www.oracle.com/database/technologies/instant-client/linux-x86-64-downloads.html
+      - Install Oracle Instant Client (basic, sqlplus)
+      - Set ORACLE_HOME environment variable
+      
+      Verify installation with:
+      sqlplus -version
+  when: sqlplus_validation is failed
+
 - name: Execute Oracle InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
@@ -68,7 +103,10 @@
   loop_control:
     label: "{{ item.path | basename }}"
   changed_when: false
-  failed_when: false
+  failed_when: |
+    (oracle_inspec_results.rc != 0 and 
+     'Cannot connect' not in oracle_inspec_results.stdout and 
+     'Unreachable' not in oracle_inspec_results.stdout)
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
