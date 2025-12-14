@@ -5,7 +5,7 @@
 oracle_username: "nist_scan_user"
 oracle_port: 1521
 oracle_version: "19c"
-oracle_password: "{{ lookup('vars', 'vault_' + oracle_host_id + '_password') }}"
+oracle_password: ""  # AAP2 injects via extra vars (single credential for all DBs with RBAC)
 
 # Default paths and directories
 base_results_dir: "/tmp/compliance_scans"
