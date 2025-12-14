@@ -1,0 +1,191 @@
+---
+# Production Inventory - Database Compliance Scanning (LOCAL EXECUTION MODE)
+# Generated for localhost execution - InSpec runs on AAP execution environment
+# Credentials injected by AAP2 Custom Credential at runtime
+
+all:
+  ###########################################################################
+  # NO DELEGATE HOST FOR LOCAL EXECUTION
+  # If you need delegate/jump server execution, uncomment and configure:
+  ###########################################################################
+  # hosts:
+  #   inspec-runner:
+  #     ansible_host: jumpserver.example.com
+  #     ansible_connection: ssh
+  #     ansible_user: ansible_svc
+  #     ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
+
+  children:
+    ###########################################################################
+    # MSSQL Database Servers
+    ###########################################################################
+    mssql_databases:
+      hosts:
+        # MSSQL Server 1 (Non-standard port)
+        SQLPROD01_1733:
+          mssql_server: SQLPROD01
+          mssql_port: 1733
+          mssql_version: "2019"
+          database_platform: mssql
+
+        # MSSQL Server 2 (Standard port)
+        SQLPROD02_1433:
+          mssql_server: SQLPROD02
+          mssql_port: 1433
+          mssql_version: "2019"
+          database_platform: mssql
+
+        # MSSQL Server 3 (Different version)
+        SQLDEV01_1433:
+          mssql_server: SQLDEV01
+          mssql_port: 1433
+          mssql_version: "2017"
+          database_platform: mssql
+
+        # MSSQL Server 4 (Custom port)
+        SQLTEST01_1500:
+          mssql_server: SQLTEST01
+          mssql_port: 1500
+          mssql_version: "2022"
+          database_platform: mssql
+
+      vars:
+        # ===================================================================
+        # EXECUTION MODE: LOCAL
+        # ===================================================================
+        # InSpec runs directly on AAP execution environment
+        inspec_delegate_host: "localhost"
+        
+        # ===================================================================
+        # DATABASE CREDENTIALS (Shared by ALL MSSQL databases)
+        # ===================================================================
+        mssql_username: nist_scan_user
+        # mssql_password: INJECTED BY AAP Custom Credential
+        
+        # ===================================================================
+        # EXECUTION PARAMETERS
+        # ===================================================================
+        base_results_dir: /tmp/compliance_scans
+        enable_debug: false
+        inspec_command_timeout: 1800
+        async_scan_timeout: 3600
+        async_poll_interval: 30
+
+    ###########################################################################
+    # Oracle Database Servers
+    ###########################################################################
+    oracle_databases:
+      hosts:
+        # Oracle Database 1
+        ORAPROD01_ORCL_1521:
+          oracle_server: ORAPROD01
+          oracle_database: ORCL
+          oracle_service: ORCL
+          oracle_port: 1521
+          oracle_version: "19"
+          database_platform: oracle
+
+        # Oracle Database 2
+        ORADEV01_DEVDB_1521:
+          oracle_server: ORADEV01
+          oracle_database: DEVDB
+          oracle_service: DEVDB
+          oracle_port: 1521
+          oracle_version: "12"
+          database_platform: oracle
+
+      vars:
+        # ===================================================================
+        # EXECUTION MODE: LOCAL
+        # ===================================================================
+        inspec_delegate_host: "localhost"
+        
+        # ===================================================================
+        # DATABASE CREDENTIALS (Shared by ALL Oracle databases)
+        # ===================================================================
+        oracle_username: nist_scan_user
+        # oracle_password: INJECTED BY AAP Custom Credential
+        
+        # ===================================================================
+        # EXECUTION PARAMETERS
+        # ===================================================================
+        base_results_dir: /tmp/compliance_scans
+        enable_debug: false
+        inspec_command_timeout: 1800
+
+    ###########################################################################
+    # Sybase Database Servers
+    ###########################################################################
+    sybase_databases:
+      hosts:
+        # Sybase Database 1
+        SYBPROD01_master_5000:
+          sybase_server: SYBPROD01
+          sybase_database: master
+          sybase_port: 5000
+          sybase_version: "16"
+          database_platform: sybase
+
+        # Sybase Database 2
+        SYBDEV01_testdb_5000:
+          sybase_server: SYBDEV01
+          sybase_database: testdb
+          sybase_port: 5000
+          sybase_version: "15"
+          database_platform: sybase
+
+      vars:
+        # ===================================================================
+        # EXECUTION MODE: LOCAL
+        # ===================================================================
+        inspec_delegate_host: "localhost"
+        
+        # ===================================================================
+        # SYBASE: THREE-LAYER AUTHENTICATION
+        # ===================================================================
+        # Layer 1: Ansible -> Delegate (N/A for local mode)
+        # Layer 2: InSpec -> Sybase SSH Tunnel
+        # Layer 3: isql -> Sybase Database
+        
+        sybase_use_ssh: true
+        sybase_ssh_user: sybase_admin
+        # sybase_ssh_password: INJECTED BY AAP Custom Credential
+        
+        sybase_username: nist_scan_user
+        # sybase_password: INJECTED BY AAP Custom Credential
+        
+        # ===================================================================
+        # EXECUTION PARAMETERS
+        # ===================================================================
+        base_results_dir: /tmp/compliance_scans
+        enable_debug: false
+        inspec_command_timeout: 1800
+
+###############################################################################
+# USAGE INSTRUCTIONS
+###############################################################################
+#
+# LOCAL EXECUTION (Current Configuration):
+# ----------------------------------------
+# 1. Set inspec_delegate_host: "localhost" (already set above)
+# 2. Ensure AAP Custom Credential is attached to Job Template
+# 3. Run playbook: test_playbooks/run_compliance_scans.yml
+#
+# DELEGATE EXECUTION (To Switch):
+# --------------------------------
+# 1. Uncomment the hosts section under 'all:'
+# 2. Configure delegate host details
+# 3. Change inspec_delegate_host: "inspec-runner" in each group
+# 4. Attach BOTH Machine Credential + Custom Credential in AAP
+#
+# ADDING MORE DATABASES:
+# ----------------------
+# Add new entries under the appropriate group (mssql_databases, etc.):
+#
+#   YOUR_SERVER_PORT:
+#     mssql_server: YOUR_SERVER
+#     mssql_port: PORT_NUMBER
+#     mssql_version: "VERSION"
+#     database_platform: mssql
+#
+###############################################################################

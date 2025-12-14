@@ -69,6 +69,43 @@
         - item | trim | length > 0
         - not item.strip().startswith('#')
 
+    - name: Set execution mode to localhost (default)
+      set_fact:
+        inventory_data: "{{ inventory_data | combine({
+          'all': {
+            'children': inventory_data.all.children | combine({
+              'mssql_databases': {
+                'hosts': inventory_data.all.children.mssql_databases.hosts,
+                'vars': inventory_data.all.children.mssql_databases.vars | combine({
+                  'inspec_delegate_host': 'localhost',
+                  'base_results_dir': '/tmp/compliance_scans',
+                  'enable_debug': false,
+                  'inspec_command_timeout': 1800
+                })
+              },
+              'oracle_databases': {
+                'hosts': inventory_data.all.children.oracle_databases.hosts,
+                'vars': inventory_data.all.children.oracle_databases.vars | combine({
+                  'inspec_delegate_host': 'localhost',
+                  'base_results_dir': '/tmp/compliance_scans',
+                  'enable_debug': false,
+                  'inspec_command_timeout': 1800
+                })
+              },
+              'sybase_databases': {
+                'hosts': inventory_data.all.children.sybase_databases.hosts,
+                'vars': inventory_data.all.children.sybase_databases.vars | combine({
+                  'inspec_delegate_host': 'localhost',
+                  'base_results_dir': '/tmp/compliance_scans',
+                  'enable_debug': false,
+                  'inspec_command_timeout': 1800
+                })
+              }
+            })
+          }
+        }, recursive=true) }}"
+      when: delegate_host | length == 0
+
     - name: Add delegate host to inventory (if specified)
       set_fact:
         inventory_data: "{{ inventory_data | combine({
@@ -77,26 +114,36 @@
               delegate_host: {
                 'ansible_host': delegate_address,
                 'ansible_connection': 'ssh',
-                'ansible_user': delegate_user
+                'ansible_user': delegate_user,
+                'ansible_ssh_common_args': '-o StrictHostKeyChecking=accept-new'
               }
             },
             'children': inventory_data.all.children | combine({
               'mssql_databases': {
                 'hosts': inventory_data.all.children.mssql_databases.hosts,
                 'vars': inventory_data.all.children.mssql_databases.vars | combine({
-                  'inspec_delegate_host': delegate_host
+                  'inspec_delegate_host': delegate_host,
+                  'base_results_dir': '/tmp/compliance_scans',
+                  'enable_debug': false,
+                  'inspec_command_timeout': 1800
                 })
               },
               'oracle_databases': {
                 'hosts': inventory_data.all.children.oracle_databases.hosts,
                 'vars': inventory_data.all.children.oracle_databases.vars | combine({
-                  'inspec_delegate_host': delegate_host
+                  'inspec_delegate_host': delegate_host,
+                  'base_results_dir': '/tmp/compliance_scans',
+                  'enable_debug': false,
+                  'inspec_command_timeout': 1800
                 })
               },
               'sybase_databases': {
                 'hosts': inventory_data.all.children.sybase_databases.hosts,
                 'vars': inventory_data.all.children.sybase_databases.vars | combine({
-                  'inspec_delegate_host': delegate_host
+                  'inspec_delegate_host': delegate_host,
+                  'base_results_dir': '/tmp/compliance_scans',
+                  'enable_debug': false,
+                  'inspec_command_timeout': 1800
                 })
               }
             })
@@ -111,13 +158,15 @@
         content: |
           ---
           # Generated Inventory - Database Compliance Scanning
-          # Credentials injected by AAP2 via extra vars
+          # Credentials injected by AAP2 Custom Credential at runtime
           #
           # Connection modes:
-          #   inspec_delegate_host: "localhost" (or empty) = local execution
+          #   inspec_delegate_host: "localhost" = Local execution on AAP
           #   inspec_delegate_host: "<hostname>" = SSH to delegate host
+          #
+          # Generated on: {{ ansible_date_time.iso8601 }}
 
-          {{ inventory_data | to_nice_yaml }}
+          {{ inventory_data | to_nice_yaml(indent=2) }}
         dest: "{{ output_file }}"
 
     - name: Summary
