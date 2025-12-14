@@ -346,15 +346,22 @@ inspec-runner | SUCCESS => {
 
 ## AAP2 Credential Mapping
 
-### Machine Credential (SSH to Delegate)
+### Machine Credential (SSH to Delegate Host)
+
+AAP2 machine credentials handle delegate host SSH authentication automatically.
 
 **For SSH Key:**
 - Username: ansible-svc
 - SSH Private Key: (paste key content)
+- AAP2 injects: `ansible_user`, `ansible_ssh_private_key_file`
 
 **For Password:**
 - Username: ansible-svc
 - Password: (enter password)
+- AAP2 injects: `ansible_user`, `ansible_password`
+
+The delegate host in inventory only needs `ansible_host` and `ansible_connection`.
+AAP2 supplies the authentication automatically.
 
 ### Custom Credential Types (Database Passwords)
 
@@ -365,6 +372,32 @@ Create custom credential types in AAP2:
 - `sybase_ssh_password` - SSH tunnel password for Sybase
 
 AAP2 injects these as extra vars at job runtime.
+
+### Local Testing (Without AAP2)
+
+For local testing, use Ansible Vault:
+
+```yaml
+# vault.yml (encrypted)
+vault_delegate_password: YourSSHPassword
+vault_mssql_password: YourDBPassword
+```
+
+Reference in inventory:
+```yaml
+all:
+  hosts:
+    inspec-runner:
+      ansible_host: delegate.example.com
+      ansible_connection: ssh
+      ansible_user: ansible_svc
+      ansible_password: "{{ vault_delegate_password }}"
+```
+
+Run with vault:
+```bash
+ansible-playbook -i inventory.yml playbook.yml -e @vault.yml --vault-password-file .vaultpass
+```
 
 ---
 

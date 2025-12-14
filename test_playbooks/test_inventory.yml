@@ -9,6 +9,9 @@ all:
   #     ansible_host: delegate.example.com
   #     ansible_connection: ssh
   #     ansible_user: ansible_svc
+  #     # Authentication - choose ONE:
+  #     # ansible_ssh_private_key_file: /path/to/key  # SSH key (production)
+  #     # ansible_password: "{{ vault_delegate_password }}"  # Password (testing)
 
   children:
     mssql_databases:
