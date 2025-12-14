@@ -1,7 +1,7 @@
 # AAP Credential Mapping & Job Template Configuration
 
-**Author:** DevOps Team  
-**Date:** 2025-12-14  
+**Author:** DevOps Team
+**Date:** 2025-12-14
 **Purpose:** Step-by-step guide to configure Ansible Automation Platform credentials and job templates
 
 ---
@@ -33,7 +33,7 @@ Your InSpec compliance scanning uses **TWO credential types**:
 
 **Layer in Architecture:**
 ```
-AAP (Machine Credential) 
+AAP (Machine Credential)
   ↓
 Ansible SSHs to delegate
   ↓
@@ -133,7 +133,7 @@ ssh-copy-id -i ~/.ssh/ansible_inspec_rsa.pub ansible_svc@delegate.example.com
        ],
        "required": ["username", "password"]
      }
-     
+
      Injectors:
      {
        "env": {
@@ -189,7 +189,7 @@ ssh-copy-id -i ~/.ssh/ansible_inspec_rsa.pub ansible_svc@delegate.example.com
        ],
        "required": ["username", "password"]
      }
-     
+
      Injectors:
      {
        "env": {
@@ -246,7 +246,7 @@ Sybase is special - it needs TWO password fields (SSH tunnel + database):
        ],
        "required": ["ssh_password", "password"]
      }
-     
+
      Injectors:
      {
        "env": {
@@ -421,10 +421,10 @@ When the same variable could come from multiple sources:
 ```
 1. Job Template Extra Variables (highest)
    Example: extra_vars: { "mssql_password": "override123" }
-   
+
 2. Credential Injection
    Example: MSSQL Custom Credential injects mssql_password
-   
+
 3. Inventory Variables (lowest)
    Example: inventory has mssql_password: "vault_value"
 ```
@@ -465,22 +465,22 @@ mssql_password = "emergency_override"
 - name: Test Machine Credential (SSH to Delegate)
   hosts: localhost
   gather_facts: no
-  
+
   vars:
     delegate_host: "inspec-runner"
-  
+
   tasks:
     - name: Ping delegate host
       ping:
       delegate_to: "{{ delegate_host }}"
       register: ping_result
-      
+
     - name: Get delegate hostname
       shell: hostname
       delegate_to: "{{ delegate_host }}"
       register: delegate_info
       changed_when: false
-      
+
     - name: Display results
       debug:
         msg: |
@@ -502,19 +502,19 @@ mssql_password = "emergency_override"
 - name: Test Custom Credential (Database Access)
   hosts: localhost
   gather_facts: no
-  
+
   tasks:
     - name: Display injected username
       debug:
         msg: "Username injected: {{ mssql_username | default('NOT_INJECTED') }}"
-      
+
     - name: Display injected password (masked)
       debug:
         msg: "Password injected: [PROTECTED]"
       no_log: true
       when:
         - mssql_password is defined
-      
+
     - name: Test MSSQL connection
       shell: |
         sqlcmd -S localhost,1433 \
@@ -524,7 +524,7 @@ mssql_password = "emergency_override"
       register: sql_result
       changed_when: false
       no_log: true
-      
+
     - name: Display connection result
       debug:
         msg: |
@@ -546,18 +546,18 @@ mssql_password = "emergency_override"
 - name: Test Credential Precedence
   hosts: localhost
   gather_facts: no
-  
+
   tasks:
     - name: Show where mssql_password comes from
       debug:
         msg: |
           mssql_password value: {{ mssql_password | default('NOT_DEFINED') }}
-          
+
           If this is:
           - "vault_value" → Loaded from inventory
           - "prod_password" → Loaded from credential injection
           - "override_val" → Loaded from extra vars
-      
+
     - name: Assert credential injection worked
       assert:
         that:
@@ -662,11 +662,11 @@ ssh ansible_svc@delegate.example.com "grep $(cat ~/.ssh/ansible_inspec_rsa.pub |
   debug:
     msg: |
       This password came from:
-      
+
       1. Job Template Extra Variables? → Check JSON section
       2. Custom Credential? → Check attached credentials
       3. Inventory? → Check inventory file
-      
+
       Current mssql_password: {{ mssql_password }}
   no_log: true  # Hide actual password
 
@@ -754,7 +754,7 @@ sqlcmd -S mssql_server,1433 -Q "SELECT @@VERSION" 2>&1 | head
   - [ ] Type: "MSSQL Database"
   - [ ] Username: nist_scan_user
   - [ ] Password: [actual password]
-  
+
 - [ ] Create Job Template
   - [ ] Playbook: run_mssql_inspec.yml
   - [ ] Inventory: (select yours)

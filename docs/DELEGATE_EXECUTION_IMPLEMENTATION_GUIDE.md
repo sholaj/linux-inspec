@@ -1,7 +1,7 @@
 # Delegate Execution Implementation Guide
 
-**Author:** DevOps Team  
-**Date:** 2025-12-14  
+**Author:** DevOps Team
+**Date:** 2025-12-14
 **Purpose:** Comprehensive guide for implementing delegate host execution with InSpec compliance scanning
 
 ---
@@ -51,7 +51,7 @@ The system automatically detects which mode to use based on the `inspec_delegate
 └─────────────────────────────────────────────────┘
 ```
 
-**IMPORTANT:** 
+**IMPORTANT:**
 - Layer 1 credentials = SSH access to delegate (Machine Credential)
 - Layer 2 credentials = Database access via InSpec (Custom Credential)
 - These are DIFFERENT and must not be confused
@@ -311,12 +311,12 @@ sybase_databases:
       database_platform: sybase
   vars:
     # Layer 1: SSH to Delegate (ansible layer - handled separately)
-    
+
     # Layer 2: SSH Tunnel (InSpec to Sybase server)
     sybase_ssh_user: sybase_admin
     sybase_use_ssh: true
     # sybase_ssh_password: INJECTED BY AAP
-    
+
     # Layer 3: Database Login (isql)
     sybase_username: nist_scan_user
     # sybase_password: INJECTED BY AAP
@@ -326,7 +326,7 @@ sybase_databases:
 1. Create Machine Credential for Sybase SSH
    - Username: sybase_admin
    - Injected as: `sybase_ssh_user` (override inventory)
-   
+
 2. Create Custom Credential for Sybase Database
    - Fields: `sybase_ssh_password`, `sybase_password`
    - Injected at runtime
@@ -358,21 +358,21 @@ all:
       ansible_host: delegate.example.com
       ansible_connection: ssh
       ansible_user: ansible_svc
-      
+
       # SSH Authentication - Choose ONE:
-      
+
       # Option A: SSH Key (Recommended for Production)
       ansible_ssh_private_key_file: /path/to/ansible_rsa
       # Managed by: SSH Key stored in AAP, injected at runtime
-      
+
       # Option B: Password (Recommended for Testing/Dev)
       # ansible_password: "{{ vault_delegate_password }}"
       # Managed by: Vault file for local testing
       #            AAP Machine Credential for AAP execution
-      
+
       # SSH Host Key Management
       ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
-      # Options: 
+      # Options:
       #   accept-new = automatically accept new host keys (recommended)
       #   yes = require host key in known_hosts (most secure)
       #   no = never verify (insecure - don't use)
@@ -403,18 +403,18 @@ all:
         # Execution Mode Selection
         # Option 1: Local Execution (comment out for local mode)
         inspec_delegate_host: "inspec-runner"
-        
+
         # Option 2: For local execution, use this instead:
         # inspec_delegate_host: ""  # Empty string = local mode
-        
+
         # Database Credentials (Layer 2)
         mssql_username: nist_scan_user
         # mssql_password: NOT in inventory - injected by AAP Custom Credential
-        
+
         # Execution Parameters
         base_results_dir: "/tmp/compliance_scans"
         enable_debug: false
-        
+
         # Timeouts
         inspec_command_timeout: 1800  # 30 minutes per control
         async_scan_timeout: 3600       # 1 hour total async
@@ -443,11 +443,11 @@ all:
       vars:
         # Execution Mode
         inspec_delegate_host: "inspec-runner"
-        
+
         # Database Credentials (Layer 2)
         oracle_username: nist_scan_user
         # oracle_password: injected by AAP
-        
+
         # Execution Parameters
         base_results_dir: "/tmp/compliance_scans"
 
@@ -467,16 +467,16 @@ all:
       vars:
         # Execution Mode
         inspec_delegate_host: "inspec-runner"
-        
+
         # Layer 2: SSH Tunnel to Sybase
         sybase_use_ssh: true  # Enable SSH tunnel
         sybase_ssh_user: sybase_admin
         # sybase_ssh_password: injected by AAP
-        
+
         # Layer 3: Database Login
         sybase_username: nist_scan_user
         # sybase_password: injected by AAP
-        
+
         # Execution Parameters
         base_results_dir: "/tmp/compliance_scans"
 ```
@@ -685,7 +685,7 @@ Extra Variables:
 
 Execution Environment:
   Select EE that has InSpec and sqlcmd installed
-  
+
 Job Tags:
   (optional) validate, execute, process, cleanup
 ```
@@ -706,7 +706,7 @@ Machine Credential   Custom Credential
     ├─ ansible_user       ├─ mssql_username
     ├─ ansible_password   └─ mssql_password
     └─ (or SSH key)
-    
+
     │                     │
     └──────────┬──────────┘
                │
@@ -739,7 +739,7 @@ all:
   hosts:
     inspec-runner:
       ansible_host: delegate.example.com  # Check spelling
-      
+
 # Step 2: Test DNS resolution
 nslookup delegate.example.com
 
@@ -864,7 +864,7 @@ mssql_databases:
   debug:
     msg: "Delegate host: {{ inspec_delegate_host }}"
   register: mode_check
-  
+
 - name: Assert correct mode
   assert:
     that:
@@ -890,7 +890,7 @@ all:
       ansible_host: delegate.example.com
       ansible_connection: ssh  # MUST be ssh, not local
       ansible_user: ansible_svc
-      
+
 # Verify inspec_delegate_host value:
 mssql_databases:
   vars:
@@ -910,7 +910,7 @@ mssql_databases:
 - name: Test Execution Mode Detection
   hosts: mssql_databases
   gather_facts: no
-  
+
   tasks:
     - name: Display detected execution mode
       debug:
@@ -918,16 +918,16 @@ mssql_databases:
           inspec_delegate_host: {{ inspec_delegate_host | default('NOT_DEFINED') }}
           use_delegate_host: {{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}
           Expected Mode: {{ 'DELEGATE' if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'LOCAL' }}
-    
+
     - name: Show execution target
       debug:
         msg: "{{ inventory_hostname }}"
-    
+
     - name: Show where this task runs (local)
       shell: hostname
       register: local_hostname
       changed_when: false
-      
+
     - name: Show where task runs on delegate
       shell: hostname
       delegate_to: "{{ inspec_delegate_host }}"
@@ -935,7 +935,7 @@ mssql_databases:
       when:
         - (inspec_delegate_host | default('')) not in ['', 'localhost']
       changed_when: false
-      
+
     - name: Display results
       debug:
         msg: |
@@ -951,28 +951,28 @@ mssql_databases:
 - name: Test Delegate SSH Connectivity
   hosts: localhost
   gather_facts: no
-  
+
   vars:
     delegate_host: "inspec-runner"
-  
+
   tasks:
     - name: Test ping to delegate
       ping:
       delegate_to: "{{ delegate_host }}"
       register: ping_result
-      
+
     - name: Test SSH connectivity
       raw: echo "SSH works"
       delegate_to: "{{ delegate_host }}"
       register: ssh_test
-      
+
     - name: Get delegate host info
       shell: |
         echo "Hostname: $(hostname)"
         echo "OS: $(uname -a)"
       delegate_to: "{{ delegate_host }}"
       register: delegate_info
-      
+
     - name: Display results
       debug:
         msg: |
@@ -990,7 +990,7 @@ mssql_databases:
 - name: Test Database Credentials
   hosts: mssql_databases
   gather_facts: no
-  
+
   tasks:
     - name: Display database configuration
       debug:
@@ -999,14 +999,14 @@ mssql_databases:
           Port: {{ mssql_port }}
           Username: {{ mssql_username }}
           Password: [PROTECTED]
-        
+
     - name: Test MSSQL connection (if local mode)
       shell: sqlcmd -S {{ mssql_server }},{{ mssql_port }} -U {{ mssql_username }} -P "{{ mssql_password }}" -Q "SELECT @@VERSION"
       register: mssql_version
       changed_when: false
       when:
         - (inspec_delegate_host | default('')) in ['', 'localhost']
-        
+
     - name: Test MSSQL connection (if delegate mode)
       shell: sqlcmd -S {{ mssql_server }},{{ mssql_port }} -U {{ mssql_username }} -P "{{ mssql_password }}" -Q "SELECT @@VERSION"
       delegate_to: "{{ inspec_delegate_host }}"
@@ -1014,7 +1014,7 @@ mssql_databases:
       changed_when: false
       when:
         - (inspec_delegate_host | default('')) not in ['', 'localhost']
-        
+
     - name: Display connection test results
       debug:
         msg: |

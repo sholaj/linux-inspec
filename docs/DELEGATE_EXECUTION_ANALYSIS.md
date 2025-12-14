@@ -1,8 +1,8 @@
 # Delegate Execution Framework - Comprehensive Analysis
 
-**Author:** DevOps Architecture Review  
-**Date:** 2025-12-14  
-**Status:** In-Depth Assessment Complete  
+**Author:** DevOps Architecture Review
+**Date:** 2025-12-14
+**Status:** In-Depth Assessment Complete
 **Scope:** Delegate host vs. local execution patterns for InSpec compliance scanning
 
 ---
@@ -140,7 +140,7 @@ Roles rely on explicit `inspec_delegate_host` variable being set. If not defined
     - name: Check delegate host configuration
       set_fact:
         delegate_host: "{{ inspec_delegate_host | default('') }}"
-        
+
     # Validate delegate host connectivity if specified
     - name: Validate delegate host is reachable (if specified)
       block:
@@ -149,7 +149,7 @@ Roles rely on explicit `inspec_delegate_host` variable being set. If not defined
           delegate_to: "{{ delegate_host }}"
           ignore_errors: yes
           register: delegate_ping
-          
+
         - name: Fail if delegate host unreachable
           fail:
             msg: "Delegate host '{{ delegate_host }}' is unreachable. Check ansible_connection and network."
@@ -159,7 +159,7 @@ Roles rely on explicit `inspec_delegate_host` variable being set. If not defined
       when:
         - delegate_host | length > 0
         - delegate_host != 'localhost'
-        
+
     - name: Set execution mode
       set_fact:
         use_delegate_host: "{{ delegate_host not in ['', 'localhost'] }}"
@@ -185,7 +185,7 @@ Roles rely on explicit `inspec_delegate_host` variable being set. If not defined
 1. **AAP Machine Credential** (highest priority)
    - When job is run from AAP with Machine Credential attached
    - Variables injected: `ansible_user`, `ansible_password` OR `ansible_ssh_private_key_file`
-   
+
 2. **Inventory ansible_user/ansible_password**
    - Direct definition in hosts[inspec-runner] section
    - Overridden by AAP if both exist
@@ -259,11 +259,11 @@ Add to playbooks:
         - name: Ping delegate host
           ping:
           delegate_to: "{{ inspec_delegate_host }}"
-          
+
         - name: Verify SSH connectivity
           raw: echo "SSH connectivity verified"
           delegate_to: "{{ inspec_delegate_host }}"
-          
+
         - name: Verify required tools on delegate
           shell: |
             which inspec
@@ -272,11 +272,11 @@ Add to playbooks:
           register: tool_check
           failed_when:
             - tool_check.rc != 0
-          
+
       when:
         - inspec_delegate_host is defined
         - inspec_delegate_host != 'localhost'
-      
+
     - name: Verify local execution environment
       block:
         - name: Verify required tools locally
@@ -285,7 +285,7 @@ Add to playbooks:
             which sqlcmd
           register: local_tools
           failed_when: local_tools.rc != 0
-          
+
       when:
         - inspec_delegate_host is not defined or
         - inspec_delegate_host == 'localhost'
@@ -399,25 +399,25 @@ Create a new playbook helper that validates execution mode:
       set_fact:
         inspec_delegate_host: "{{ inspec_delegate_host | default('localhost') }}"
         execution_mode: "unknown"
-        
+
     - name: Determine execution mode
       set_fact:
         use_delegate_host: "{{ inspec_delegate_host not in ['', 'localhost'] }}"
         execution_mode: "{{ 'DELEGATE' if inspec_delegate_host not in ['', 'localhost'] else 'LOCAL' }}"
-        
+
     - name: Display execution mode
       debug:
         msg: |
           Execution Mode Detected: {{ execution_mode }}
           Delegate Host: {{ inspec_delegate_host if use_delegate_host | bool else 'N/A (local execution)' }}
-          
+
     - name: Validate delegate host connectivity (if delegate mode)
       block:
         - name: Ping delegate host
           ping:
           delegate_to: "{{ inspec_delegate_host }}"
           register: delegate_ping
-          
+
         - name: Ensure delegate host is reachable
           assert:
             that:
@@ -425,7 +425,7 @@ Create a new playbook helper that validates execution mode:
               - delegate_ping.ping | bool
             fail_msg: |
               ERROR: Cannot reach delegate host '{{ inspec_delegate_host }}'
-              
+
               Troubleshooting:
               1. Verify inspec_delegate_host is correct: {{ inspec_delegate_host }}
               2. Check inventory has delegation host defined:
@@ -437,9 +437,9 @@ Create a new playbook helper that validates execution mode:
                        ansible_user: <username>
               3. Test SSH manually: ssh -v {{ inspec_delegate_host }}
               4. Verify delegate host ansible_connection is 'ssh'
-              
+
       when: use_delegate_host | bool
-      
+
     - name: Validate local execution environment
       block:
         - name: Check if InSpec is available locally
@@ -447,7 +447,7 @@ Create a new playbook helper that validates execution mode:
           register: inspec_check
           failed_when: inspec_check.rc != 0
           changed_when: false
-          
+
       when: not (use_delegate_host | bool)
 ```
 

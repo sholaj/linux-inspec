@@ -24,68 +24,67 @@ all:
     inspec-runner:
       # IP address or hostname of delegate host
       ansible_host: delegate-host.example.com
-      
+
       # MUST be 'ssh' for remote execution (not 'local')
       ansible_connection: ssh
-      
+
       # SSH username to authenticate with delegate
       ansible_user: ansible_svc
-      
+
       # ══════════════════════════════════════════════════════════════════════
       # SSH AUTHENTICATION: Choose ONE method
       # ══════════════════════════════════════════════════════════════════════
-      
+
       # OPTION A: SSH Private Key (Recommended for Production)
       # ───────────────────────────────────────────────────
       # Most secure method. Use SSH keys instead of passwords.
       # In AAP: Store private key in Machine Credential, AAP injects it.
-      # 
+      #
       ansible_ssh_private_key_file: /path/to/ansible_inspec_rsa
-      # 
+      #
       # Note: AAP will override this when Machine Credential is attached
       #       The above is for local testing with Ansible directly
-      
+
       # OPTION B: SSH Password Authentication (Testing/Dev Only)
       # ──────────────────────────────────────────────────────────
       # Less secure, for development/testing environments only.
       # In AAP: Password stored in Machine Credential vault, never exposed
-      # 
+      #
       # Uncomment to use password instead of key:
       # ansible_password: "{{ vault_delegate_password }}"
-      # 
+      #
       # This references a vault file value (for local testing):
       # Keep vault file out of version control!
-      
+
       # ══════════════════════════════════════════════════════════════════════
       # SSH HOST KEY VERIFICATION
       # ══════════════════════════════════════════════════════════════════════
       # Control how strictly SSH host keys are verified
-      
-      ansible_ssh_common_args: '-o StrictHostKeyChecking=accept-new'
-      
+
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
       # OPTIONS:
       #   accept-new = Auto-accept new host keys, reject if changed (recommended)
       #   yes = Require host key in known_hosts, strict (most secure)
       #   no = Never verify host keys (insecure - DO NOT USE in production)
-      
+
       # ══════════════════════════════════════════════════════════════════════
       # OPTIONAL: Connection Timeouts
       # ══════════════════════════════════════════════════════════════════════
       # ansible_timeout: 30  # seconds to wait for SSH response
       # ansible_port: 22     # SSH port (default is 22)
 
-# ════════════════════════════════════════════════════════════════════════════════
-# SECTION 2: DATABASE GROUPS
-# ════════════════════════════════════════════════════════════════════════════════
-# Define your database servers and execution parameters
+  # ════════════════════════════════════════════════════════════════════════════════
+  # SECTION 2: DATABASE GROUPS
+  # ════════════════════════════════════════════════════════════════════════════════
+  # Define your database servers and execution parameters
 
   children:
-    
     # ────────────────────────────────────────────────────────────────────────
     # GROUP 1: MSSQL Database Servers
     # ────────────────────────────────────────────────────────────────────────
     # SQL Server 2017, 2019, 2022 instances
-    
+
     mssql_databases:
       hosts:
         # MSSQL Server 1 (Production)
@@ -95,7 +94,7 @@ all:
           mssql_port: 1433
           mssql_version: "2019"
           database_platform: mssql
-          
+
           # Optional: Override execution results directory
           # inspec_results_dir: "/tmp/mssql_prod_01_results"
 
@@ -109,7 +108,7 @@ all:
         # MSSQL Server 3 (Different Port)
         mssql_prod_02:
           mssql_server: prod-mssql-02.internal.com
-          mssql_port: 1500  # Non-standard port
+          mssql_port: 1500 # Non-standard port
           mssql_version: "2022"
           database_platform: mssql
 
@@ -118,14 +117,14 @@ all:
         # EXECUTION MODE SELECTION
         # ════════════════════════════════════════════════════════════════════
         # This ONE variable controls where InSpec executes
-        
+
         # ╔─────────────────────────────────────────────────────────────────╗
         # ║ MODE: DELEGATE - InSpec runs on remote host (via SSH)           ║
         # ║                                                                 ║
         # ║ Use when: AAP cannot reach databases (firewall), need bastion  ║
         # ╚─────────────────────────────────────────────────────────────────╝
         inspec_delegate_host: "inspec-runner"
-        
+
         # Uncomment below for LOCAL mode instead:
         # ╔─────────────────────────────────────────────────────────────────╗
         # ║ MODE: LOCAL - InSpec runs on AAP execution environment          ║
@@ -135,44 +134,44 @@ all:
         # inspec_delegate_host: ""  # Empty string = local mode
         # or
         # inspec_delegate_host: "localhost"  # Explicitly localhost
-        
+
         # ════════════════════════════════════════════════════════════════════
         # DATABASE CREDENTIALS
         # ════════════════════════════════════════════════════════════════════
         # These credentials are for InSpec → Database connection
         # (DIFFERENT from SSH credentials for delegate host)
-        
+
         mssql_username: nist_scan_user
         # mssql_password: DO NOT PUT IN INVENTORY
         #   ↓ Instead, inject via AAP Custom Credential
         #   ↓ In AAP: Job Template → Credentials → Attach MSSQL Custom Credential
         #   ↓ AAP automatically injects mssql_password at runtime
         #   ↓ For LOCAL testing: Use vault file (see vault section below)
-        
+
         # ════════════════════════════════════════════════════════════════════
         # EXECUTION PARAMETERS
         # ════════════════════════════════════════════════════════════════════
-        
+
         # Results directory (on local or delegate execution environment)
         base_results_dir: "/tmp/compliance_scans"
-        
+
         # Enable debug output (verbose logging)
         enable_debug: false
-        
+
         # Timeout for individual InSpec control execution
-        inspec_command_timeout: 1800  # 30 minutes
-        
+        inspec_command_timeout: 1800 # 30 minutes
+
         # Timeout for async scan execution
-        async_scan_timeout: 3600  # 1 hour
-        
+        async_scan_timeout: 3600 # 1 hour
+
         # Poll interval for async status checks
-        async_poll_interval: 30  # Check every 30 seconds
+        async_poll_interval: 30 # Check every 30 seconds
 
     # ────────────────────────────────────────────────────────────────────────
     # GROUP 2: Oracle Database Servers
     # ────────────────────────────────────────────────────────────────────────
     # Oracle 12c, 19c instances
-    
+
     oracle_databases:
       hosts:
         # Oracle Database 1 (Production)
@@ -195,12 +194,12 @@ all:
 
       vars:
         # Execution mode (same selection as MSSQL)
-        inspec_delegate_host: "inspec-runner"  # or "" for local
-        
+        inspec_delegate_host: "inspec-runner" # or "" for local
+
         # Database credentials
         oracle_username: nist_scan_user
         # oracle_password: injected by AAP Custom Credential
-        
+
         # Execution parameters
         base_results_dir: "/tmp/compliance_scans"
         enable_debug: false
@@ -210,7 +209,7 @@ all:
     # ────────────────────────────────────────────────────────────────────────
     # Sybase ASE 15, 16 instances
     # NOTE: Sybase requires SSH tunnel, so has additional credentials
-    
+
     sybase_databases:
       hosts:
         # Sybase Database 1 (Production)
@@ -231,33 +230,32 @@ all:
 
       vars:
         # Execution mode
-        inspec_delegate_host: "inspec-runner"  # or "" for local
-        
+        inspec_delegate_host: "inspec-runner" # or "" for local
+
         # ════════════════════════════════════════════════════════════════════
         # SYBASE: THREE-LAYER AUTHENTICATION
         # ════════════════════════════════════════════════════════════════════
         # Layer 1: Ansible → Delegate (handled by ansible_connection above)
         # Layer 2: InSpec → Sybase via SSH Tunnel
         # Layer 3: isql → Sybase Database
-        
+
         # LAYER 2: SSH Tunnel Configuration
         # InSpec connects to Sybase via SSH tunnel, not direct TCP
-        sybase_use_ssh: true                # Enable SSH tunnel
-        sybase_ssh_user: sybase_admin       # SSH tunnel username
+        sybase_use_ssh: true # Enable SSH tunnel
+        sybase_ssh_user: sybase_admin # SSH tunnel username
         # sybase_ssh_password: injected by AAP Machine Credential
-        
+
         # LAYER 3: Database Login
-        sybase_username: nist_scan_user     # isql username
+        sybase_username: nist_scan_user # isql username
         # sybase_password: injected by AAP Custom Credential
-        
+
         # Execution parameters
         base_results_dir: "/tmp/compliance_scans"
         enable_debug: false
-
 # ════════════════════════════════════════════════════════════════════════════════
 # SECTION 3: VAULT FILE (for LOCAL TESTING ONLY)
 # ════════════════════════════════════════════════════════════════════════════════
-# 
+#
 # For local testing with Ansible directly (not AAP), use vault file
 # For AAP execution, credentials come from AAP credentials, NOT vault
 #
