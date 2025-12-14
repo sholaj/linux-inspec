@@ -82,10 +82,38 @@
       register: inspec_check
       changed_when: false
 
+    - name: Check for sqlcmd availability
+      command: which sqlcmd
+      register: sqlcmd_check
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Get sqlcmd version
+      command: sqlcmd -? 2>&1 | head -1
+      register: sqlcmd_version
+      changed_when: false
+      ignore_errors: yes
+      when: sqlcmd_check is succeeded
+
+    - name: Fail if sqlcmd is not available
+      fail:
+        msg: |
+          sqlcmd not found in PATH!
+          This is CRITICAL for MSSQL InSpec scans.
+          
+          Please install Microsoft SQL Server tools:
+          - RHEL/CentOS: sudo yum install mssql-tools
+          - Ubuntu/Debian: sudo apt-get install mssql-tools
+          - Or download from: https://learn.microsoft.com/en-us/sql/tools/sqlcmd-utility
+          
+          The InSpec role requires: /opt/mssql-tools/bin/sqlcmd
+      when: sqlcmd_check is failed
+
     - name: Display configuration
       debug:
         msg: |
           Mode: LOCALHOST | DB: {{ mssql_server }}:{{ mssql_port }} | InSpec: {{ inspec_check.stdout_lines[0] }}
+          sqlcmd: ✓ Available ({{ sqlcmd_version.stdout | default('version check failed') }})
           Network: ✓ Reachable
 
   roles:

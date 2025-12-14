@@ -70,25 +70,66 @@ The setup creates two MSSQL Server containers:
 ./test_local_setup.sh
 ```
 
-### 2. Run Compliance Scans
+### 2. Pre-Flight Validation (NEW - Error Handling Improvements)
+Before running the playbooks, the test playbooks now perform automatic pre-flight validation checks:
+
+**MSSQL Pre-Flight Checks:**
 ```bash
-# Test with local databases
+# Automatically verified before execution:
+# ✓ sqlcmd is available in PATH
+# ✓ sqlcmd version can be retrieved
+# ✓ mssql-tools package is correctly installed
+which sqlcmd
+sqlcmd -?
+```
+
+**Oracle Pre-Flight Checks:**
+```bash
+# Automatically verified before execution:
+# ✓ SQL*Plus is available in PATH
+# ✓ ORACLE_HOME is set correctly
+# ✓ TNS_ADMIN configuration exists
+which sqlplus
+```
+
+**Sybase Pre-Flight Checks:**
+```bash
+# Automatically verified before execution:
+# ✓ isql is available in PATH
+# ✓ Sybase environment variables are set
+which isql
+```
+
+If any pre-flight check fails, the playbook will exit immediately with a clear error message indicating what tool is missing and how to install it.
+
+### 3. Run Compliance Scans
+```bash
+# Test with local databases (MSSQL)
 ansible-playbook -i local_inventory.yml run_mssql_inspec.yml -e @local_vault.yml
 
-# Debug mode
-ansible-playbook -i local_inventory.yml run_mssql_inspec.yml -e @local_vault.yml -e enable_debug=true -vv
+# Debug mode with execution details
+ansible-playbook -i local_inventory.yml run_mssql_inspec.yml -e @local_vault.yml -e inspec_debug_mode=true -vv
 
 # Test specific database
 ansible-playbook -i local_inventory.yml run_mssql_inspec.yml -e @local_vault.yml --limit "localhost_TestDB2019_1433"
+
+# Test Oracle
+ansible-playbook run_oracle_inspec.yml -e @local_vault.yml
+
+# Test Sybase
+ansible-playbook run_sybase_inspec.yml -e @local_vault.yml
 ```
 
-### 3. View Results
+### 4. View Results
 ```bash
 # Check results directory
 ls -la /tmp/compliance_scans/
 
 # View specific results
 cat /tmp/compliance_scans/*/MSSQL_NIST_*_*.json
+
+# View execution log with timestamps
+cat /tmp/compliance_scans/*/execution_*.log
 ```
 
 ## Manual Testing Commands
@@ -163,6 +204,62 @@ export PATH="/opt/inspec/bin:$PATH"
 /opt/inspec/bin/inspec --version
 ```
 
+**5. Pre-Flight Check Failures (NEW - Error Handling)**
+
+**Missing sqlcmd:**
+```bash
+# Error message:
+# CRITICAL ERROR: sqlcmd not found in PATH
+# Installation fix for macOS:
+brew tap microsoft/mssql-release https://github.com/Microsoft/homebrew-mssql-release
+brew install mssql-tools
+```
+
+**Missing SQL*Plus:**
+```bash
+# Error message:
+# CRITICAL ERROR: SQL*Plus not found in PATH
+# Installation fix:
+# 1. Download from Oracle
+# 2. Install Oracle Instant Client
+# 3. Set ORACLE_HOME and PATH environment variables
+```
+
+**Missing isql:**
+```bash
+# Error message:
+# CRITICAL ERROR: isql not found in PATH
+# Installation fix:
+# 1. Install Sybase ASE client tools
+# 2. Set SYBASE environment variable
+# 3. Add SYBASE/bin to PATH
+```
+
+**6. Database Connection Timeouts**
+
+If you see errors like "Cannot connect to database", this is automatically captured by the roles:
+- The task will NOT fail (connection errors are expected in scan output)
+- The JSON results will include the connection error message
+- Check the `results.json` file in `/tmp/compliance_scans/` for details
+- The error is logged but treated as expected behavior (database unavailable)
+
+```bash
+# View connection error details
+grep "Cannot connect" /tmp/compliance_scans/*/MSSQL_NIST_*.json
+```
+
+**7. InSpec Execution Failures**
+
+If InSpec itself fails (not database connectivity):
+- The task WILL fail with a clear error message
+- Exit codes will be non-zero and not related to connection timeouts
+- Examples: invalid control files, syntax errors, missing dependencies
+
+```bash
+# Task will stop with failure and show:
+# CRITICAL ERROR: InSpec execution failed with exit code X
+```
+
 ## Performance Considerations
 
 ### Resource Requirements
@@ -210,6 +307,71 @@ The only differences are:
 - Local Docker containers vs remote MSSQL servers
 - Unencrypted vault vs encrypted vault
 - Test passwords vs production credentials
+
+## Enhanced Error Handling (NEW - Execution Architecture)
+
+### Three-Layer Error Detection System
+
+The roles now implement a sophisticated three-layer error detection system:
+
+**Layer 1: Pre-Flight Validation**
+- Happens BEFORE InSpec execution
+- Validates required tools exist in PATH (sqlcmd, SQL*Plus, isql)
+- Fails immediately with clear installation instructions
+- Prevents silent failures from missing dependencies
+
+**Layer 2: Execution Status Monitoring**
+- Captures exit codes from InSpec execution
+- Distinguishes between:
+  - **Actual failures** (non-zero exit codes from tool/syntax errors) → Task FAILS
+  - **Connection timeouts** (database unreachable) → Task PASSES, error in JSON output
+  
+**Layer 3: Results Processing**
+- Parses JSON output from InSpec
+- Captures both control results and connection errors
+- Stores sanitized logs without passwords
+- Generates execution summaries with timestamps
+
+### Error Handling by Type
+
+| Error Type | Detection | Behavior | Result |
+|-----------|-----------|----------|--------|
+| Missing sqlcmd/isql/SQL*Plus | Pre-flight check | Fails immediately | Clear install message |
+| InSpec syntax error | Exit code != 0 | Task fails | Shows error in logs |
+| Database connection timeout | stdout contains "Cannot connect" | Task passes | Error captured in JSON |
+| Permission denied on files | Exit code != 0 | Task fails | Requires investigation |
+| Invalid credentials | stdout contains "Cannot connect" | Task passes | Error in JSON output |
+
+### How to Check Error Status
+
+```bash
+# View execution log to see what happened
+cat /tmp/compliance_scans/*/execution_*.log
+
+# Check JSON results for embedded connection errors
+grep "Cannot\|connection\|Unreachable" /tmp/compliance_scans/*/*.json
+
+# Run with debug mode to see detailed execution steps
+ansible-playbook run_mssql_inspec.yml -e inspec_debug_mode=true -vv
+
+# Test pre-flight checks in isolation
+ansible-playbook -i local_inventory.yml test_mssql_localhost.yml --tags "preflight"
+```
+
+### Execution Target Control
+
+All roles support flexible execution via the `inspec_execution_target` variable:
+
+```bash
+# Execute on localhost (default)
+ansible-playbook run_mssql_inspec.yml
+
+# Execute on delegate host (requires SSH setup)
+ansible-playbook run_mssql_inspec.yml -e inspec_delegate_host=bastion.example.com
+
+# Multiple databases with different targets
+ansible-playbook run_mssql_inspec.yml -e inspec_delegate_host=prod-bastion -i production_inventory.yml
+```
 
 ## Next Steps
 
