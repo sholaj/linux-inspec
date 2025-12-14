@@ -12,7 +12,11 @@ all:
   #     ansible_host: delegate.example.com
   #     ansible_connection: ssh
   #     ansible_user: ansible_svc
-  #     # ansible_ssh_private_key_file: /path/to/key  # Or use AAP2 credential
+  #     # Authentication - choose ONE:
+  #     # Option A: SSH Key (recommended for production)
+  #     # ansible_ssh_private_key_file: /path/to/key
+  #     # Option B: Password (AAP2 machine credential injects this automatically)
+  #     # ansible_password: "{{ vault_delegate_password }}"  # For local testing only
 
   children:
     # ========================================
@@ -92,10 +96,15 @@ all:
 # AAP2 CREDENTIALS
 # ========================================
 #
-# Create custom credential types in AAP2:
-#   - mssql_password: Single password for all MSSQL DBs (RBAC)
-#   - oracle_password: Single password for all Oracle DBs (RBAC)
-#   - sybase_password: Single password for all Sybase DBs (RBAC)
-#   - sybase_ssh_password: SSH tunnel password for Sybase
+# 1. MACHINE CREDENTIAL (Delegate SSH - if using remote delegate):
+#    - AAP2 automatically injects ansible_user and ansible_password
+#    - Or use SSH key in the machine credential
+#    - This handles Layer 1: Ansible → Delegate Host
 #
-# AAP2 injects these as extra vars at job runtime.
+# 2. CUSTOM CREDENTIAL TYPES (Database passwords):
+#    - mssql_password: Single password for all MSSQL DBs (RBAC)
+#    - oracle_password: Single password for all Oracle DBs (RBAC)
+#    - sybase_password: Single password for all Sybase DBs (RBAC)
+#    - sybase_ssh_password: SSH tunnel password for Sybase
+#    - These are injected as extra vars at job runtime
+#    - This handles Layer 2: InSpec → Database

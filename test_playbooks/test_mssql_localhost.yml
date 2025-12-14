@@ -1,0 +1,71 @@
+---
+# Test Playbook: MSSQL InSpec - Localhost Execution (AAP2)
+#
+# PURPOSE: Validates mssql_inspec role in LOCAL mode
+#          InSpec runs on AAP2 execution node
+#
+# AAP2 SETUP:
+#   - Credentials: Custom credential type injecting mssql_password
+#   - Execution node needs: InSpec, sqlcmd, network access to DB
+
+# Play 1: Setup inventory
+- name: Initialize test inventory
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Add test MSSQL target
+      add_host:
+        name: "test_mssql_01"
+        groups: mssql_databases
+        ###########################################
+        # UPDATE THESE VALUES FOR YOUR ENVIRONMENT
+        ###########################################
+        mssql_server: "your-mssql-server.example.com"
+        mssql_port: 1433
+        mssql_version: "2019"
+        mssql_username: "nist_scan_user"
+        database_platform: mssql
+        # mssql_password: injected by AAP2 credential
+
+# Play 2: Run MSSQL InSpec scan locally
+- name: Test MSSQL InSpec - Localhost Execution
+  hosts: mssql_databases
+  gather_facts: yes
+  connection: local
+
+  vars:
+    # Execution mode: LOCAL (on AAP2 execution node)
+    inspec_delegate_host: "localhost"
+
+    # Role configuration
+    base_results_dir: /tmp/compliance_scans
+    inspec_debug_mode: true
+    inspec_command_timeout: 1800
+
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - mssql_server is defined
+          - mssql_username is defined
+          - mssql_password is defined
+          - mssql_password | length > 0
+        fail_msg: "Missing mssql_password - ensure AAP2 credential is attached"
+
+    - name: Check InSpec version
+      command: /usr/bin/inspec version
+      register: inspec_check
+      changed_when: false
+
+    - name: Display configuration
+      debug:
+        msg: |
+          Mode: LOCALHOST | DB: {{ mssql_server }}:{{ mssql_port }} | InSpec: {{ inspec_check.stdout_lines[0] }}
+
+  roles:
+    - role: mssql_inspec
+
+  post_tasks:
+    - name: Test complete
+      debug:
+        msg: "Results: {{ base_results_dir }}"

@@ -1,0 +1,87 @@
+---
+# Test Playbook: MSSQL InSpec - Delegate Execution (AAP2)
+#
+# PURPOSE: Validates mssql_inspec role in DELEGATE mode
+#          Ansible SSHs to delegate host, InSpec runs there
+#
+# AAP2 SETUP:
+#   - Machine Credential: SSH to delegate host (injects ansible_user/ansible_password)
+#   - Custom Credential: Database password (injects mssql_password)
+#   - Delegate host needs: InSpec, sqlcmd, network access to DB
+
+# Play 1: Setup inventory
+- name: Initialize test inventory
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Add delegate host
+      add_host:
+        name: "inspec-runner"
+        ###########################################
+        # UPDATE THESE VALUES FOR YOUR ENVIRONMENT
+        ###########################################
+        ansible_host: "your-delegate-host.example.com"
+        ansible_connection: ssh
+        # ansible_user: injected by AAP2 machine credential
+        # ansible_password: injected by AAP2 machine credential
+
+    - name: Add test MSSQL target
+      add_host:
+        name: "test_mssql_01"
+        groups: mssql_databases
+        ###########################################
+        # UPDATE THESE VALUES FOR YOUR ENVIRONMENT
+        ###########################################
+        mssql_server: "your-mssql-server.example.com"
+        mssql_port: 1433
+        mssql_version: "2019"
+        mssql_username: "nist_scan_user"
+        database_platform: mssql
+        inspec_delegate_host: "inspec-runner"
+        # mssql_password: injected by AAP2 custom credential
+
+# Play 2: Run MSSQL InSpec scan via delegate
+- name: Test MSSQL InSpec - Delegate Execution
+  hosts: mssql_databases
+  gather_facts: no
+
+  vars:
+    # Role configuration
+    base_results_dir: /tmp/compliance_scans
+    inspec_debug_mode: true
+    inspec_command_timeout: 1800
+
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - mssql_server is defined
+          - mssql_username is defined
+          - mssql_password is defined
+          - mssql_password | length > 0
+          - inspec_delegate_host is defined
+        fail_msg: "Missing variables - ensure AAP2 credentials are attached"
+
+    - name: Wait for delegate host connection
+      wait_for_connection:
+        timeout: 30
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Check InSpec version on delegate
+      command: /usr/bin/inspec version
+      register: inspec_check
+      changed_when: false
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display configuration
+      debug:
+        msg: |
+          Mode: DELEGATE ({{ inspec_delegate_host }}) | DB: {{ mssql_server }}:{{ mssql_port }} | InSpec: {{ inspec_check.stdout_lines[0] }}
+
+  roles:
+    - role: mssql_inspec
+
+  post_tasks:
+    - name: Test complete
+      debug:
+        msg: "Results on delegate: {{ base_results_dir }}"
