@@ -98,4 +98,3 @@
   loop_control:
     index_var: idx
     label: "Processing Oracle result {{ idx + 1 }}"
-  delegate_to: "{{ inspec_execution_target }}"
