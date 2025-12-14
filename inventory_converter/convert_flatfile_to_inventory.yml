@@ -9,16 +9,30 @@
     input_file: "{{ flatfile_input | default('databases.txt') }}"
     output_file: "{{ inventory_output | default('inventory.yml') }}"
 
-    # Simple inventory structure
+    # Optional: specify a delegate host for remote InSpec execution
+    # Leave empty for local execution (default)
+    delegate_host: "{{ inspec_delegate | default('') }}"
+    delegate_address: "{{ inspec_delegate_address | default('') }}"
+    delegate_user: "{{ inspec_delegate_user | default('ansible_svc') }}"
+
+    # Inventory structure with group vars
     inventory_data:
       all:
         children:
           mssql_databases:
             hosts: {}
+            vars:
+              mssql_username: nist_scan_user
           oracle_databases:
             hosts: {}
+            vars:
+              oracle_username: nist_scan_user
           sybase_databases:
             hosts: {}
+            vars:
+              sybase_username: nist_scan_user
+              sybase_use_ssh: true
+              sybase_ssh_user: oracle
 
     platform_counts:
       mssql: 0
@@ -55,9 +69,55 @@
         - item | trim | length > 0
         - not item.strip().startswith('#')
 
+    - name: Add delegate host to inventory (if specified)
+      set_fact:
+        inventory_data: "{{ inventory_data | combine({
+          'all': {
+            'hosts': {
+              delegate_host: {
+                'ansible_host': delegate_address,
+                'ansible_connection': 'ssh',
+                'ansible_user': delegate_user
+              }
+            },
+            'children': inventory_data.all.children | combine({
+              'mssql_databases': {
+                'hosts': inventory_data.all.children.mssql_databases.hosts,
+                'vars': inventory_data.all.children.mssql_databases.vars | combine({
+                  'inspec_delegate_host': delegate_host
+                })
+              },
+              'oracle_databases': {
+                'hosts': inventory_data.all.children.oracle_databases.hosts,
+                'vars': inventory_data.all.children.oracle_databases.vars | combine({
+                  'inspec_delegate_host': delegate_host
+                })
+              },
+              'sybase_databases': {
+                'hosts': inventory_data.all.children.sybase_databases.hosts,
+                'vars': inventory_data.all.children.sybase_databases.vars | combine({
+                  'inspec_delegate_host': delegate_host
+                })
+              }
+            })
+          }
+        }, recursive=true) }}"
+      when:
+        - delegate_host | length > 0
+        - delegate_address | length > 0
+
     - name: Write inventory file
       copy:
-        content: "{{ inventory_data | to_nice_yaml }}"
+        content: |
+          ---
+          # Generated Inventory - Database Compliance Scanning
+          # Credentials injected by AAP2 via extra vars
+          #
+          # Connection modes:
+          #   inspec_delegate_host: "localhost" (or empty) = local execution
+          #   inspec_delegate_host: "<hostname>" = SSH to delegate host
+
+          {{ inventory_data | to_nice_yaml }}
         dest: "{{ output_file }}"
 
     - name: Summary
@@ -68,3 +128,8 @@
           - Oracle: {{ platform_counts.oracle }} hosts
           - Sybase: {{ platform_counts.sybase }} hosts
           - Total: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase }} hosts
+          {% if delegate_host | length > 0 %}
+          - Delegate Host: {{ delegate_host }} ({{ delegate_address }})
+          {% else %}
+          - Execution Mode: Local (on AAP2 execution node)
+          {% endif %}
