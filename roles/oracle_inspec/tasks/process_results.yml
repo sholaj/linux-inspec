@@ -18,7 +18,7 @@
     oracle_inspec_status: "{{ (item.stdout | regex_search('\"status\":\"([^\"]+)\"', '\\1') | first) | default('unknown') }}"
   ignore_errors: true
 
-- name: Handle successful Oracle InSpec execution on delegate host
+- name: Handle successful Oracle InSpec execution
   block:
     - name: Save successful Oracle results to JSON file
       copy:
@@ -30,25 +30,9 @@
       debug:
         msg: "Oracle control {{ oracle_control_file_name }} completed with status: {{ oracle_inspec_status }}"
       when: inspec_debug_mode | default(false)
-  delegate_to: "{{ inspec_delegate_host }}"
-  when: use_delegate_host | bool
+  delegate_to: "{{ inspec_execution_target }}"
 
-- name: Handle successful Oracle InSpec execution locally
-  block:
-    - name: Save successful Oracle results to JSON file
-      copy:
-        content: "{{ item.stdout }}"
-        dest: "{{ inspec_results_dir }}/{{ oracle_result_file_name }}.json"
-      when: oracle_inspec_status is defined and oracle_inspec_status in ['passed', 'failed', 'skipped']
-
-    - name: Log successful Oracle execution
-      debug:
-        msg: "Oracle control {{ oracle_control_file_name }} completed with status: {{ oracle_inspec_status }}"
-      when: inspec_debug_mode | default(false)
-  delegate_to: localhost
-  when: not (use_delegate_host | bool)
-
-- name: Handle failed Oracle InSpec execution on delegate host
+- name: Handle failed Oracle InSpec execution
   block:
     - name: Create Oracle error report matching original script format
       copy:
@@ -67,27 +51,4 @@
       when:
         - inspec_debug_mode | default(false)
         - (item.rc != 0 or (oracle_inspec_status is not defined or oracle_inspec_status not in ['passed', 'failed', 'skipped']))
-  delegate_to: "{{ inspec_delegate_host }}"
-  when: use_delegate_host | bool
-
-- name: Handle failed Oracle InSpec execution locally
-  block:
-    - name: Create Oracle error report matching original script format
-      copy:
-        content: |
-          {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to Oracle database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect to Oracle","statistics":{"duration":0},"version":"N/A"}]}
-        dest: "{{ inspec_results_dir }}/{{ oracle_result_file_name }}.json"
-      when:
-        - item.rc != 0 or (oracle_inspec_status is not defined or oracle_inspec_status not in ['passed', 'failed', 'skipped'])
-
-    - name: Log Oracle connection error
-      debug:
-        msg: |
-          Oracle control {{ oracle_control_file_name }} failed to execute.
-          Error: {{ item.stderr | default('Unknown Oracle error') }}
-          Result file: {{ oracle_result_file_name }}.json
-      when:
-        - inspec_debug_mode | default(false)
-        - (item.rc != 0 or (oracle_inspec_status is not defined or oracle_inspec_status not in ['passed', 'failed', 'skipped']))
-  delegate_to: localhost
-  when: not (use_delegate_host | bool)
+  delegate_to: "{{ inspec_execution_target }}"
