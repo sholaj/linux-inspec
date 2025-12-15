@@ -90,10 +90,19 @@
       register: inspec_check
       changed_when: false
 
+    - name: Check isql version
+      shell: /opt/sybase/bin/isql -v 2>&1 | head -2
+      args:
+        executable: /bin/bash
+      register: isql_version
+      changed_when: false
+      ignore_errors: yes
+
     - name: Display configuration
       debug:
         msg: |
           Mode: LOCALHOST | DB: {{ sybase_server }}:{{ sybase_port }} | InSpec: {{ inspec_check.stdout_lines[0] }}
+          isql: {{ isql_version.stdout_lines[0] | default('Not found') }}
 
   roles:
     - role: sybase_inspec
