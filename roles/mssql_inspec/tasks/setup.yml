@@ -11,13 +11,13 @@
       file:
         path: "{{ inspec_results_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Create temporary working directory
       file:
         path: "{{ inspec_temp_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Find all Ruby control files for specified MSSQL version
       find:
@@ -43,13 +43,13 @@
       file:
         path: "{{ inspec_results_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Create temporary working directory
       file:
         path: "{{ inspec_temp_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Find all Ruby control files for specified MSSQL version
       find:

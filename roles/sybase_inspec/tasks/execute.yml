@@ -18,6 +18,7 @@
   set_fact:
     use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
     inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+    cacheable: yes
 
 - name: Gather environment facts from execution target
   setup:

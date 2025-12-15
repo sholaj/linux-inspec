@@ -148,7 +148,7 @@
         success_msg: "✓ TEST 4.1 PASSED: sqlcmd found at {{ sqlcmd_path.stdout }}"
 
     - name: Test 4.3 - Check sqlcmd version
-      shell: sqlcmd -?
+      shell: /opt/mssql-tools/bin/sqlcmd -? 2>&1 | head -2
       args:
         executable: /bin/bash
       environment:
