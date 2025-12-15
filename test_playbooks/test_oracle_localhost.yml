@@ -85,10 +85,19 @@
       register: inspec_check
       changed_when: false
 
+    - name: Check sqlplus version
+      shell: /opt/oracle-ic/bin/sqlplus -v 2>&1 | head -2
+      args:
+        executable: /bin/bash
+      register: sqlplus_version
+      changed_when: false
+      ignore_errors: yes
+
     - name: Display configuration
       debug:
         msg: |
           Mode: LOCALHOST | DB: {{ oracle_server }}:{{ oracle_port }} | Service: {{ oracle_service }} | InSpec: {{ inspec_check.stdout_lines[0] }}
+          sqlplus: {{ sqlplus_version.stdout_lines[0] | default('Not found') }}
 
   roles:
     - role: oracle_inspec
