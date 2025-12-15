@@ -29,7 +29,7 @@
 
 - name: Set target environment from execution host
   set_fact:
-    _target_env: "{{ hostvars[inspec_execution_target].ansible_env }}"
+    _target_env: "{{ hostvars[inspec_execution_target].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
 
 - name: Build environment variables
   set_fact:
