@@ -17,6 +17,7 @@
   set_fact:
     use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
     inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+    cacheable: yes
 
 - name: Gather environment facts from execution target
   setup:
@@ -32,9 +33,9 @@
 - name: Build environment variables
   set_fact:
     mssql_environment:
-      PATH: "{{ mssql_environment_base.PATH }}:{{ _target_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
-      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
+      PATH: "{{ mssql_environment.PATH }}:{{ _target_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
+      INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
 
 - name: Execute InSpec controls
   shell: |
@@ -63,8 +64,8 @@
     label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: |
-    (inspec_results.rc != 0 and 
-     'Cannot connect' not in inspec_results.stdout and 
+    (inspec_results.rc != 0 and
+     'Cannot connect' not in inspec_results.stdout and
      'Unreachable' not in inspec_results.stdout)
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
