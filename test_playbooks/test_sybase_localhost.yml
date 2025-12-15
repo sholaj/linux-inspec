@@ -1,0 +1,104 @@
+---
+# Test Playbook: Sybase InSpec - Localhost Execution (AAP2)
+#
+# PURPOSE: Validates sybase_inspec role in LOCAL mode
+#          InSpec runs on AAP2 execution node with SSH to Sybase
+#
+# AAP2 SETUP:
+#   - Credentials: Custom credential type injecting sybase_password and sybase_ssh_password
+#   - Execution node needs: InSpec, isql, SSH client, network access to DB
+
+# Play 1: Setup inventory
+- name: Initialize test inventory
+  hosts: localhost
+  gather_facts: no
+  tasks:
+    - name: Add test Sybase target
+      add_host:
+        name: "test_sybase_01"
+        groups: sybase_databases
+        ###########################################
+        # UPDATE THESE VALUES FOR YOUR ENVIRONMENT
+        ###########################################
+        sybase_server: "your-sybase-server.example.com"
+        sybase_port: 5000
+        sybase_username: "nist_scan_user"
+        sybase_ssh_user: "sybase_ssh_user"
+        database_platform: sybase
+        # sybase_password: injected by AAP2 credential
+        # sybase_ssh_password: injected by AAP2 credential
+
+# Play 2: Run Sybase InSpec scan locally
+- name: Test Sybase InSpec - Localhost Execution
+  hosts: sybase_databases
+  gather_facts: false
+  connection: local
+
+  vars:
+    # Execution mode: LOCAL (on AAP2 execution node)
+    inspec_delegate_host: "localhost"
+
+    # Role configuration
+    base_results_dir: /tmp/compliance_scans
+    inspec_debug_mode: true
+    inspec_command_timeout: 1800
+
+    # Sybase-specific settings
+    sybase_use_ssh: true
+    sybase_ssh_key_path: ""
+
+  pre_tasks:
+    - name: Validate required variables
+      assert:
+        that:
+          - sybase_server is defined
+          - sybase_username is defined
+          - sybase_password is defined
+          - sybase_password | length > 0
+          - sybase_ssh_user is defined
+          - sybase_ssh_password is defined
+          - sybase_ssh_password | length > 0
+        fail_msg: "Missing sybase credentials - ensure AAP2 credential is attached"
+
+    - name: Test network connectivity to Sybase server
+      wait_for:
+        host: "{{ sybase_server }}"
+        port: "{{ sybase_port }}"
+        state: started
+        timeout: 10
+      register: network_test
+      ignore_errors: yes
+
+    - name: Display network test result
+      debug:
+        msg: |
+          Network Test: {{ 'PASS - Port ' ~ sybase_port ~ ' is reachable' if network_test is succeeded else 'FAIL - Cannot reach ' ~ sybase_server ~ ':' ~ sybase_port }}
+
+    - name: Fail if network connectivity is not available
+      fail:
+        msg: |
+          Cannot establish network connection to {{ sybase_server }}:{{ sybase_port }}
+          Please verify:
+          - Sybase server is running
+          - Firewall allows traffic on port {{ sybase_port }}
+          - Network routing is correct
+          - AAP2 execution node can reach the database network
+      when: network_test is failed
+
+    - name: Check InSpec version
+      command: /usr/bin/inspec version
+      register: inspec_check
+      changed_when: false
+
+    - name: Display configuration
+      debug:
+        msg: |
+          Mode: LOCALHOST | DB: {{ sybase_server }}:{{ sybase_port }} | InSpec: {{ inspec_check.stdout_lines[0] }}
+
+  roles:
+    - role: sybase_inspec
+
+  post_tasks:
+    - name: Test complete
+      debug:
+        msg: "Results: {{ base_results_dir }}"
