@@ -1,0 +1,137 @@
+# Production Inventory – Database Compliance Scanning (DELEGATE EXECUTION MODE)
+# This demonstrates correct inventory structure for delegate/bastion execution
+# InSpec runs on a jump server (inspec-runner) that connects to databases
+
+all:
+  ###########################################################################
+  # DELEGATE/JUMP SERVER CONFIGURATION
+  # This host will execute InSpec commands and connect to databases
+  ###########################################################################
+  hosts:
+    inspec-runner: # Inventory hostname (use this in inspec_delegate_host)
+      ansible_host: jumphost.example.com # Actual server hostname/IP
+      ansible_connection: ssh
+      ansible_user: ansible_service # SSH user for Ansible connection
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+  children:
+    ###########################################################################
+    # MSSQL Database Servers
+    ###########################################################################
+    mssql_databases:
+      vars:
+        # Global MSSQL settings for all hosts in this group
+        inspec_delegate_host: "inspec-runner" # Points to inventory hostname above
+        inspec_command_timeout: 1800
+        inspec_debug_mode: false
+
+      hosts:
+        # MSSQL Server 1 (Non-standard port)
+        MSSQL_DB01_1733:
+          mssql_server: mssqldb01.example.com # Database hostname
+          mssql_port: 1733 # Database port
+          mssql_version: "2019"
+          mssql_username: "scan_user" # Injected by AAP2 credential
+          # mssql_password: injected by AAP2 Custom Credential at runtime
+          mssql_service: "" # Optional for MSSQL
+
+        # MSSQL Server 2 (Standard port)
+        MSSQL_DB01_1433:
+          mssql_server: mssqldb01.example.com
+          mssql_port: 1433
+          mssql_version: "2019"
+          mssql_username: "scan_user"
+          mssql_service: ""
+
+        # MSSQL Server 3
+        MSSQL_DB02_1433:
+          mssql_server: mssqldb02.example.com
+          mssql_port: 1433
+          mssql_version: "2017"
+          mssql_username: "scan_user"
+
+    ###########################################################################
+    # Oracle Database Servers
+    ###########################################################################
+    oracle_databases:
+      vars:
+        inspec_delegate_host: "inspec-runner" # Use same delegate for Oracle
+        inspec_command_timeout: 1800
+
+      hosts:
+        ORACLE_PROD_1521:
+          oracle_server: oracledb01.example.com
+          oracle_port: 1521
+          oracle_service: ORCL
+          oracle_version: "19c"
+          oracle_username: "scan_user" # Injected by AAP2 credential
+          # oracle_password: injected by AAP2 Custom Credential at runtime
+
+        ORACLE_PROD_1522:
+          oracle_server: oracledb01.example.com
+          oracle_port: 1522
+          oracle_service: ORCLPDB
+          oracle_version: "19c"
+          oracle_username: "scan_user"
+
+    ###########################################################################
+    # Sybase Database Servers
+    ###########################################################################
+    sybase_databases:
+      vars:
+        inspec_delegate_host: "inspec-runner" # Use same delegate for Sybase
+        inspec_command_timeout: 1800
+        sybase_use_ssh: false # Use direct connection (not SSH)
+
+      hosts:
+        SYBASE_PROD_5000:
+          sybase_server: sybasedb01.example.com
+          sybase_port: 5000
+          sybase_version: "16.0"
+          sybase_username: "scan_user" # Injected by AAP2 credential
+          # sybase_password: injected by AAP2 Custom Credential at runtime
+          sybase_database: "master"
+###############################################################################
+# KEY CONCEPTS:
+###############################################################################
+#
+# 1. INVENTORY HOSTNAME vs ACTUAL HOSTNAME:
+#    - "inspec-runner" = inventory hostname (used in Ansible references)
+#    - "jumphost.example.com" = actual server hostname (ansible_host value)
+#    - Always use inventory hostname in inspec_delegate_host variable
+#
+# 2. EXECUTION FLOW:
+#    - Playbook runs on control node
+#    - Tasks delegate to "inspec-runner" (which Ansible resolves to jumphost.example.com)
+#    - InSpec runs on jumphost.example.com and connects to databases
+#
+# 3. HOSTVARS RESOLUTION:
+#    - hostvars['inspec-runner'] ✅ CORRECT (inventory name)
+#    - hostvars['jumphost.example.com'] ❌ WRONG (not in inventory)
+#
+# 4. CONNECTION CREDENTIALS:
+#    - ansible_user/ansible_password: For Ansible SSH to delegate host
+#    - mssql_username/mssql_password: For InSpec connection to database
+#    - These are DIFFERENT credentials for DIFFERENT connections
+#
+###############################################################################
+
+###############################################################################
+# ALTERNATIVE: LOCALHOST EXECUTION MODE
+###############################################################################
+# To run InSpec directly on AAP2 execution environment (no delegate):
+#
+# mssql_databases:
+#   vars:
+#     inspec_delegate_host: "localhost"    # or "" or undefined
+#   hosts:
+#     MSSQL_DB01_1433:
+#       mssql_server: mssqldb01.example.com
+#       mssql_port: 1433
+#       # ... other vars
+#
+# This mode:
+# - InSpec runs on AAP2 execution node
+# - No SSH to delegate host
+# - Database must be reachable from AAP2 controller
+###############################################################################
