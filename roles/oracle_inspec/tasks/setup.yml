@@ -25,7 +25,12 @@
         paths: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
         patterns: "*.rb"
         file_type: file
-      register: oracle_control_files
+      register: oracle_control_files_raw
+
+    - name: Cache Oracle control files for execution tasks
+      set_fact:
+        oracle_control_files: "{{ oracle_control_files_raw }}"
+        cacheable: yes
 
     - name: Display Oracle control files to be executed
       debug:
