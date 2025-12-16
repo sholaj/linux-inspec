@@ -107,9 +107,9 @@
     set -euo pipefail
     
     timeout 10 "{{ sqlcmd_bin }}" \
-      -S "{{ mssql_server }},{{ mssql_port }}" \
-      -U "{{ mssql_username }}" \
-      -P "{{ mssql_password }}" \
+      -S '{{ mssql_server }},{{ mssql_port }}' \
+      -U '{{ mssql_username }}' \
+      -P '{{ mssql_password }}' \
       -Q "SELECT @@VERSION" 2>&1
     
     echo "SUCCESS: Database connection verified"
