@@ -184,22 +184,45 @@
   no_log: true
   delegate_to: "{{ inspec_execution_target }}"
 
-- name: Display sanitized execution summary (debug mode only)
-  debug:
-    msg: |
-      InSpec Execution Summary
-      ========================
-      Database: {{ mssql_server }}:{{ mssql_port }}
-      Username: {{ mssql_username }}
-      Password: [PROTECTED - passed via environment variable]
-      Control: {{ item.item.path | basename }}
-      Status: {{ 'PASS' if item.rc == 0 else 'FAIL' }}
-      Exit Code: {{ item.rc }}
+- name: Parse InSpec results for display
+  set_fact:
+    parsed_results: "{{ parsed_results | default([]) + [item.stdout | from_json] }}"
   loop: "{{ inspec_results.results }}"
   loop_control:
     label: "{{ item.item.path | basename }}"
-  when: inspec_debug_mode | default(false)
-  delegate_to: "{{ inspec_execution_target }}"
+  when: item.stdout is defined and item.stdout != ''
+  no_log: true
+
+- name: Display InSpec execution summary
+  debug:
+    msg: |
+      
+      ╔════════════════════════════════════════════════════════════════════════════════════════
+      ║ InSpec Compliance Scan Results
+      ║ Database: {{ mssql_server }}:{{ mssql_port }}
+      ║ Scan User: {{ mssql_username }}
+      ╚════════════════════════════════════════════════════════════════════════════════════════
+      {% for result in parsed_results %}
+      {% set controls = result.controls | default([]) %}
+      {% for control in controls %}
+      
+      Control: {{ control.id }}
+      Title  : {{ control.title | default('N/A') }}
+      Status : {{ control.results[0].status | upper if control.results | length > 0 else 'UNKNOWN' }}
+      {% if control.results | length > 0 and control.results[0].status != 'passed' %}
+      Message: {{ control.results[0].message | default('No message') | regex_replace('\n', ' ') | truncate(120) }}
+      {% endif %}
+      ────────────────────────────────────────────────────────────────────────────────────────
+      {% endfor %}
+      {% endfor %}
+      
+      Summary:
+      --------
+      Total Controls: {{ parsed_results | map(attribute='controls') | flatten | length }}
+      Passed        : {{ parsed_results | map(attribute='controls') | flatten | selectattr('results', 'defined') | selectattr('results', '>', []) | map(attribute='results') | flatten | selectattr('status', 'equalto', 'passed') | list | length }}
+      Failed        : {{ parsed_results | map(attribute='controls') | flatten | selectattr('results', 'defined') | selectattr('results', '>', []) | map(attribute='results') | flatten | selectattr('status', 'equalto', 'failed') | list | length }}
+      
+  when: parsed_results is defined and parsed_results | length > 0
 
 - name: Process InSpec results
   include_tasks: process_results.yml
