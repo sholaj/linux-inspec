@@ -48,56 +48,70 @@
       PATH: "{{ mssql_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
 
-- name: Test database connectivity with sqlcmd
+- name: Detect sqlcmd binary (auto)
   shell: |
-    set -e
-    
-    # Export PATH explicitly
     export PATH="{{ mssql_environment.PATH }}"
-    
-    # Check if sqlcmd is available
-    if ! command -v sqlcmd &> /dev/null; then
-      echo "ERROR: sqlcmd command not found in PATH"
-      echo "PATH: $PATH"
-      echo "Searching for sqlcmd..."
-      find /opt /usr -name sqlcmd 2>/dev/null || echo "No sqlcmd found"
-      exit 127
+    set -euo pipefail
+
+    # 1) Prefer PATH lookup first
+    if command -v sqlcmd >/dev/null 2>&1; then
+      command -v sqlcmd
+      exit 0
     fi
-    
-    echo "Testing connectivity to {{ mssql_server }}:{{ mssql_port }}..."
-    
-    # Run connectivity test with timeout
-    timeout 10 sqlcmd -S '{{ mssql_server }},{{ mssql_port }}' \
-      -U "{{ mssql_username }}" \
-      -P '{{ mssql_password }}' \
-      -Q "SELECT @@VERSION" 2>&1
-    
-    exit_code=$?
-    
-    if [ $exit_code -eq 0 ]; then
-      echo "SUCCESS: Database connection verified"
-    elif [ $exit_code -eq 124 ]; then
-      echo "ERROR: Connection timeout after 10 seconds"
-      exit 124
-    else
-      echo "ERROR: Connection failed with exit code $exit_code"
-      exit $exit_code
+
+    # 2) Common install locations (mssql-tools packages)
+    for p in /opt/mssql-tools/bin/sqlcmd /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools17/bin/sqlcmd /opt/mssql-tools*/bin/sqlcmd /usr/bin/sqlcmd /usr/local/bin/sqlcmd; do
+      if [ -x "$p" ]; then
+        echo "$p"
+        exit 0
+      fi
+    done
+
+    # 3) Last resort: shallow search (kept small for speed)
+    found="$(find /opt /usr -maxdepth 5 -type f -name sqlcmd -perm -111 2>/dev/null | head -n 1 || true)"
+    if [ -n "$found" ]; then
+      echo "$found"
+      exit 0
     fi
-  args:
-    executable: /bin/bash
-  register: sqlcmd_test
+
+    exit 1
+  register: sqlcmd_detect
   changed_when: false
   failed_when: false
   delegate_to: "{{ inspec_execution_target }}"
   no_log: true
 
-- name: Debug sqlcmd test result
-  debug:
+- name: Set sqlcmd_bin fact
+  set_fact:
+    sqlcmd_bin: "{{ (sqlcmd_detect.stdout | trim) if (sqlcmd_detect.rc == 0 and (sqlcmd_detect.stdout | trim) != '') else '' }}"
+  no_log: true
+
+- name: Fail if sqlcmd is not available
+  fail:
     msg: |
-      sqlcmd_test.rc: {{ sqlcmd_test.rc | default('UNDEFINED') }}
-      sqlcmd_test.stdout: {{ sqlcmd_test.stdout | default('EMPTY') }}
-      sqlcmd_test.stderr: {{ sqlcmd_test.stderr | default('EMPTY') }}
-  when: inspec_debug_mode | default(false)
+      CRITICAL: sqlcmd not found on execution target {{ inspec_execution_target }}.
+      PATH (mssql_environment.PATH): {{ mssql_environment.PATH | default('UNSET') }}
+      sqlcmd_detect.rc: {{ sqlcmd_detect.rc | default('UNDEFINED') }}
+      sqlcmd_detect.stdout: {{ sqlcmd_detect.stdout | default('EMPTY') }}
+      Tip: install Microsoft mssql-tools and/or include its bin dir in mssql_environment.PATH.
+  when: sqlcmd_bin == ""
+
+- name: Test database connectivity with sqlcmd
+  shell: |
+    set -euo pipefail
+    
+    timeout 10 "{{ sqlcmd_bin }}" \
+      -S "{{ mssql_server }},{{ mssql_port }}" \
+      -U "{{ mssql_username }}" \
+      -P "{{ mssql_password }}" \
+      -Q "SELECT @@VERSION" 2>&1
+    
+    echo "SUCCESS: Database connection verified"
+  register: sqlcmd_test
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ inspec_execution_target }}"
+  no_log: true
 
 - name: Fail if database is not reachable
   fail:
