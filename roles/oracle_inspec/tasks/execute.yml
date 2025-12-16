@@ -74,7 +74,7 @@
 
 - name: Execute InSpec controls
   shell: |
-    /usr/bin/inspec exec {{ item.path }} \
+    inspec exec {{ item.path }} \
       --input usernm='{{ oracle_username }}' \
               passwd='{{ oracle_password }}' \
               hostnm='{{ oracle_server }}' \
