@@ -33,9 +33,9 @@
 - name: Build environment variables
   set_fact:
     mssql_environment:
-      PATH: "{{ mssql_environment.PATH }}:{{ _target_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
-      INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
+      PATH: "{{ mssql_environment_base.PATH }}:{{ _target_env.PATH }}"
+      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
+      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
 
 - name: Execute InSpec controls
   shell: |
