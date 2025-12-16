@@ -73,7 +73,7 @@
 
 - name: Execute Sybase InSpec controls via SSH
   shell: |
-    /usr/bin/inspec exec {{ item.path }} \
+    inspec exec {{ item.path }} \
       --ssh://'{{ sybase_ssh_user }}':'{{ sybase_ssh_password }}'@'{{ sybase_server }}' \
       -o {{ sybase_ssh_key_path }} \
       --input usernm='{{ sybase_username }}' \
@@ -111,7 +111,7 @@
 
 - name: Execute InSpec controls
   shell: |
-    /usr/bin/inspec exec {{ item.path }} \
+    inspec exec {{ item.path }} \
       --input usernm='{{ sybase_username }}' \
               passwd='{{ sybase_password }}' \
               hostnm='{{ sybase_server }}' \

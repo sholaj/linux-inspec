@@ -36,32 +36,11 @@
       PATH: "{{ mssql_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
 
-- name: Verify InSpec and train-mssql plugin availability
-  shell: |
-    set -e
-    echo "=== Checking InSpec ==="
-    /usr/bin/inspec --version
-    echo "=== Checking train plugins ==="
-    /usr/bin/inspec plugin list
-    echo "=== Checking for train-mssql ==="
-    /usr/bin/inspec plugin list | grep -i mssql || echo "WARNING: train-mssql plugin not found"
-  args:
-    executable: /bin/bash
-  register: inspec_verification
-  changed_when: false
-  failed_when: false
-  delegate_to: "{{ inspec_execution_target }}"
-
-- name: Display InSpec environment verification
-  debug:
-    var: inspec_verification.stdout_lines
-  when: inspec_debug_mode | default(false)
-
 - name: Test database connectivity with sqlcmd
   shell: |
     set -e
     echo "Testing connectivity to {{ mssql_server }}:{{ mssql_port }}..."
-    timeout 10 /opt/mssql-tools/bin/sqlcmd -S '{{ mssql_server }},{{ mssql_port }}' \
+    timeout 10 sqlcmd -S '{{ mssql_server }},{{ mssql_port }}' \
       -U "{{ mssql_username }}" \
       -P '{{ mssql_password }}' \
       -Q "SELECT @@VERSION" > /dev/null 2>&1
@@ -90,7 +69,7 @@
 
 - name: Execute InSpec controls
   shell: |
-    /usr/bin/inspec exec {{ item.path }} \
+    inspec exec {{ item.path }} \
       --input usernm='{{ mssql_username }}' \
               passwd='{{ mssql_password }}' \
               hostnm='{{ mssql_server }}' \
