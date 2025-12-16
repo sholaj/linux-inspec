@@ -34,7 +34,7 @@ all:
       ansible_host: jumphost.example.com       # ← Actual server (NOT used in hostvars lookup)
       ansible_connection: ssh
       ansible_user: ansible_service
-  
+
   children:
     mssql_databases:
       vars:
@@ -57,7 +57,7 @@ all:
 ```yaml
 all:
   # No hosts section needed for localhost mode
-  
+
   children:
     mssql_databases:
       vars:

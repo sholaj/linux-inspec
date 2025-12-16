@@ -21,7 +21,7 @@ check_pattern() {
     local file=$1
     local pattern=$2
     local description=$3
-    
+
     if grep -q "$pattern" "$file" 2>/dev/null; then
         echo "✓ PASS: $description"
         ((CHECKS_PASSED++))
@@ -41,7 +41,7 @@ check_multiple_patterns() {
     shift 1
     local description="${!#}"
     local patterns=("$@")
-    
+
     local all_found=true
     for pattern in "${patterns[@]}"; do
         if ! grep -q "$pattern" "$file" 2>/dev/null; then
@@ -49,7 +49,7 @@ check_multiple_patterns() {
             break
         fi
     done
-    
+
     if [ "$all_found" = true ]; then
         echo "✓ PASS: $description"
         ((CHECKS_PASSED++))

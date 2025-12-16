@@ -325,7 +325,7 @@ The roles now implement a sophisticated three-layer error detection system:
 - Distinguishes between:
   - **Actual failures** (non-zero exit codes from tool/syntax errors) → Task FAILS
   - **Connection timeouts** (database unreachable) → Task PASSES, error in JSON output
-  
+
 **Layer 3: Results Processing**
 - Parses JSON output from InSpec
 - Captures both control results and connection errors

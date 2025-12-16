@@ -270,7 +270,7 @@
             end
           end
         dest: /tmp/test_inspec_mssql_connection.rb
-        mode: '0644'
+        mode: "0644"
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Test 7.2 - Execute InSpec test control (credentials via environment)
@@ -424,7 +424,6 @@
           ================================================
           {% endif %}
       run_once: true
-
 # Usage:
 # ansible-playbook -i inventory.yml test_mssql_implementation.yml -e @vault.yml
 #

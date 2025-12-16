@@ -12,7 +12,7 @@
       file:
         path: "{{ inspec_results_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
 
     - name: Create Sybase temporary working directory
       tempfile:
