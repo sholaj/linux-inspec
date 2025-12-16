@@ -23,7 +23,6 @@ sybase_environment_base:
   LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/lib"
   SYBASE: "/tools/ver/sybase"
   SYBASE_OCS: "OCS-16_0"
-  INSPEC_BACKEND: "sybase"
 
 # Timestamp formats matching original script exactly
 timestamp_format: "%Y_%m%d_%H%M%S"

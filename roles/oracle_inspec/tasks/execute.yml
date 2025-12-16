@@ -37,13 +37,11 @@
       LD_LIBRARY_PATH: "{{ oracle_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
       ORACLE_HOME: "{{ oracle_environment_base.ORACLE_HOME }}"
       TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
-      INSPEC_BACKEND: "{{ oracle_environment_base.INSPEC_BACKEND }}"
       NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
 
-- name: Execute Oracle InSpec controls
+- name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --backend oracle \
       --input usernm="$INSPEC_DB_USERNAME" \
               passwd="$INSPEC_DB_PASSWORD" \
               hostnm="$INSPEC_DB_HOST" \
@@ -58,7 +56,6 @@
     LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
     ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
     TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
-    INSPEC_BACKEND: "{{ oracle_environment.INSPEC_BACKEND }}"
     NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
     INSPEC_DB_USERNAME: "{{ oracle_username }}"
     INSPEC_DB_PASSWORD: "{{ oracle_password }}"

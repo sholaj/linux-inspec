@@ -25,7 +25,6 @@ oracle_environment_base:
   LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
   ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
   TNS_ADMIN: "{{ oracle_tns_admin | default('/tools/ver/oracle-19.16.0.0-64/network/admin') }}"
-  INSPEC_BACKEND: "oracle"
   NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
 
 # Timestamp formats matching original script exactly

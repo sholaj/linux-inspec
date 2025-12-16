@@ -36,9 +36,7 @@
     sybase_environment:
       PATH: "{{ sybase_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
-      SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
-      INSPEC_BACKEND: "{{ sybase_environment_base.INSPEC_BACKEND }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
 
 - name: Execute Sybase InSpec controls via SSH
@@ -61,7 +59,6 @@
     LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
     SYBASE: "{{ sybase_environment.SYBASE }}"
     SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_BACKEND: "{{ sybase_environment.INSPEC_BACKEND }}"
     INSPEC_SSH_USER: "{{ sybase_ssh_user }}"
     INSPEC_SSH_PASSWORD: "{{ sybase_ssh_password }}"
     INSPEC_DB_USERNAME: "{{ sybase_username }}"
@@ -86,10 +83,9 @@
   delegate_to: "{{ inspec_execution_target }}"
   when: sybase_use_ssh | default(true)
 
-- name: Execute Sybase InSpec controls directly
+- name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --backend sybase \
       --input usernm="$INSPEC_DB_USERNAME" \
               passwd="$INSPEC_DB_PASSWORD" \
               hostnm="$INSPEC_DB_HOST" \
@@ -104,7 +100,6 @@
     LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
     SYBASE: "{{ sybase_environment.SYBASE }}"
     SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_BACKEND: "{{ sybase_environment.INSPEC_BACKEND }}"
     INSPEC_DB_USERNAME: "{{ sybase_username }}"
     INSPEC_DB_PASSWORD: "{{ sybase_password }}"
     INSPEC_DB_HOST: "{{ sybase_server }}"

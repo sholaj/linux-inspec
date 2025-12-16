@@ -35,12 +35,31 @@
     mssql_environment:
       PATH: "{{ mssql_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
-      INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
+
+- name: Verify InSpec and train-mssql plugin availability
+  shell: |
+    set -e
+    echo "=== Checking InSpec ==="
+    /usr/bin/inspec --version
+    echo "=== Checking train plugins ==="
+    /usr/bin/inspec plugin list
+    echo "=== Checking for train-mssql ==="
+    /usr/bin/inspec plugin list | grep -i mssql || echo "WARNING: train-mssql plugin not found"
+  args:
+    executable: /bin/bash
+  register: inspec_verification
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ inspec_execution_target }}"
+
+- name: Display InSpec environment verification
+  debug:
+    var: inspec_verification.stdout_lines
+  when: inspec_debug_mode | default(false)
 
 - name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --backend mssql \
       --input usernm="$INSPEC_DB_USERNAME" \
               passwd="$INSPEC_DB_PASSWORD" \
               hostnm="$INSPEC_DB_HOST" \
@@ -53,7 +72,6 @@
   environment:
     PATH: "{{ mssql_environment.PATH }}"
     LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
-    INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
     INSPEC_DB_USERNAME: "{{ mssql_username }}"
     INSPEC_DB_PASSWORD: "{{ mssql_password }}"
     INSPEC_DB_HOST: "{{ mssql_server }}"
