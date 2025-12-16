@@ -48,56 +48,62 @@
       PATH: "{{ mssql_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
 
-- name: Detect sqlcmd binary (auto)
-  shell: |
-    export PATH="{{ mssql_environment.PATH }}"
-    set -euo pipefail
+- name: Detect and validate sqlcmd binary
+  block:
+    - name: Detect sqlcmd binary location
+      shell: |
+        export PATH="{{ mssql_environment.PATH }}"
+        set -euo pipefail
+        
+        # 1) Check PATH first
+        if command -v sqlcmd >/dev/null 2>&1; then
+          command -v sqlcmd
+          exit 0
+        fi
+        
+        # 2) Check common install locations
+        for dir in /opt/mssql-tools18/bin /opt/mssql-tools/bin /usr/local/bin /usr/bin; do
+          if [ -x "$dir/sqlcmd" ]; then
+            echo "$dir/sqlcmd"
+            exit 0
+          fi
+        done
+        
+        # 3) Last resort: search (limited depth for speed)
+        find /opt /usr -maxdepth 5 -type f -name sqlcmd -perm -111 2>/dev/null | head -n 1 || exit 1
+      args:
+        executable: /bin/bash
+      register: sqlcmd_detect
+      changed_when: false
+      failed_when: false
+      delegate_to: "{{ inspec_execution_target }}"
 
-    # 1) Prefer PATH lookup first
-    if command -v sqlcmd >/dev/null 2>&1; then
-      command -v sqlcmd
-      exit 0
-    fi
+    - name: Set sqlcmd_bin fact
+      set_fact:
+        sqlcmd_bin: "{{ (sqlcmd_detect.stdout | trim) if (sqlcmd_detect.rc == 0 and (sqlcmd_detect.stdout | trim) != '') else '' }}"
 
-    # 2) Common install locations (mssql-tools packages)
-    for p in /opt/mssql-tools/bin/sqlcmd /opt/mssql-tools18/bin/sqlcmd /opt/mssql-tools17/bin/sqlcmd /opt/mssql-tools*/bin/sqlcmd /usr/bin/sqlcmd /usr/local/bin/sqlcmd; do
-      if [ -x "$p" ]; then
-        echo "$p"
-        exit 0
-      fi
-    done
+    - name: Fail if sqlcmd not found
+      fail:
+        msg: |
+          CRITICAL: sqlcmd not found on {{ inspec_execution_target }}
+          
+          Detection output: {{ sqlcmd_detect.stdout | default('EMPTY') }}
+          Exit code: {{ sqlcmd_detect.rc | default('UNDEFINED') }}
+          Search PATH: {{ mssql_environment.PATH }}
+          
+          Install mssql-tools package or ensure sqlcmd is in PATH.
+      when: sqlcmd_bin == ""
 
-    # 3) Last resort: shallow search (kept small for speed)
-    found="$(find /opt /usr -maxdepth 5 -type f -name sqlcmd -perm -111 2>/dev/null | head -n 1 || true)"
-    if [ -n "$found" ]; then
-      echo "$found"
-      exit 0
-    fi
-
-    exit 1
-  register: sqlcmd_detect
-  changed_when: false
-  failed_when: false
-  delegate_to: "{{ inspec_execution_target }}"
-  no_log: true
-
-- name: Set sqlcmd_bin fact
-  set_fact:
-    sqlcmd_bin: "{{ (sqlcmd_detect.stdout | trim) if (sqlcmd_detect.rc == 0 and (sqlcmd_detect.stdout | trim) != '') else '' }}"
-  no_log: true
-
-- name: Fail if sqlcmd is not available
-  fail:
-    msg: |
-      CRITICAL: sqlcmd not found on execution target {{ inspec_execution_target }}.
-      PATH (mssql_environment.PATH): {{ mssql_environment.PATH | default('UNSET') }}
-      sqlcmd_detect.rc: {{ sqlcmd_detect.rc | default('UNDEFINED') }}
-      sqlcmd_detect.stdout: {{ sqlcmd_detect.stdout | default('EMPTY') }}
-      Tip: install Microsoft mssql-tools and/or include its bin dir in mssql_environment.PATH.
-  when: sqlcmd_bin == ""
+    - name: Update PATH with sqlcmd directory
+      set_fact:
+        mssql_environment:
+          PATH: "{{ sqlcmd_bin | dirname }}:{{ mssql_environment.PATH }}"
+          LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
+      when: "'/' in sqlcmd_bin"
 
 - name: Test database connectivity with sqlcmd
   shell: |
+    export PATH="{{ mssql_environment.PATH }}"
     set -euo pipefail
     
     timeout 10 "{{ sqlcmd_bin }}" \
