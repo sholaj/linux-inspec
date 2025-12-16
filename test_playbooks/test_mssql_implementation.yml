@@ -15,7 +15,6 @@
     mssql_environment_base:
       PATH: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
       LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
-      INSPEC_BACKEND: "mssql"
 
   pre_tasks:
     - name: Display test configuration
@@ -104,7 +103,6 @@
         mssql_environment:
           PATH: "{{ mssql_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
           LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
-          INSPEC_BACKEND: "{{ mssql_environment_base.INSPEC_BACKEND }}"
 
     - name: Test 3.2 - Verify environment variables constructed
       assert:
@@ -112,13 +110,11 @@
           - mssql_environment.PATH is defined
           - mssql_environment.PATH is search('/opt/mssql-tools/bin')
           - mssql_environment.LD_LIBRARY_PATH is defined
-          - mssql_environment.INSPEC_BACKEND == 'mssql'
         fail_msg: "❌ CRITICAL FAILURE: Environment variables not built correctly"
         success_msg: |
           ✓ TEST 3 PASSED: Environment variables built correctly
           PATH starts with: {{ mssql_environment.PATH[:100] }}...
           LD_LIBRARY_PATH: {{ mssql_environment.LD_LIBRARY_PATH[:100] }}...
-          INSPEC_BACKEND: {{ mssql_environment.INSPEC_BACKEND }}
 
     # ========================================
     # TEST 4: Database Client Tools
@@ -287,7 +283,6 @@
       environment:
         PATH: "{{ mssql_environment.PATH }}"
         LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
-        INSPEC_BACKEND: "{{ mssql_environment.INSPEC_BACKEND }}"
         INSPEC_DB_USERNAME: "{{ mssql_username }}"
         INSPEC_DB_PASSWORD: "{{ mssql_password }}"
         INSPEC_DB_HOST: "{{ mssql_server }}"
