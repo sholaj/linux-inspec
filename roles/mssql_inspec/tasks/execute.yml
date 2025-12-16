@@ -101,6 +101,20 @@
           LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
       when: "'/' in sqlcmd_bin"
 
+    - name: Detect inspec binary location
+      shell: |
+        export PATH="{{ mssql_environment.PATH }}"
+        command -v inspec || which inspec || echo "/usr/bin/inspec"
+      args:
+        executable: /bin/bash
+      register: inspec_detect
+      changed_when: false
+      delegate_to: "{{ inspec_execution_target }}"
+
+    - name: Set inspec_bin fact
+      set_fact:
+        inspec_bin: "{{ (inspec_detect.stdout | trim) if (inspec_detect.stdout | trim) != '' else 'inspec' }}"
+
 - name: Test database connectivity with sqlcmd
   shell: |
     export PATH="{{ mssql_environment.PATH }}"
@@ -147,7 +161,7 @@
     export PATH="{{ mssql_environment.PATH }}"
     export LD_LIBRARY_PATH="{{ mssql_environment.LD_LIBRARY_PATH }}"
     
-    inspec exec {{ item.path }} \
+    "{{ inspec_bin }}" exec {{ item.path }} \
       --input usernm='{{ mssql_username }}' \
               passwd='{{ mssql_password }}' \
               hostnm='{{ mssql_server }}' \
