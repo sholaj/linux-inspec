@@ -181,8 +181,6 @@
      'Cannot connect' not in inspec_results.stdout and
      'Unreachable' not in inspec_results.stdout)
   no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Display sanitized execution summary (debug mode only)
