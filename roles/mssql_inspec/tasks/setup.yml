@@ -23,7 +23,12 @@
       find:
         paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
         patterns: "*.rb"
-      register: control_files
+      register: control_files_raw
+
+    - name: Cache control files for execution tasks
+      set_fact:
+        control_files: "{{ control_files_raw }}"
+        cacheable: yes
 
     - name: Display control files to be executed
       debug:
@@ -55,7 +60,12 @@
       find:
         paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
         patterns: "*.rb"
-      register: control_files
+      register: control_files_raw
+
+    - name: Cache control files for execution tasks
+      set_fact:
+        control_files: "{{ control_files_raw }}"
+        cacheable: yes
 
     - name: Display control files to be executed
       debug:

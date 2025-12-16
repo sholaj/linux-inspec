@@ -25,7 +25,12 @@
         paths: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
         patterns: "*.rb"
         file_type: file
-      register: sybase_control_files
+      register: sybase_control_files_raw
+
+    - name: Cache Sybase control files for execution tasks
+      set_fact:
+        sybase_control_files: "{{ sybase_control_files_raw }}"
+        cacheable: yes
 
     - name: Display Sybase control files to be executed
       debug:
