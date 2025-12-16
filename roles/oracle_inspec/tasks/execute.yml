@@ -33,8 +33,8 @@
 - name: Build environment variables
   set_fact:
     oracle_environment:
-      PATH: "{{ oracle_environment_base.PATH }}:{{ _target_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ oracle_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
+      PATH: "{{ oracle_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
+      LD_LIBRARY_PATH: "{{ oracle_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
       ORACLE_HOME: "{{ oracle_environment_base.ORACLE_HOME }}"
       TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
       INSPEC_BACKEND: "{{ oracle_environment_base.INSPEC_BACKEND }}"

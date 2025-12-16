@@ -34,8 +34,8 @@
 - name: Build environment variables
   set_fact:
     sybase_environment:
-      PATH: "{{ sybase_environment_base.PATH }}:{{ _target_env.PATH }}"
-      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ _target_env.LD_LIBRARY_PATH | default('') }}"
+      PATH: "{{ sybase_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
+      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
       SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       INSPEC_BACKEND: "{{ sybase_environment_base.INSPEC_BACKEND }}"
