@@ -55,6 +55,12 @@
   shell: |
     set -e
     
+    # Export environment variables explicitly
+    export PATH="{{ sybase_environment.PATH }}"
+    export LD_LIBRARY_PATH="{{ sybase_environment.LD_LIBRARY_PATH }}"
+    export SYBASE="{{ sybase_environment_base.SYBASE }}"
+    export SYBASE_OCS="{{ sybase_environment.SYBASE_OCS }}"
+    
     # Check if isql is available
     if ! command -v isql &> /dev/null; then
       echo "ERROR: isql command not found in PATH"
@@ -80,11 +86,6 @@
     fi
   args:
     executable: /bin/bash
-  environment:
-    PATH: "{{ sybase_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
-    SYBASE: "{{ sybase_environment_base.SYBASE }}"
-    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
   register: isql_test
   changed_when: false
   failed_when: false
@@ -119,6 +120,13 @@
 
 - name: Execute Sybase InSpec controls via SSH
   shell: |
+    export PATH="{{ sybase_environment.PATH }}"
+    export LD_LIBRARY_PATH="{{ sybase_environment.LD_LIBRARY_PATH }}"
+    export SYBASE="{{ sybase_environment.SYBASE }}"
+    export SYBASE_OCS="{{ sybase_environment.SYBASE_OCS }}"
+    export INSPEC_DB_SERVICE="{{ sybase_service | default('') }}"
+    export INSPEC_DB_PORT="{{ sybase_port }}"
+    
     inspec exec {{ item.path }} \
       --ssh://'{{ sybase_ssh_user }}':'{{ sybase_ssh_password }}'@'{{ sybase_server }}' \
       -o {{ sybase_ssh_key_path }} \
@@ -131,13 +139,6 @@
       --no-color
   args:
     executable: /bin/bash
-  environment:
-    PATH: "{{ sybase_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
-    SYBASE: "{{ sybase_environment.SYBASE }}"
-    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_DB_SERVICE: "{{ sybase_service | default('') }}"
-    INSPEC_DB_PORT: "{{ sybase_port }}"
   register: sybase_inspec_results
   loop: "{{ sybase_control_files.files }}"
   loop_control:
@@ -157,6 +158,13 @@
 
 - name: Execute InSpec controls
   shell: |
+    export PATH="{{ sybase_environment.PATH }}"
+    export LD_LIBRARY_PATH="{{ sybase_environment.LD_LIBRARY_PATH }}"
+    export SYBASE="{{ sybase_environment.SYBASE }}"
+    export SYBASE_OCS="{{ sybase_environment.SYBASE_OCS }}"
+    export INSPEC_DB_SERVICE="{{ sybase_service | default('') }}"
+    export INSPEC_DB_PORT="{{ sybase_port }}"
+    
     inspec exec {{ item.path }} \
       --input usernm='{{ sybase_username }}' \
               passwd='{{ sybase_password }}' \
@@ -167,13 +175,6 @@
       --no-color
   args:
     executable: /bin/bash
-  environment:
-    PATH: "{{ sybase_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
-    SYBASE: "{{ sybase_environment.SYBASE }}"
-    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_DB_SERVICE: "{{ sybase_service | default('') }}"
-    INSPEC_DB_PORT: "{{ sybase_port }}"
   register: sybase_inspec_results_direct
   loop: "{{ sybase_control_files.files }}"
   loop_control:

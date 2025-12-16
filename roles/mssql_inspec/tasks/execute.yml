@@ -52,10 +52,15 @@
   shell: |
     set -e
     
+    # Export PATH explicitly
+    export PATH="{{ mssql_environment.PATH }}"
+    
     # Check if sqlcmd is available
     if ! command -v sqlcmd &> /dev/null; then
       echo "ERROR: sqlcmd command not found in PATH"
       echo "PATH: $PATH"
+      echo "Searching for sqlcmd..."
+      find /opt /usr -name sqlcmd 2>/dev/null || echo "No sqlcmd found"
       exit 127
     fi
     
@@ -80,13 +85,19 @@
     fi
   args:
     executable: /bin/bash
-  environment:
-    PATH: "{{ mssql_environment.PATH }}"
   register: sqlcmd_test
   changed_when: false
   failed_when: false
   delegate_to: "{{ inspec_execution_target }}"
   no_log: true
+
+- name: Debug sqlcmd test result
+  debug:
+    msg: |
+      sqlcmd_test.rc: {{ sqlcmd_test.rc | default('UNDEFINED') }}
+      sqlcmd_test.stdout: {{ sqlcmd_test.stdout | default('EMPTY') }}
+      sqlcmd_test.stderr: {{ sqlcmd_test.stderr | default('EMPTY') }}
+  when: inspec_debug_mode | default(false)
 
 - name: Fail if database is not reachable
   fail:
@@ -113,6 +124,9 @@
 
 - name: Execute InSpec controls
   shell: |
+    export PATH="{{ mssql_environment.PATH }}"
+    export LD_LIBRARY_PATH="{{ mssql_environment.LD_LIBRARY_PATH }}"
+    
     inspec exec {{ item.path }} \
       --input usernm='{{ mssql_username }}' \
               passwd='{{ mssql_password }}' \
@@ -123,9 +137,6 @@
       --no-color
   args:
     executable: /bin/bash
-  environment:
-    PATH: "{{ mssql_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
   register: inspec_results
   loop: "{{ control_files.files }}"
   loop_control:

@@ -55,6 +55,13 @@
   shell: |
     set -e
     
+    # Export environment variables explicitly
+    export PATH="{{ oracle_environment.PATH }}"
+    export LD_LIBRARY_PATH="{{ oracle_environment.LD_LIBRARY_PATH }}"
+    export ORACLE_HOME="{{ oracle_environment.ORACLE_HOME }}"
+    export TNS_ADMIN="{{ oracle_environment.TNS_ADMIN }}"
+    export NLS_LANG="{{ oracle_environment.NLS_LANG }}"
+    
     # Check if sqlplus is available
     if ! command -v sqlplus &> /dev/null; then
       echo "ERROR: sqlplus command not found in PATH"
@@ -80,12 +87,6 @@
     fi
   args:
     executable: /bin/bash
-  environment:
-    PATH: "{{ oracle_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
-    ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
-    TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
-    NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
   register: sqlplus_test
   changed_when: false
   failed_when: false
@@ -120,6 +121,14 @@
 
 - name: Execute InSpec controls
   shell: |
+    export PATH="{{ oracle_environment.PATH }}"
+    export LD_LIBRARY_PATH="{{ oracle_environment.LD_LIBRARY_PATH }}"
+    export ORACLE_HOME="{{ oracle_environment.ORACLE_HOME }}"
+    export TNS_ADMIN="{{ oracle_environment.TNS_ADMIN }}"
+    export NLS_LANG="{{ oracle_environment.NLS_LANG }}"
+    export INSPEC_DB_SERVICE="{{ oracle_service | default('') }}"
+    export INSPEC_DB_PORT="{{ oracle_port }}"
+    
     inspec exec {{ item.path }} \
       --input usernm='{{ oracle_username }}' \
               passwd='{{ oracle_password }}' \
@@ -130,14 +139,6 @@
       --no-color
   args:
     executable: /bin/bash
-  environment:
-    PATH: "{{ oracle_environment.PATH }}"
-    LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
-    ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
-    TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
-    NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
-    INSPEC_DB_SERVICE: "{{ oracle_service | default('') }}"
-    INSPEC_DB_PORT: "{{ oracle_port }}"
   register: oracle_inspec_results
   loop: "{{ oracle_control_files.files }}"
   loop_control:
