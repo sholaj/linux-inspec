@@ -229,7 +229,8 @@
 
 - name: Process InSpec results
   include_tasks: process_results.yml
-  loop: "{{ inspec_results.results }}"
+  loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
     index_var: idx
     label: "Processing result {{ idx + 1 }}"
+  when: inspec_results.results is defined
