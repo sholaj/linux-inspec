@@ -84,10 +84,10 @@
     msg: |
       CRITICAL: Cannot connect to Sybase database {{ sybase_server }}:{{ sybase_port }}
       
-      Exit Code: {{ isql_test.rc }}
+      Exit Code: {{ isql_test.rc | default('undefined') }}
       
       Diagnostics:
-      {{ isql_test.stdout }}
+      {{ isql_test.stdout | default('') }}
       
       This could be due to:
       - isql not in PATH (exit code 127)
@@ -101,7 +101,9 @@
       Current PATH: {{ sybase_environment.PATH }}
       SYBASE: {{ sybase_environment_base.SYBASE }}
       SYBASE_OCS: {{ sybase_environment.SYBASE_OCS }}
-  when: isql_test.rc != 0
+  when: 
+    - isql_test.rc is defined
+    - isql_test.rc != 0
 
 - name: Execute Sybase InSpec controls via SSH
   shell: |
