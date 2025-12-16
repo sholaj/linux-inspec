@@ -42,9 +42,30 @@
 - name: Test database connectivity with isql
   shell: |
     set -e
+    
+    # Check if isql is available
+    if ! command -v isql &> /dev/null; then
+      echo "ERROR: isql command not found in PATH"
+      echo "PATH: $PATH"
+      exit 127
+    fi
+    
     echo "Testing connectivity to {{ sybase_server }}:{{ sybase_port }}..."
-    echo "SELECT 'CONNECTION_OK'" | timeout 10 isql -U "{{ sybase_username }}" -P '{{ sybase_password }}' -S "{{ sybase_server }}:{{ sybase_port }}" > /dev/null 2>&1
-    echo "SUCCESS: Database connection verified"
+    
+    # Run connectivity test with timeout
+    echo "SELECT 'CONNECTION_OK'" | timeout 10 isql -U "{{ sybase_username }}" -P '{{ sybase_password }}' -S "{{ sybase_server }}:{{ sybase_port }}" 2>&1
+    
+    exit_code=$?
+    
+    if [ $exit_code -eq 0 ]; then
+      echo "SUCCESS: Database connection verified"
+    elif [ $exit_code -eq 124 ]; then
+      echo "ERROR: Connection timeout after 10 seconds"
+      exit 124
+    else
+      echo "ERROR: Connection failed with exit code $exit_code"
+      exit $exit_code
+    fi
   args:
     executable: /bin/bash
   environment:
@@ -62,13 +83,24 @@
   fail:
     msg: |
       CRITICAL: Cannot connect to Sybase database {{ sybase_server }}:{{ sybase_port }}
+      
+      Exit Code: {{ isql_test.rc }}
+      
+      Diagnostics:
+      {{ isql_test.stdout }}
+      
       This could be due to:
+      - isql not in PATH (exit code 127)
+      - Connection timeout (exit code 124)
       - Incorrect credentials
       - Network connectivity issues
       - Database server not running
       - Interfaces file configuration issues
       - Firewall blocking connection
-      Error: {{ isql_test.stderr | default('Connection timeout or refused') }}
+      
+      Current PATH: {{ sybase_environment.PATH }}
+      SYBASE: {{ sybase_environment_base.SYBASE }}
+      SYBASE_OCS: {{ sybase_environment.SYBASE_OCS }}
   when: isql_test.rc != 0
 
 - name: Execute Sybase InSpec controls via SSH
