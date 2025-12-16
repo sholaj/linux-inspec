@@ -40,6 +40,7 @@
 - name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
+      --backend mssql \
       --input usernm="$INSPEC_DB_USERNAME" \
               passwd="$INSPEC_DB_PASSWORD" \
               hostnm="$INSPEC_DB_HOST" \
