@@ -31,6 +31,18 @@
   set_fact:
     _target_env: "{{ hostvars[inspec_execution_target].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
 
+- name: Get system PATH from delegate host if not available in facts
+  shell: echo "$PATH"
+  register: delegate_system_path
+  changed_when: false
+  delegate_to: "{{ inspec_execution_target }}"
+  when: not _target_env.PATH or _target_env.PATH == ''
+
+- name: Update target environment with system PATH
+  set_fact:
+    _target_env: "{{ _target_env | combine({'PATH': delegate_system_path.stdout}) }}"
+  when: delegate_system_path.stdout is defined
+
 - name: Build environment variables
   set_fact:
     sybase_environment:
