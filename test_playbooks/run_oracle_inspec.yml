@@ -14,9 +14,9 @@
     scan_timestamp: "{{ controller_time.epoch | default(ansible_date_time.epoch) }}"
     enable_debug: false
     # Timeout settings for lengthy scans
-    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"  # Default 30 minutes per control
-    async_timeout: "{{ async_scan_timeout | default(3600) }}"    # Default 1 hour for async execution
-    poll_interval: "{{ async_poll_interval | default(30) }}"      # Check status every 30 seconds
+    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}" # Default 30 minutes per control
+    async_timeout: "{{ async_scan_timeout | default(3600) }}" # Default 1 hour for async execution
+    poll_interval: "{{ async_poll_interval | default(30) }}" # Check status every 30 seconds
     # AAP compatibility
     job_id: "{{ tower_job_id | default('local') }}"
     project_name: "{{ project_name | default('oracle_compliance') }}"
@@ -48,7 +48,7 @@
       file:
         path: "{{ base_results_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
       run_once: true
       delegate_to: "{{ inspec_delegate_host }}"
 
@@ -116,7 +116,6 @@
           run_once: true
           delegate_to: "{{ inspec_delegate_host }}"
       when: not ansible_check_mode
-
 # Example usage:
 # POC Mode:
 # ansible-playbook -i oracle_inventory.yml run_oracle_inspec.yml -e @oracle_vault.yml --vault-password-file .vaultpass

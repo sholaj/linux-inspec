@@ -7,7 +7,7 @@
   gather_facts: false
   connection: local
   strategy: "{{ execution_strategy | default('linear') }}"
-  serial: "{{ batch_size | default(3) }}"  # Lower default for SSH connections
+  serial: "{{ batch_size | default(3) }}" # Lower default for SSH connections
 
   vars:
     # Global settings - can be overridden by AAP extra vars
@@ -15,9 +15,9 @@
     scan_timestamp: "{{ controller_time.epoch | default(ansible_date_time.epoch) }}"
     enable_debug: false
     # Timeout settings for lengthy scans (higher for SSH)
-    inspec_timeout: "{{ inspec_scan_timeout | default(2400) }}"  # Default 40 minutes per control (SSH overhead)
-    async_timeout: "{{ async_scan_timeout | default(4800) }}"    # Default 80 minutes for async execution
-    poll_interval: "{{ async_poll_interval | default(45) }}"      # Check status every 45 seconds
+    inspec_timeout: "{{ inspec_scan_timeout | default(2400) }}" # Default 40 minutes per control (SSH overhead)
+    async_timeout: "{{ async_scan_timeout | default(4800) }}" # Default 80 minutes for async execution
+    poll_interval: "{{ async_poll_interval | default(45) }}" # Check status every 45 seconds
     # AAP compatibility
     job_id: "{{ tower_job_id | default('local') }}"
     project_name: "{{ project_name | default('sybase_compliance') }}"
@@ -49,7 +49,7 @@
       file:
         path: "{{ base_results_dir }}"
         state: directory
-        mode: '0755'
+        mode: "0755"
       run_once: true
       delegate_to: "{{ inspec_delegate_host }}"
 
@@ -146,7 +146,6 @@
           run_once: true
           delegate_to: "{{ inspec_delegate_host }}"
       when: not ansible_check_mode
-
 # Example usage:
 # POC Mode:
 # ansible-playbook -i sybase_inventory.yml run_sybase_inspec.yml -e @sybase_vault.yml --vault-password-file .vaultpass

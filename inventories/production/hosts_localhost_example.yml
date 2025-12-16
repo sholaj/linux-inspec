@@ -20,20 +20,20 @@ all:
     mssql_databases:
       vars:
         # CRITICAL: Set to "localhost" or "" or leave undefined for local execution
-        inspec_delegate_host: "localhost"       # Local execution mode
+        inspec_delegate_host: "localhost" # Local execution mode
         inspec_command_timeout: 1800
         inspec_debug_mode: false
-      
+
       hosts:
         # MSSQL Server 1 (Non-standard port)
         MSSQL_DB01_1733:
-          mssql_server: mssqldb01.example.com             # Database must be reachable from AAP2
+          mssql_server: mssqldb01.example.com # Database must be reachable from AAP2
           mssql_port: 1733
           mssql_version: "2019"
-          mssql_username: "scan_user"      # Injected by AAP2 credential
+          mssql_username: "scan_user" # Injected by AAP2 credential
           # mssql_password: injected by AAP2 Custom Credential at runtime
           mssql_service: ""
-        
+
         # MSSQL Server 2 (Standard port)
         MSSQL_DB01_1433:
           mssql_server: mssqldb01.example.com
@@ -41,7 +41,7 @@ all:
           mssql_version: "2019"
           mssql_username: "scan_user"
           mssql_service: ""
-        
+
         # MSSQL Server 3
         MSSQL_DB02_1433:
           mssql_server: mssqldb02.example.com
@@ -54,9 +54,9 @@ all:
     ###########################################################################
     oracle_databases:
       vars:
-        inspec_delegate_host: "localhost"       # Local execution mode
+        inspec_delegate_host: "localhost" # Local execution mode
         inspec_command_timeout: 1800
-      
+
       hosts:
         ORACLE_PROD_1521:
           oracle_server: oracledb01.example.com
@@ -64,7 +64,7 @@ all:
           oracle_service: ORCL
           oracle_version: "19c"
           oracle_username: "scan_user"
-        
+
         ORACLE_PROD_1522:
           oracle_server: oracledb01.example.com
           oracle_port: 1522
@@ -77,10 +77,10 @@ all:
     ###########################################################################
     sybase_databases:
       vars:
-        inspec_delegate_host: "localhost"       # Local execution mode
+        inspec_delegate_host: "localhost" # Local execution mode
         inspec_command_timeout: 1800
         sybase_use_ssh: false
-      
+
       hosts:
         SYBASE_PROD_5000:
           sybase_server: sybasedb01.example.com
@@ -88,11 +88,10 @@ all:
           sybase_version: "16.0"
           sybase_username: "scan_user"
           sybase_database: "master"
-
 ###############################################################################
 # KEY CONCEPTS FOR LOCALHOST MODE:
 ###############################################################################
-# 
+#
 # 1. EXECUTION ENVIRONMENT:
 #    - InSpec runs directly in AAP2 execution environment (EE)
 #    - No SSH connection to delegate host

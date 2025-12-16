@@ -55,13 +55,13 @@ all:
         # ===================================================================
         # InSpec runs directly on AAP execution environment
         inspec_delegate_host: "localhost"
-        
+
         # ===================================================================
         # DATABASE CREDENTIALS (Shared by ALL MSSQL databases)
         # ===================================================================
         mssql_username: nist_scan_user
         # mssql_password: INJECTED BY AAP Custom Credential
-        
+
         # ===================================================================
         # EXECUTION PARAMETERS
         # ===================================================================
@@ -99,13 +99,13 @@ all:
         # EXECUTION MODE: LOCAL
         # ===================================================================
         inspec_delegate_host: "localhost"
-        
+
         # ===================================================================
         # DATABASE CREDENTIALS (Shared by ALL Oracle databases)
         # ===================================================================
         oracle_username: nist_scan_user
         # oracle_password: INJECTED BY AAP Custom Credential
-        
+
         # ===================================================================
         # EXECUTION PARAMETERS
         # ===================================================================
@@ -139,28 +139,27 @@ all:
         # EXECUTION MODE: LOCAL
         # ===================================================================
         inspec_delegate_host: "localhost"
-        
+
         # ===================================================================
         # SYBASE: THREE-LAYER AUTHENTICATION
         # ===================================================================
         # Layer 1: Ansible -> Delegate (N/A for local mode)
         # Layer 2: InSpec -> Sybase SSH Tunnel
         # Layer 3: isql -> Sybase Database
-        
+
         sybase_use_ssh: true
         sybase_ssh_user: sybase_admin
         # sybase_ssh_password: INJECTED BY AAP Custom Credential
-        
+
         sybase_username: nist_scan_user
         # sybase_password: INJECTED BY AAP Custom Credential
-        
+
         # ===================================================================
         # EXECUTION PARAMETERS
         # ===================================================================
         base_results_dir: /tmp/compliance_scans
         enable_debug: false
         inspec_command_timeout: 1800
-
 ###############################################################################
 # USAGE INSTRUCTIONS
 ###############################################################################

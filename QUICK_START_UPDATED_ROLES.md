@@ -5,7 +5,7 @@
 All three InSpec roles (MSSQL, Oracle, Sybase) have been updated to:
 
 1. **Run locally** without SSH to database inventory hosts
-2. **Validate required tools** exist before execution  
+2. **Validate required tools** exist before execution
 3. **Properly detect errors** instead of silently failing
 4. **Use unified execution targets** for consistent behavior
 
@@ -62,13 +62,13 @@ isql -v
   hosts: localhost
   connection: local
   gather_facts: false
-  
+
   vars:
     mssql_server: "your-mssql-server.example.com"
     mssql_port: 1433
     mssql_username: "scan_user"
     mssql_password: "your_password"
-    
+
   roles:
     - mssql_inspec
 ```
@@ -80,17 +80,17 @@ isql -v
   hosts: localhost
   connection: local
   gather_facts: false
-  
+
   vars:
     oracle_server: "your-oracle-server.example.com"
     oracle_port: 1521
     oracle_service: "ORCL"
     oracle_username: "scan_user"
     oracle_password: "your_password"
-    
+
     # Required for Oracle
     oracle_home: "/opt/oracle-ic"
-    
+
   roles:
     - oracle_inspec
 ```
@@ -102,13 +102,13 @@ isql -v
   hosts: localhost
   connection: local
   gather_facts: false
-  
+
   vars:
     sybase_server: "your-sybase-server.example.com"
     sybase_port: 5000
     sybase_username: "scan_user"
     sybase_password: "your_password"
-    
+
   roles:
     - sybase_inspec
 ```
@@ -212,12 +212,12 @@ ansible-playbook test_playbooks/run_mssql_inspec.yml -vvv | grep -i "ssh\|connec
 
 ## Key Features
 
-✓ **Local Execution** - No SSH to database inventory hosts  
-✓ **Pre-Flight Checks** - Validates required tools before scanning  
-✓ **Proper Error Detection** - Fails on real errors, captures connection timeouts  
-✓ **Unified Targets** - Consistent behavior across all execution modes  
-✓ **Environment Isolation** - Each role manages its own environment variables  
-✓ **Clear Error Messages** - Actionable failure messages with remediation steps  
+✓ **Local Execution** - No SSH to database inventory hosts
+✓ **Pre-Flight Checks** - Validates required tools before scanning
+✓ **Proper Error Detection** - Fails on real errors, captures connection timeouts
+✓ **Unified Targets** - Consistent behavior across all execution modes
+✓ **Environment Isolation** - Each role manages its own environment variables
+✓ **Clear Error Messages** - Actionable failure messages with remediation steps
 
 ## Troubleshooting
 
