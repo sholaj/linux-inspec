@@ -39,14 +39,47 @@
       TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
       NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
 
+- name: Test database connectivity with sqlplus
+  shell: |
+    set -e
+    echo "Testing connectivity to {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}..."
+    echo "SELECT 'CONNECTION_OK' FROM DUAL;" | timeout 10 sqlplus -S "{{ oracle_username }}/{{ oracle_password }}@//{{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}" > /dev/null 2>&1
+    echo "SUCCESS: Database connection verified"
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ oracle_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
+    ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
+    TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
+    NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
+  register: sqlplus_test
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ inspec_execution_target }}"
+  no_log: true
+
+- name: Fail if database is not reachable
+  fail:
+    msg: |
+      CRITICAL: Cannot connect to Oracle database {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}
+      This could be due to:
+      - Incorrect credentials
+      - Network connectivity issues
+      - Database server not running  
+      - TNS configuration issues
+      - Firewall blocking connection
+      Error: {{ sqlplus_test.stderr | default('Connection timeout or refused') }}
+  when: sqlplus_test.rc != 0
+
 - name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
+      --input usernm='{{ oracle_username }}' \
+              passwd='{{ oracle_password }}' \
+              hostnm='{{ oracle_server }}' \
+              servicenm='{{ oracle_service | default("") }}' \
+              port='{{ oracle_port }}' \
       --reporter=json-min \
       --no-color
   args:
@@ -57,9 +90,6 @@
     ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
     TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
     NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
-    INSPEC_DB_USERNAME: "{{ oracle_username }}"
-    INSPEC_DB_PASSWORD: "{{ oracle_password }}"
-    INSPEC_DB_HOST: "{{ oracle_server }}"
     INSPEC_DB_SERVICE: "{{ oracle_service | default('') }}"
     INSPEC_DB_PORT: "{{ oracle_port }}"
   register: oracle_inspec_results

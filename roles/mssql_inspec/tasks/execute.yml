@@ -57,14 +57,45 @@
     var: inspec_verification.stdout_lines
   when: inspec_debug_mode | default(false)
 
+- name: Test database connectivity with sqlcmd
+  shell: |
+    set -e
+    echo "Testing connectivity to {{ mssql_server }}:{{ mssql_port }}..."
+    timeout 10 /opt/mssql-tools/bin/sqlcmd -S '{{ mssql_server }},{{ mssql_port }}' \
+      -U "{{ mssql_username }}" \
+      -P '{{ mssql_password }}' \
+      -Q "SELECT @@VERSION" > /dev/null 2>&1
+    echo "SUCCESS: Database connection verified"
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ mssql_environment.PATH }}"
+  register: sqlcmd_test
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ inspec_execution_target }}"
+  no_log: true
+
+- name: Fail if database is not reachable
+  fail:
+    msg: |
+      CRITICAL: Cannot connect to database {{ mssql_server }}:{{ mssql_port }}
+      This could be due to:
+      - Incorrect credentials
+      - Network connectivity issues
+      - Database server not running
+      - Firewall blocking connection
+      Error: {{ sqlcmd_test.stderr | default('Connection timeout or refused') }}
+  when: sqlcmd_test.rc != 0
+
 - name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
+      --input usernm='{{ mssql_username }}' \
+              passwd='{{ mssql_password }}' \
+              hostnm='{{ mssql_server }}' \
+              servicenm='{{ mssql_service | default("") }}' \
+              port='{{ mssql_port }}' \
       --reporter=json-min \
       --no-color
   args:
@@ -72,11 +103,6 @@
   environment:
     PATH: "{{ mssql_environment.PATH }}"
     LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
-    INSPEC_DB_USERNAME: "{{ mssql_username }}"
-    INSPEC_DB_PASSWORD: "{{ mssql_password }}"
-    INSPEC_DB_HOST: "{{ mssql_server }}"
-    INSPEC_DB_SERVICE: "{{ mssql_service | default('') }}"
-    INSPEC_DB_PORT: "{{ mssql_port }}"
   register: inspec_results
   loop: "{{ control_files.files }}"
   loop_control:

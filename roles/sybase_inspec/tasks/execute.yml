@@ -39,17 +39,48 @@
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
 
+- name: Test database connectivity with isql
+  shell: |
+    set -e
+    echo "Testing connectivity to {{ sybase_server }}:{{ sybase_port }}..."
+    echo "SELECT 'CONNECTION_OK'" | timeout 10 isql -U "{{ sybase_username }}" -P '{{ sybase_password }}' -S "{{ sybase_server }}:{{ sybase_port }}" > /dev/null 2>&1
+    echo "SUCCESS: Database connection verified"
+  args:
+    executable: /bin/bash
+  environment:
+    PATH: "{{ sybase_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
+    SYBASE: "{{ sybase_environment_base.SYBASE }}"
+    SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
+  register: isql_test
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ inspec_execution_target }}"
+  no_log: true
+
+- name: Fail if database is not reachable
+  fail:
+    msg: |
+      CRITICAL: Cannot connect to Sybase database {{ sybase_server }}:{{ sybase_port }}
+      This could be due to:
+      - Incorrect credentials
+      - Network connectivity issues
+      - Database server not running
+      - Interfaces file configuration issues
+      - Firewall blocking connection
+      Error: {{ isql_test.stderr | default('Connection timeout or refused') }}
+  when: isql_test.rc != 0
+
 - name: Execute Sybase InSpec controls via SSH
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --backend sybase \
-      --ssh://${INSPEC_SSH_USER}:${INSPEC_SSH_PASSWORD}@${INSPEC_DB_HOST} \
+      --ssh://'{{ sybase_ssh_user }}':'{{ sybase_ssh_password }}'@'{{ sybase_server }}' \
       -o {{ sybase_ssh_key_path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
+      --input usernm='{{ sybase_username }}' \
+              passwd='{{ sybase_password }}' \
+              hostnm='{{ sybase_server }}' \
+              servicenm='{{ sybase_service | default("") }}' \
+              port='{{ sybase_port }}' \
       --reporter=json-min \
       --no-color
   args:
@@ -59,11 +90,6 @@
     LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
     SYBASE: "{{ sybase_environment.SYBASE }}"
     SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_SSH_USER: "{{ sybase_ssh_user }}"
-    INSPEC_SSH_PASSWORD: "{{ sybase_ssh_password }}"
-    INSPEC_DB_USERNAME: "{{ sybase_username }}"
-    INSPEC_DB_PASSWORD: "{{ sybase_password }}"
-    INSPEC_DB_HOST: "{{ sybase_server }}"
     INSPEC_DB_SERVICE: "{{ sybase_service | default('') }}"
     INSPEC_DB_PORT: "{{ sybase_port }}"
   register: sybase_inspec_results
@@ -86,11 +112,11 @@
 - name: Execute InSpec controls
   shell: |
     /usr/bin/inspec exec {{ item.path }} \
-      --input usernm="$INSPEC_DB_USERNAME" \
-              passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
-              servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
+      --input usernm='{{ sybase_username }}' \
+              passwd='{{ sybase_password }}' \
+              hostnm='{{ sybase_server }}' \
+              servicenm='{{ sybase_service | default("") }}' \
+              port='{{ sybase_port }}' \
       --reporter=json-min \
       --no-color
   args:
@@ -100,9 +126,6 @@
     LD_LIBRARY_PATH: "{{ sybase_environment.LD_LIBRARY_PATH }}"
     SYBASE: "{{ sybase_environment.SYBASE }}"
     SYBASE_OCS: "{{ sybase_environment.SYBASE_OCS }}"
-    INSPEC_DB_USERNAME: "{{ sybase_username }}"
-    INSPEC_DB_PASSWORD: "{{ sybase_password }}"
-    INSPEC_DB_HOST: "{{ sybase_server }}"
     INSPEC_DB_SERVICE: "{{ sybase_service | default('') }}"
     INSPEC_DB_PORT: "{{ sybase_port }}"
   register: sybase_inspec_results_direct
