@@ -178,6 +178,7 @@
   changed_when: false
   failed_when: |
     (inspec_results.rc != 0 and
+     inspec_results.rc != 100 and
      'Cannot connect' not in inspec_results.stdout and
      'Unreachable' not in inspec_results.stdout)
   no_log: true
