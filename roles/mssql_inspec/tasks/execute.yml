@@ -81,10 +81,10 @@
     msg: |
       CRITICAL: Cannot connect to database {{ mssql_server }}:{{ mssql_port }}
       
-      Exit Code: {{ sqlcmd_test.rc }}
+      Exit Code: {{ sqlcmd_test.rc | default('undefined') }}
       
       Diagnostics:
-      {{ sqlcmd_test.stdout }}
+      {{ sqlcmd_test.stdout | default('') }}
       
       This could be due to:
       - sqlcmd not in PATH (exit code 127)
@@ -95,7 +95,9 @@
       - Firewall blocking connection
       
       Current PATH: {{ mssql_environment.PATH }}
-  when: sqlcmd_test.rc != 0
+  when: 
+    - sqlcmd_test.rc is defined
+    - sqlcmd_test.rc != 0
 
 - name: Execute InSpec controls
   shell: |
