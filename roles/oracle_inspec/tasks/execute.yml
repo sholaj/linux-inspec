@@ -145,9 +145,9 @@
     label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: |
-    (oracle_inspec_results.rc != 0 and
-     'Cannot connect' not in oracle_inspec_results.stdout and
-     'Unreachable' not in oracle_inspec_results.stdout)
+    (item.rc != 0 and
+     'Cannot connect' not in item.stdout and
+     'Unreachable' not in item.stdout)
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
   poll: 30
