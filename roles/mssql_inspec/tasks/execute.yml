@@ -179,7 +179,6 @@
   failed_when: false
   no_log: true
   delegate_to: "{{ inspec_execution_target }}"
-  ignore_errors: yes
 
 - name: Initialize parsed results
   set_fact:
