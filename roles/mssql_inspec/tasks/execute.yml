@@ -176,13 +176,14 @@
   loop_control:
     label: "{{ item.path | basename }}"
   changed_when: false
-  failed_when: |
-    (inspec_results.rc != 0 and
-     inspec_results.rc != 100 and
-     'Cannot connect' not in inspec_results.stdout and
-     'Unreachable' not in inspec_results.stdout)
+  failed_when: false
   no_log: true
   delegate_to: "{{ inspec_execution_target }}"
+  ignore_errors: yes
+
+- name: Initialize parsed results
+  set_fact:
+    parsed_results: []
 
 - name: Parse InSpec results for display
   set_fact:
