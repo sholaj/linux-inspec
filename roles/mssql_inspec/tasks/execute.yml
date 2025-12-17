@@ -191,7 +191,6 @@
   loop_control:
     label: "{{ item.item.path | basename }}"
   when: 
-    - inspec_results.results is defined
     - item.stdout is defined 
     - item.stdout != ''
   no_log: true
