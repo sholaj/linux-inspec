@@ -246,6 +246,29 @@
     - parsed_results is defined
     - (parsed_results | default([])) | length > 0
 
+# Lightweight summary-only output to ensure totals are always visible
+- name: Display InSpec summary totals
+  debug:
+    msg: |
+      {% set ns = namespace(pass=0, fail=0, total=0) %}
+      {% for result in parsed_results | default([]) %}
+      {% for control in result.controls | default([]) %}
+      {% set res = control.results | default([]) %}
+      {% set status = res[0].status | upper if res | length > 0 else (control.status | default('UNKNOWN') | upper) %}
+      {% set ns.total = ns.total + 1 %}
+      {% if status == 'PASSED' %}{% set ns.pass = ns.pass + 1 %}{% elif status == 'FAILED' %}{% set ns.fail = ns.fail + 1 %}{% endif %}
+      {% endfor %}
+      {% endfor %}
+      Summary:
+      --------
+      Total Controls: {{ ns.total }}
+      Passed        : {{ ns.pass }}
+      Failed        : {{ ns.fail }}
+      {% if ns.total == 0 %}Note: No controls were parsed from InSpec output.{% endif %}
+  when:
+    - parsed_results is defined
+    - (parsed_results | default([])) | length > 0
+
 - name: Process InSpec results
   include_tasks: process_results.yml
   loop: "{{ inspec_results.results | default([]) }}"
