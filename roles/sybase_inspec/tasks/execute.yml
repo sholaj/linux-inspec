@@ -194,7 +194,10 @@
 
 - name: Set results variable for processing
   set_fact:
-    sybase_final_results: "{{ sybase_use_ssh | ternary(sybase_inspec_results, sybase_inspec_results_direct) }}"
+    sybase_final_results: "{{
+      (sybase_use_ssh | default(true))
+        | ternary(sybase_inspec_results | default({}), sybase_inspec_results_direct | default({}))
+    }}"
 
 - name: Display sanitized execution summary (debug mode only)
   debug:
@@ -213,15 +216,18 @@
       Control: {{ item.item.path | basename }}
       Status: {{ 'PASS' if item.rc == 0 else 'FAIL' }}
       Exit Code: {{ item.rc }}
-  loop: "{{ sybase_final_results.results }}"
+  loop: "{{ sybase_final_results.results | default([]) }}"
   loop_control:
     label: "{{ item.item.path | basename }}"
-  when: inspec_debug_mode | default(false)
+  when:
+    - inspec_debug_mode | default(false)
+    - sybase_final_results.results is defined
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Process Sybase InSpec results
   include_tasks: process_results.yml
-  loop: "{{ sybase_final_results.results }}"
+  loop: "{{ sybase_final_results.results | default([]) }}"
   loop_control:
     index_var: idx
     label: "Processing Sybase result {{ idx + 1 }}"
+  when: sybase_final_results.results is defined
