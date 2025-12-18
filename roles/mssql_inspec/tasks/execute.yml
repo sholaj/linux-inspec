@@ -204,15 +204,20 @@
       ║ Database: {{ mssql_server }}:{{ mssql_port }}
       ║ Scan User: {{ mssql_username }}
       ╚════════════════════════════════════════════════════════════════════════════════════════
-      {% for result in parsed_results %}
-      {% set controls = result.controls | default([]) %}
-      {% for control in controls %}
+      {% set ns = namespace(pass=0, fail=0, total=0) %}
+      {% for result in parsed_results | default([]) %}
+      {% for control in result.controls | default([]) %}
+      {% set res = control.results | default([]) %}
+      {% set status = res[0].status | upper if res | length > 0 else 'UNKNOWN' %}
+      {% set ns.total = ns.total + 1 %}
+      {% if res | length > 0 and res[0].status == 'passed' %}{% set ns.pass = ns.pass + 1 %}{% endif %}
+      {% if res | length > 0 and res[0].status == 'failed' %}{% set ns.fail = ns.fail + 1 %}{% endif %}
       
       Control: {{ control.id }}
       Title  : {{ control.title | default('N/A') }}
-      Status : {{ control.results[0].status | upper if control.results | length > 0 else 'UNKNOWN' }}
-      {% if control.results | length > 0 and control.results[0].status != 'passed' %}
-      Message: {{ control.results[0].message | default('No message') | regex_replace('\n', ' ') | truncate(120) }}
+      Status : {{ status }}
+      {% if res | length > 0 and res[0].status != 'passed' %}
+      Message: {{ res[0].message | default('No message') | regex_replace('\n', ' ') | truncate(120) }}
       {% endif %}
       ────────────────────────────────────────────────────────────────────────────────────────
       {% endfor %}
@@ -220,9 +225,9 @@
       
       Summary:
       --------
-      Total Controls: {{ parsed_results | map(attribute='controls') | flatten | length }}
-      Passed        : {{ parsed_results | map(attribute='controls') | flatten | selectattr('results', 'defined') | selectattr('results', '>', []) | map(attribute='results') | flatten | selectattr('status', 'equalto', 'passed') | list | length }}
-      Failed        : {{ parsed_results | map(attribute='controls') | flatten | selectattr('results', 'defined') | selectattr('results', '>', []) | map(attribute='results') | flatten | selectattr('status', 'equalto', 'failed') | list | length }}
+      Total Controls: {{ ns.total }}
+      Passed        : {{ ns.pass }}
+      Failed        : {{ ns.fail }}
       
   when:
     - parsed_results is defined
