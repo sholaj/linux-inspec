@@ -224,7 +224,7 @@
       Passed        : {{ parsed_results | map(attribute='controls') | flatten | selectattr('results', 'defined') | selectattr('results', '>', []) | map(attribute='results') | flatten | selectattr('status', 'equalto', 'passed') | list | length }}
       Failed        : {{ parsed_results | map(attribute='controls') | flatten | selectattr('results', 'defined') | selectattr('results', '>', []) | map(attribute='results') | flatten | selectattr('status', 'equalto', 'failed') | list | length }}
       
-  when: parsed_results is defined and parsed_results | length > 0
+  when: parsed_results is defined and (parsed_results | length > 0)
 
 - name: Process InSpec results
   include_tasks: process_results.yml
