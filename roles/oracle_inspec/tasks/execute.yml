@@ -170,7 +170,6 @@
     label: "{{ item.item.path | basename }}"
   when:
     - inspec_debug_mode | default(false)
-    - oracle_inspec_results.results is defined
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Process Oracle InSpec results
@@ -179,4 +178,4 @@
   loop_control:
     index_var: idx
     label: "Processing Oracle result {{ idx + 1 }}"
-  when: oracle_inspec_results.results is defined
+  when: oracle_inspec_results is defined

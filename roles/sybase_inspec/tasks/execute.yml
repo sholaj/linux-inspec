@@ -221,7 +221,6 @@
     label: "{{ item.item.path | basename }}"
   when:
     - inspec_debug_mode | default(false)
-    - sybase_final_results.results is defined
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Process Sybase InSpec results
@@ -230,4 +229,4 @@
   loop_control:
     index_var: idx
     label: "Processing Sybase result {{ idx + 1 }}"
-  when: sybase_final_results.results is defined
+  when: sybase_final_results is defined
