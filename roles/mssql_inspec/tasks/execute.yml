@@ -220,16 +220,17 @@
       {% for result in parsed_results | default([]) %}
       {% for control in result.controls | default([]) %}
       {% set res = control.results | default([]) %}
-      {% set status = res[0].status | upper if res | length > 0 else 'UNKNOWN' %}
+      {% set status = res[0].status | upper if res | length > 0 else (control.status | default('UNKNOWN') | upper) %}
+      {% set message = res[0].message | default(control.code_desc | default('No message')) if res | length > 0 else (control.code_desc | default('No message')) %}
       {% set ns.total = ns.total + 1 %}
-      {% if res | length > 0 and res[0].status == 'passed' %}{% set ns.pass = ns.pass + 1 %}{% endif %}
-      {% if res | length > 0 and res[0].status == 'failed' %}{% set ns.fail = ns.fail + 1 %}{% endif %}
+      {% if status == 'PASSED' %}{% set ns.pass = ns.pass + 1 %}{% endif %}
+      {% if status == 'FAILED' %}{% set ns.fail = ns.fail + 1 %}{% endif %}
       
       Control: {{ control.id }}
       Title  : {{ control.title | default('N/A') }}
       Status : {{ status }}
-      {% if res | length > 0 and res[0].status != 'passed' %}
-      Message: {{ res[0].message | default('No message') | regex_replace('\n', ' ') | truncate(120) }}
+      {% if status != 'PASSED' %}
+      Message: {{ message | regex_replace('\\n', ' ') | truncate(120) }}
       {% endif %}
       ────────────────────────────────────────────────────────────────────────────────────────
       {% endfor %}
