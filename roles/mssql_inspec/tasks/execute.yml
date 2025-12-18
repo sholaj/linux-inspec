@@ -195,6 +195,18 @@
     - item.stdout != ''
   no_log: true
 
+# TEMP DEBUG: show first stdout (passwords redacted). Remove after verification.
+- name: Debug first InSpec stdout (sanitized)
+  debug:
+    msg: |
+      InSpec stdout (first item, sanitized):
+      {{ inspec_results.results[0].stdout | regex_replace(mssql_password, '****') if (inspec_results.results | length) > 0 else 'NO STDOUT' }}
+  when:
+    - inspec_results is defined
+    - inspec_results.results is defined
+    - (inspec_results.results | length) > 0
+  no_log: false
+
 - name: Display InSpec execution summary
   debug:
     msg: |
