@@ -145,10 +145,10 @@
     label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: |
-    sybase_inspec_results.rc != 0 and (
-      'Cannot connect to' not in sybase_inspec_results.stdout and
-      'connection refused' not in sybase_inspec_results.stdout and
-      'Connection timeout' not in sybase_inspec_results.stdout
+    item.rc != 0 and (
+      'Cannot connect to' not in item.stdout and
+      'connection refused' not in item.stdout and
+      'Connection timeout' not in item.stdout
     )
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"
@@ -181,10 +181,10 @@
     label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: |
-    sybase_inspec_results_direct.rc != 0 and (
-      'Cannot connect to' not in sybase_inspec_results_direct.stdout and
-      'connection refused' not in sybase_inspec_results_direct.stdout and
-      'Connection timeout' not in sybase_inspec_results_direct.stdout
+    item.rc != 0 and (
+      'Cannot connect to' not in item.stdout and
+      'connection refused' not in item.stdout and
+      'Connection timeout' not in item.stdout
     )
   no_log: true
   async: "{{ inspec_command_timeout | default(1800) }}"

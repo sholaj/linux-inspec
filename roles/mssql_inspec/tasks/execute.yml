@@ -177,10 +177,10 @@
     label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: |
-    (inspec_results.rc != 0 and
-     inspec_results.rc != 100 and
-     'Cannot connect' not in inspec_results.stdout and
-     'Unreachable' not in inspec_results.stdout)
+    (item.rc != 0 and
+     item.rc != 100 and
+     'Cannot connect' not in item.stdout and
+     'Unreachable' not in item.stdout)
   no_log: true
   delegate_to: "{{ inspec_execution_target }}"
 
@@ -275,4 +275,4 @@
   loop_control:
     index_var: idx
     label: "Processing result {{ idx + 1 }}"
-  when: inspec_results.results is defined
+  when: inspec_results.results is defined and inspec_results.results | length > 0
