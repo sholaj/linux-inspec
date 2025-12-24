@@ -87,7 +87,7 @@ all:
 **Variables:**
 - `ansible_connection: ssh` - Use SSH protocol
 - `ansible_user` - SSH username
-- `ansible_password` - SSH password (MUST be in vault!)
+- `asnible_password` - SSH password (MUST be in vau§lt!)
 
 ---
 
