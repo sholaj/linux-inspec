@@ -1,0 +1,26 @@
+name: mssql2019-compliance
+title: MSSQL 2019 NIST Compliance
+maintainer: DevOps Team
+copyright: Internal
+license: Proprietary
+summary: MSSQL 2019 NIST compliance controls using sqlcmd with SSL bypass
+version: 1.0.0
+inspec_version: '>= 5.0'
+
+inputs:
+  - name: hostnm
+    required: true
+    description: MSSQL server hostname or IP
+
+  - name: port
+    value: '1433'
+    description: MSSQL server port
+
+  - name: usernm
+    required: true
+    description: MSSQL username
+
+  - name: passwd
+    required: true
+    sensitive: true
+    description: MSSQL password

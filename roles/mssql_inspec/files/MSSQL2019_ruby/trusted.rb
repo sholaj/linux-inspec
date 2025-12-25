@@ -1,15 +1,12 @@
 # MSSQL 2019 InSpec Control - trusted.rb
 # NIST compliance checks for SQL Server 2019
+# Uses sqlcmd with -C flag to bypass SSL certificate validation
 
-# Establish connection to MSSQL
-sql = mssql_session(
-  user: attribute('usernm'),
-  password: attribute('passwd'),
-  host: attribute('hostnm'),
-  port: attribute('port'),
-  instance: attribute('servicenm', default: ''),
-  TrustServerCertificate: 'Yes'
-)
+# Get connection parameters (these are accessible within control blocks)
+hostnm = attribute('hostnm')
+port = attribute('port', default: '1433')
+usernm = attribute('usernm')
+passwd = attribute('passwd')
 
 # Control 2.01: Ad Hoc Distributed Queries
 control '2.01' do
@@ -17,8 +14,11 @@ control '2.01' do
   title "Ensure 'Ad Hoc Distributed Queries' Server Configuration Option is set to '0'"
   desc "Enabling Ad Hoc Distributed Queries allows users to query data and execute statements on external data sources."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'Ad Hoc Distributed Queries'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'Ad Hoc Distributed Queries'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -28,8 +28,11 @@ control '2.02' do
   title "Ensure 'CLR Enabled' Server Configuration Option is set to '0'"
   desc "The clr enabled option specifies whether user assemblies can be run by SQL Server."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'clr enabled'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'clr enabled'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -39,8 +42,11 @@ control '2.03' do
   title "Ensure 'Cross DB Ownership Chaining' Server Configuration Option is set to '0'"
   desc "Cross-database ownership chaining allows database objects to access objects in other databases."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'cross db ownership chaining'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'cross db ownership chaining'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -50,8 +56,11 @@ control '2.04' do
   title "Ensure 'Database Mail XPs' Server Configuration Option is set to '0'"
   desc "Database Mail XPs controls the ability to send mail from SQL Server."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'Database Mail XPs'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'Database Mail XPs'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -61,8 +70,11 @@ control '2.05' do
   title "Ensure 'Ole Automation Procedures' Server Configuration Option is set to '0'"
   desc "The Ole Automation Procedures option controls whether OLE Automation objects can be instantiated within Transact-SQL batches."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'Ole Automation Procedures'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'Ole Automation Procedures'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -72,8 +84,11 @@ control '2.06' do
   title "Ensure 'Remote Access' Server Configuration Option is set to '0'"
   desc "The remote access option controls the execution of stored procedures from local or remote servers."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'remote access'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'remote access'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -83,8 +98,11 @@ control '2.07' do
   title "Ensure 'Remote Admin Connections' Server Configuration Option is set to '0'"
   desc "The remote admin connections option allows client applications on remote computers to use the Dedicated Administrator Connection."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'remote admin connections'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'remote admin connections'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -94,8 +112,11 @@ control '2.08' do
   title "Ensure 'Scan For Startup Procs' Server Configuration Option is set to '0'"
   desc "The scan for startup procs option causes SQL Server to scan for and automatically run all stored procedures that are set to execute upon service startup."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'scan for startup procs'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'scan for startup procs'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
@@ -105,18 +126,24 @@ control '2.09' do
   title "Ensure 'External Scripts Enabled' is set to '0'"
   desc "The external scripts enabled option allows execution of scripts with certain remote language extensions."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'external scripts enabled'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'external scripts enabled'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
 
-# Control 2.10: PolyBase Enabled (SQL Server 2019 specific)
+# Control 2.10: Contained Database Authentication
 control '2.10' do
   impact 0.7
-  title "Ensure 'PolyBase Enabled' is configured correctly"
-  desc "PolyBase allows querying data from external data sources."
+  title "Ensure 'Contained Database Authentication' is set to '0'"
+  desc "Contained database authentication allows users to connect without authenticating at the Database Engine level."
 
-  describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'polybase enabled'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+  sql_query = "SET NOCOUNT ON; SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END FROM sys.configurations WHERE name = 'contained database authentication'"
+
+  describe command("sqlcmd -S '#{hostnm},#{port}' -U '#{usernm}' -P '#{passwd}' -C -h -1 -W -Q \"#{sql_query}\"") do
+    its('stdout.strip') { should eq 'COMPLIANT' }
+    its('exit_status') { should eq 0 }
   end
 end
