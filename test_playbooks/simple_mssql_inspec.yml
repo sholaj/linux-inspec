@@ -1,0 +1,180 @@
+---
+# Simple MSSQL InSpec Playbook - Direct execution on runner VM
+- name: Run InSpec MSSQL Compliance Scan
+  hosts: runner
+  gather_facts: true
+
+  vars:
+    mssql_server: "10.0.2.4"
+    mssql_port: 1433
+    mssql_username: "sa"
+    results_dir: "/tmp/compliance_scans"
+
+  tasks:
+    - name: Create results directory
+      file:
+        path: "{{ results_dir }}"
+        state: directory
+        mode: '0755'
+
+    - name: Create InSpec profile directory
+      file:
+        path: /tmp/mssql_inspec/controls
+        state: directory
+        mode: '0755'
+
+    - name: Copy MSSQL 2019 control file
+      copy:
+        src: "../roles/mssql_inspec/files/MSSQL2019_ruby/trusted.rb"
+        dest: /tmp/mssql_inspec/controls/trusted.rb
+        mode: '0644'
+
+    - name: Create InSpec profile metadata
+      copy:
+        content: |
+          name: mssql-2019-compliance
+          title: MSSQL 2019 NIST Compliance Profile
+          maintainer: InSpec Test
+          copyright: 2024
+          license: Apache-2.0
+          summary: NIST compliance checks for SQL Server 2019
+          version: 1.0.0
+          supports:
+            - platform: os
+          inspec_version: ">= 5.0"
+        dest: /tmp/mssql_inspec/inspec.yml
+        mode: '0644'
+
+    - name: Create command-based control file
+      copy:
+        content: |
+          # MSSQL 2019 InSpec Control - Direct sqlcmd approach
+
+          usernm = input('usernm')
+          passwd = input('passwd')
+          hostnm = input('hostnm')
+          port = input('port')
+
+          sqlcmd = "sqlcmd -S #{hostnm},#{port} -U #{usernm} -P '#{passwd}' -W -h-1"
+
+          control '2.01' do
+            impact 1.0
+            title 'Ensure Ad Hoc Distributed Queries is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'Ad Hoc Distributed Queries'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.02' do
+            impact 1.0
+            title 'Ensure CLR Enabled is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'clr enabled'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.03' do
+            impact 1.0
+            title 'Ensure Cross DB Ownership Chaining is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'cross db ownership chaining'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.04' do
+            impact 0.7
+            title 'Ensure Database Mail XPs is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'Database Mail XPs'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.05' do
+            impact 1.0
+            title 'Ensure Ole Automation Procedures is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'Ole Automation Procedures'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.06' do
+            impact 1.0
+            title 'Ensure Remote Access is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'remote access'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.07' do
+            impact 0.5
+            title 'Ensure Remote Admin Connections is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'remote admin connections'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.08' do
+            impact 0.7
+            title 'Ensure Scan For Startup Procs is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'scan for startup procs'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.09' do
+            impact 1.0
+            title 'Ensure External Scripts Enabled is set to 0'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'external scripts enabled'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+
+          control '2.10' do
+            impact 0.7
+            title 'Ensure PolyBase Enabled is configured correctly'
+            describe command("#{sqlcmd} -Q \"SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT_COMPLIANT' END FROM sys.configurations WHERE name = 'polybase enabled'\" 2>/dev/null | head -1") do
+              its('stdout') { should match /COMPLIANT/ }
+            end
+          end
+        dest: /tmp/mssql_inspec/controls/trusted.rb
+        mode: '0644'
+
+    - name: Run InSpec compliance scan
+      shell: |
+        export PATH=/usr/local/bin:$PATH
+        cd /tmp/mssql_inspec
+        inspec exec . \
+          --input usernm={{ mssql_username }} \
+          passwd='{{ mssql_password }}' \
+          hostnm={{ mssql_server }} \
+          port={{ mssql_port }} \
+          --reporter cli json:{{ results_dir }}/mssql_results_{{ ansible_date_time.epoch }}.json
+      register: inspec_result
+      failed_when: false
+
+    - name: Display InSpec results
+      debug:
+        msg: "{{ inspec_result.stdout_lines }}"
+
+    - name: Parse JSON results
+      shell: |
+        latest=$(ls -t {{ results_dir }}/mssql_results_*.json | head -1)
+        python3 -c "
+        import json
+        with open('$latest') as f:
+            d = json.load(f)
+            stats = d.get('statistics', {})
+            controls = d.get('profiles', [{}])[0].get('controls', [])
+            passed = sum(1 for c in controls if c.get('results', [{}])[0].get('status') == 'passed')
+            failed = len(controls) - passed
+            print(f'Profile: {d.get(\"profiles\", [{}])[0].get(\"title\", \"Unknown\")}')
+            print(f'Duration: {round(stats.get(\"duration\", 0), 2)} seconds')
+            print(f'Passed: {passed}')
+            print(f'Failed: {failed}')
+        "
+      register: results_summary
+      changed_when: false
+
+    - name: Show final summary
+      debug:
+        msg: "{{ results_summary.stdout_lines }}"
