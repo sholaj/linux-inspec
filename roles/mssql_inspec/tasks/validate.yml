@@ -1,27 +1,19 @@
 ---
 # Validation tasks for MSSQL InSpec role
 
-- name: Handle sensitive connection parameters
-  block:
-    - name: Set database connection parameters
-      set_fact:
-        mssql_connection:
-          server: "{{ mssql_server }}"
-          port: "{{ mssql_port }}"
-          database: "{{ mssql_database }}"
-          username: "{{ mssql_username }}"
-          password: "{{ mssql_password }}"
-          version: "{{ mssql_version }}"
-
-    - name: Validate required parameters
-      assert:
-        that:
-          - mssql_server is defined
-          - mssql_port is defined
-          - mssql_database is defined
-          - mssql_username is defined
-          - mssql_password is defined
-          - mssql_version is defined
-        fail_msg: "Required MSSQL connection parameters are missing"
+- name: Validate required connection parameters
+  assert:
+    that:
+      - mssql_server | length > 0
+      - mssql_port | int > 0
+      - mssql_database | length > 0
+      - mssql_username | length > 0
+      - mssql_password | length > 0
+    fail_msg: "Required MSSQL connection parameters are missing or empty"
   no_log: true
 
+- name: Validate MSSQL version
+  assert:
+    that:
+      - mssql_version in supported_mssql_versions
+    fail_msg: "Unsupported MSSQL version '{{ mssql_version }}'. Supported: {{ supported_mssql_versions | join(', ') }}"
