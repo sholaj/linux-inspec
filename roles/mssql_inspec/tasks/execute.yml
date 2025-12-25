@@ -45,8 +45,8 @@
 - name: Build environment variables
   set_fact:
     mssql_environment:
-      PATH: "{{ mssql_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
-      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
+      PATH: "{{ mssql_environment_base.PATH }}{% if _target_env.PATH | default('') %}:{{ _target_env.PATH }}{% endif %}"
+      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH | default('') }}{% if _target_env.LD_LIBRARY_PATH | default('') %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
 
 - name: Detect and validate sqlcmd binary
   block:
