@@ -3,12 +3,11 @@
 
 # Establish connection to MSSQL
 sql = mssql_session(
-  user: attribute('usernm'),
-  password: attribute('passwd'),
-  host: attribute('hostnm'),
-  port: attribute('port'),
-  instance: attribute('servicenm', default: ''),
-  TrustServerCertificate: 'Yes'
+  user: input('usernm'),
+  password: input('passwd'),
+  host: input('hostnm'),
+  port: input('port', value: 1433),
+  instance: input('servicenm', value: '')
 )
 
 # Control 2.01: Ad Hoc Distributed Queries
@@ -18,7 +17,7 @@ control '2.01' do
   desc "Enabling Ad Hoc Distributed Queries allows users to query data and execute statements on external data sources."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'Ad Hoc Distributed Queries'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -29,7 +28,7 @@ control '2.02' do
   desc "The clr enabled option specifies whether user assemblies can be run by SQL Server."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'clr enabled'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -40,7 +39,7 @@ control '2.03' do
   desc "Cross-database ownership chaining allows database objects to access objects in other databases."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'cross db ownership chaining'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -51,7 +50,7 @@ control '2.04' do
   desc "Database Mail XPs controls the ability to send mail from SQL Server."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'Database Mail XPs'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -62,7 +61,7 @@ control '2.05' do
   desc "The Ole Automation Procedures option controls whether OLE Automation objects can be instantiated within Transact-SQL batches."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'Ole Automation Procedures'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -73,7 +72,7 @@ control '2.06' do
   desc "The remote access option controls the execution of stored procedures from local or remote servers."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'remote access'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -84,7 +83,7 @@ control '2.07' do
   desc "The remote admin connections option allows client applications on remote computers to use the Dedicated Administrator Connection."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'remote admin connections'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -95,7 +94,7 @@ control '2.08' do
   desc "The scan for startup procs option causes SQL Server to scan for and automatically run all stored procedures that are set to execute upon service startup."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'scan for startup procs'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -106,7 +105,7 @@ control '2.09' do
   desc "The external scripts enabled option allows execution of scripts with certain remote language extensions."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'external scripts enabled'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
 
@@ -117,6 +116,6 @@ control '2.10' do
   desc "PolyBase allows querying data from external data sources."
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS Results FROM sys.configurations WHERE name = 'polybase enabled'") do
-    its('rows.first.Results') { should eq 'COMPLIANT' }
+    its('rows.first.results') { should eq 'COMPLIANT' }
   end
 end
