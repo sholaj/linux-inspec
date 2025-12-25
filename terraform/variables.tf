@@ -56,3 +56,31 @@ variable "admin_username" {
   type        = string
   default     = "azureuser"
 }
+
+# Oracle Database Variables
+variable "oracle_password" {
+  description = "Password for Oracle SYS/SYSTEM accounts (must meet Oracle complexity requirements)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "oracle_registry_username" {
+  description = "Username for Oracle Container Registry (sign up at container-registry.oracle.com)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "oracle_registry_password" {
+  description = "Password/token for Oracle Container Registry"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "deploy_oracle" {
+  description = "Whether to deploy Oracle container (requires Oracle Container Registry credentials)"
+  type        = bool
+  default     = false
+}

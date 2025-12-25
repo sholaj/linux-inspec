@@ -83,6 +83,18 @@ resource "azurerm_network_security_group" "runner" {
     destination_address_prefix = "VirtualNetwork"
   }
 
+  security_rule {
+    name                       = "AllowOracleOutbound"
+    priority                   = 110
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "1521"
+    source_address_prefix      = "*"
+    destination_address_prefix = "VirtualNetwork"
+  }
+
   tags = azurerm_resource_group.main.tags
 }
 
@@ -117,6 +129,11 @@ resource "azurerm_network_interface" "runner" {
 resource "azurerm_network_interface_security_group_association" "runner" {
   network_interface_id      = azurerm_network_interface.runner.id
   network_security_group_id = azurerm_network_security_group.runner.id
+}
+
+# Common tags for all resources
+locals {
+  common_tags = azurerm_resource_group.main.tags
 }
 
 # Cloud-init script for Runner VM
@@ -170,6 +187,34 @@ SQLCMD_WRAPPER
     # Create results directory
     mkdir -p /tmp/compliance_scans
     chmod 777 /tmp/compliance_scans
+
+    # Install Oracle Instant Client 21c
+    echo "Installing Oracle Instant Client..."
+    dnf install -y libaio
+
+    # Download Oracle Instant Client (Basic + SQLPlus)
+    cd /tmp
+    curl -LO https://download.oracle.com/otn_software/linux/instantclient/2113000/oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm || echo "Oracle basic client download failed"
+    curl -LO https://download.oracle.com/otn_software/linux/instantclient/2113000/oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm || echo "Oracle sqlplus download failed"
+
+    # Install Oracle RPMs if downloaded
+    if [ -f oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm ]; then
+      dnf install -y oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm
+      dnf install -y oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm || true
+
+      # Set Oracle environment variables
+      cat >> /etc/profile.d/oracle.sh << 'ORACLE_ENV'
+export ORACLE_HOME=/usr/lib/oracle/21/client64
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+export PATH=$ORACLE_HOME/bin:$PATH
+ORACLE_ENV
+
+      # Create sqlplus wrapper for easy access
+      ln -sf /usr/lib/oracle/21/client64/bin/sqlplus /usr/local/bin/sqlplus 2>/dev/null || true
+      echo "Oracle Instant Client installed successfully"
+    else
+      echo "Oracle Instant Client installation skipped (download failed)"
+    fi
 
     # Signal completion
     touch /var/log/cloud-init-complete
