@@ -1,0 +1,35 @@
+name: mssql2018-compliance
+title: MSSQL 2018 NIST Compliance
+maintainer: DevOps Team
+copyright: Internal
+license: Proprietary
+summary: MSSQL 2018 NIST compliance controls
+version: 1.0.0
+inspec_version: ">= 5.0"
+
+inputs:
+  - name: hostnm
+    description: MSSQL server hostname or IP address
+    type: String
+    required: true
+
+  - name: port
+    description: MSSQL server port
+    type: Numeric
+    value: 1433
+
+  - name: usernm
+    description: MSSQL username for authentication
+    type: String
+    required: true
+
+  - name: passwd
+    description: MSSQL password for authentication
+    type: String
+    required: true
+    sensitive: true
+
+  - name: servicenm
+    description: MSSQL named instance (leave empty for default instance)
+    type: String
+    value: ""
