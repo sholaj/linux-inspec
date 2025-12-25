@@ -38,7 +38,17 @@ output "subnet_aci_id" {
   value       = azurerm_subnet.aci.id
 }
 
+output "oracle_private_ip" {
+  description = "Private IP address of the Oracle container"
+  value       = var.deploy_oracle ? azurerm_container_group.oracle[0].ip_address : "Not deployed"
+}
+
+output "oracle_connection_string" {
+  description = "Oracle connection string for sqlplus"
+  value       = var.deploy_oracle ? "sqlplus system@${azurerm_container_group.oracle[0].ip_address}:1521/XEPDB1" : "Not deployed"
+}
+
 output "estimated_monthly_cost" {
   description = "Estimated monthly cost in USD"
-  value       = "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Storage: ~$2/mo = ~$42/mo total"
+  value       = var.deploy_oracle ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Oracle ACI: ~$15/mo + Storage: ~$2/mo = ~$57/mo total" : "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Storage: ~$2/mo = ~$42/mo total"
 }
