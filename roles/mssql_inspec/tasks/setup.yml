@@ -1,80 +1,64 @@
 ---
 # Setup tasks for MSSQL InSpec role
+# Control files are always copied to the execution host (_delegate_host)
 
-- name: Determine execution mode for setup
+# Create results directory on execution host
+- name: Create results directory
+  file:
+    path: "{{ inspec_results_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ _delegate_host }}"
+
+# Find control files on Ansible controller
+- name: Set local controls path
   set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
+    _local_controls_path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
 
-- name: Setup InSpec environment on delegate host (delegate mode)
-  block:
-    - name: Create results directory
-      file:
-        path: "{{ inspec_results_dir }}"
-        state: directory
-        mode: "0755"
-
-    - name: Create temporary working directory
-      file:
-        path: "{{ inspec_temp_dir }}"
-        state: directory
-        mode: "0755"
-
-    - name: Find all Ruby control files for specified MSSQL version
-      find:
-        paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
-        patterns: "*.rb"
-      register: control_files_raw
-
-    - name: Cache control files for execution tasks
-      set_fact:
-        control_files: "{{ control_files_raw }}"
-        cacheable: yes
-
-    - name: Display control files to be executed
-      debug:
-        msg: "Found {{ control_files.files | length }} control file(s) for MSSQL {{ mssql_version }}"
-      when: inspec_debug_mode | default(false)
-
-    - name: Fail if no MSSQL control files found
-      fail:
-        msg: "No MSSQL control files found in {{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
-      when: control_files.files | length == 0
-  delegate_to: "{{ inspec_delegate_host }}"
-  when: use_delegate_host | bool
-
-- name: Setup InSpec environment locally (local mode)
-  block:
-    - name: Create results directory
-      file:
-        path: "{{ inspec_results_dir }}"
-        state: directory
-        mode: "0755"
-
-    - name: Create temporary working directory
-      file:
-        path: "{{ inspec_temp_dir }}"
-        state: directory
-        mode: "0755"
-
-    - name: Find all Ruby control files for specified MSSQL version
-      find:
-        paths: "{{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
-        patterns: "*.rb"
-      register: control_files_raw
-
-    - name: Cache control files for execution tasks
-      set_fact:
-        control_files: "{{ control_files_raw }}"
-        cacheable: yes
-
-    - name: Display control files to be executed
-      debug:
-        msg: "Found {{ control_files.files | length }} control file(s) for MSSQL {{ mssql_version }}"
-      when: inspec_debug_mode | default(false)
-
-    - name: Fail if no MSSQL control files found
-      fail:
-        msg: "No MSSQL control files found in {{ mssql_controls_path }}/MSSQL{{ mssql_version }}_ruby"
-      when: control_files.files | length == 0
+- name: Find control files for MSSQL version
+  find:
+    paths: "{{ _local_controls_path }}"
+    patterns: "*.rb"
+  register: _control_files_found
   delegate_to: localhost
-  when: not (use_delegate_host | bool)
+
+- name: Validate control files exist
+  fail:
+    msg: "No control files found in {{ _local_controls_path }}"
+  when: _control_files_found.files | length == 0
+
+- name: Display control files count
+  debug:
+    msg: "Found {{ _control_files_found.files | length }} control file(s) for MSSQL {{ mssql_version }}"
+  when: inspec_debug_mode | default(false)
+
+# Copy control files to execution host
+- name: Create temp directory on execution host
+  tempfile:
+    state: directory
+    prefix: inspec_controls_
+  register: _remote_dir
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Copy control files to execution host
+  copy:
+    src: "{{ item.path }}"
+    dest: "{{ _remote_dir.path }}/"
+    mode: "0644"
+  loop: "{{ _control_files_found.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Build remote control files list
+  set_fact:
+    _remote_files_list: "{{ _remote_files_list | default([]) + [{'path': _remote_dir.path + '/' + (item.path | basename)}] }}"
+  loop: "{{ _control_files_found.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+
+- name: Set control files with remote paths
+  set_fact:
+    control_files:
+      files: "{{ _remote_files_list }}"
+    _remote_controls_path: "{{ _remote_dir.path }}"

@@ -1,30 +1,38 @@
 ---
-# Default values for mssql_inspec role
+# MSSQL InSpec Role - Default Variables
+# ======================================
 
-# MSSQL Connection defaults
+# MSSQL Connection Parameters (Required)
 mssql_server: ""
 mssql_port: 1433
-mssql_database: ""
-mssql_username: "nist_scan_user"
-mssql_password: ""  # AAP2 injects via extra vars (single credential for all DBs with RBAC)
-mssql_service: ""
+mssql_database: "master"
+mssql_username: ""
+mssql_password: ""
 mssql_version: "2019"
+mssql_service: ""  # Named instance (optional)
 
-# InSpec execution settings
-inspec_debug_mode: false
-inspec_timeout: 300  # seconds
-inspec_delegate_host: "localhost"  # localhost = local execution, set to delegate hostname for remote
+# Execution Mode
+# - "localhost" or empty: Run InSpec on Ansible control node
+# - "<hostname>": Run InSpec on remote delegate host via SSH
+inspec_delegate_host: "localhost"
 
-# Results and logging
-inspec_results_dir: "/tmp/inspec_mssql_results_{{ ansible_date_time.epoch }}"
-inspec_temp_dir: "/tmp/inspec_mssql_temp_{{ ansible_date_time.epoch }}"
+# Results Configuration
+inspec_results_dir: "/tmp/inspec_mssql_results"
 generate_summary_report: true
 cleanup_temp_files: true
 
-# Connection settings
-trust_server_certificate: "Yes"
-connection_timeout: 30  # seconds
+# Debug Mode - shows additional output
+inspec_debug_mode: false
 
-# Retry settings for transient failures
-max_retries: 3
-retry_delay: 5  # seconds
+# Splunk Integration (optional)
+send_to_splunk: false
+splunk_hec_url: ""
+splunk_hec_token: ""
+splunk_index: "compliance_scans"
+
+# Supported MSSQL versions (for validation)
+supported_mssql_versions:
+  - "2016"
+  - "2017"
+  - "2018"
+  - "2019"
