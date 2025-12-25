@@ -66,13 +66,13 @@
   set_fact:
     _inspec_bin: "{{ _inspec_check.stdout | trim }}"
 
-# Execute InSpec controls
-- name: Execute InSpec controls
+# Execute InSpec profile (contains all controls)
+- name: Execute InSpec profile
   shell: |
     export PATH="{{ _mssql_env.PATH }}"
     export CHEF_LICENSE=accept
 
-    "{{ _inspec_bin }}" exec "{{ item.path }}" \
+    "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
       --input usernm='{{ mssql_username }}' \
               passwd='{{ mssql_password }}' \
               hostnm='{{ mssql_server }}' \
@@ -82,14 +82,21 @@
       --no-color
   args:
     executable: /bin/bash
-  register: inspec_results
-  loop: "{{ control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
+  register: _inspec_profile_result
   changed_when: false
-  failed_when: inspec_results.rc not in [0, 100, 101]
+  failed_when: _inspec_profile_result.rc not in [0, 100, 101]
   no_log: true
   delegate_to: "{{ _delegate_host }}"
+
+# Convert single result to list for compatibility with downstream tasks
+- name: Wrap InSpec result for processing
+  set_fact:
+    inspec_results:
+      results:
+        - stdout: "{{ _inspec_profile_result.stdout }}"
+          rc: "{{ _inspec_profile_result.rc }}"
+          item:
+            path: "{{ _remote_controls_path }}"
 
 # Parse and display results
 - name: Parse InSpec results

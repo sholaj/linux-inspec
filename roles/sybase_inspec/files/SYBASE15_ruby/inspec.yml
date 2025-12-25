@@ -1,0 +1,35 @@
+name: sybase15-compliance
+title: Sybase ASE 15 NIST Compliance
+maintainer: DevOps Team
+copyright: Internal
+license: Proprietary
+summary: Sybase ASE 15 NIST compliance controls
+version: 1.0.0
+inspec_version: ">= 5.0"
+
+inputs:
+  - name: sybase_host
+    description: Sybase server hostname or IP address
+    type: String
+    required: true
+
+  - name: sybase_port
+    description: Sybase server port
+    type: Numeric
+    value: 5000
+
+  - name: sybase_user
+    description: Sybase username for authentication
+    type: String
+    required: true
+
+  - name: sybase_pass
+    description: Sybase password for authentication
+    type: String
+    required: true
+    sensitive: true
+
+  - name: sybase_database
+    description: Sybase database name
+    type: String
+    value: master
