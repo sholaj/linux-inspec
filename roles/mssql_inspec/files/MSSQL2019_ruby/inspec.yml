@@ -1,35 +1,27 @@
-name: mssql2019-compliance
-title: MSSQL 2019 NIST Compliance
-maintainer: DevOps Team
-copyright: Internal
-license: Proprietary
-summary: MSSQL 2019 NIST compliance controls
+name: mssql-2019-cis
+title: CIS Microsoft SQL Server 2019 Benchmark
+maintainer: InSpec Compliance Team
+copyright: Copyright 2024
+license: Apache-2.0
+summary: InSpec profile for CIS Microsoft SQL Server 2019 compliance
 version: 1.0.0
-inspec_version: ">= 5.0"
 
 inputs:
-  - name: hostnm
-    description: MSSQL server hostname or IP address
-    type: String
-    required: true
-
-  - name: port
-    description: MSSQL server port
-    type: Numeric
-    value: 1433
-
   - name: usernm
-    description: MSSQL username for authentication
-    type: String
-    required: true
-
+    description: MSSQL username
+    type: string
   - name: passwd
-    description: MSSQL password for authentication
-    type: String
-    required: true
+    description: MSSQL password
     sensitive: true
-
+    type: string
+  - name: hostnm
+    description: MSSQL host address
+    type: string
+  - name: port
+    description: MSSQL port
+    type: numeric
+    value: 1433
   - name: servicenm
-    description: MSSQL named instance (leave empty for default instance)
-    type: String
+    description: MSSQL service/instance name
+    type: string
     value: ""

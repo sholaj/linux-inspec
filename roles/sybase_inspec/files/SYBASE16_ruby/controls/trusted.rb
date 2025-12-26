@@ -1,11 +1,16 @@
-# Sybase ASE 16 InSpec Compliance Controls
-# Based on original NIST_for_db.ksh script patterns
-# Note: SSH connectivity handled by InSpec framework
+# Sybase ASE 16 InSpec Control - trusted.rb
+# CIS Sybase ASE 16 Compliance Controls
+#
+# IMPORTANT: Export SYBASE_PWD environment variable before running InSpec:
+#   export SYBASE_PWD='your_password'
+#   inspec exec . --input usernm=sa hostnm=sybase_host servicenm=SYBASE
+#
+# The password is passed via environment variable to avoid exposure in logs.
+
+usernm = input('usernm')
+servicenm = input('servicenm')
 
 title "Sybase ASE 16 Database Security Compliance Controls"
-
-# Sybase connection using command execution (since InSpec may not have native Sybase support)
-# This approach uses isql commands as shown in the original script pattern
 
 # Control 01: Ensure server is running and accessible
 control 'sybase-16-01' do
@@ -13,7 +18,7 @@ control 'sybase-16-01' do
   title 'Ensure Sybase ASE server is accessible'
   desc 'Sybase ASE server should be running and accessible for connections'
 
-  describe command("isql -U#{attribute('usernm')} -P#{attribute('passwd')} -S#{attribute('servicenm')} -w999 <<< 'select @@servername go quit'") do
+  describe command("sybase_query #{usernm} #{servicenm} 'select @@servername'") do
     its('exit_status') { should eq 0 }
     its('stdout') { should_not be_empty }
   end
@@ -25,7 +30,7 @@ control 'sybase-16-02' do
   title 'Verify Sybase ASE version information'
   desc 'Sybase ASE should report correct version information'
 
-  describe command("isql -U#{attribute('usernm')} -P#{attribute('passwd')} -S#{attribute('servicenm')} -w999 <<< 'select @@version go quit'") do
+  describe command("sybase_query #{usernm} #{servicenm} 'select @@version'") do
     its('exit_status') { should eq 0 }
     its('stdout') { should match(/Adaptive Server Enterprise/) }
   end
@@ -37,7 +42,7 @@ control 'sybase-16-03' do
   title 'Ensure Sybase ASE auditing is enabled'
   desc 'Sybase ASE should have auditing enabled for security compliance'
 
-  describe command("isql -U#{attribute('usernm')} -P#{attribute('passwd')} -S#{attribute('servicenm')} -w999 <<< 'select name, value from master..sysconfigures where name like \"%audit%\" go quit'") do
+  describe command("sybase_query #{usernm} #{servicenm} 'select name, value from master..sysconfigures where name like \"%audit%\"'") do
     its('exit_status') { should eq 0 }
     its('stdout') { should_not match(/auditing.*0/) }
   end
@@ -49,7 +54,7 @@ control 'sybase-16-04' do
   title 'Ensure no default passwords are in use'
   desc 'Sybase ASE should not have accounts with default or empty passwords'
 
-  describe command("isql -U#{attribute('usernm')} -P#{attribute('passwd')} -S#{attribute('servicenm')} -w999 <<< 'select name from master..syslogins where password is null or password = \"\" go quit'") do
+  describe command("sybase_query #{usernm} #{servicenm} 'select name from master..syslogins where password is null or password = \"\"'") do
     its('exit_status') { should eq 0 }
     its('stdout') { should_not match(/sa|probe|guest/) }
   end
@@ -61,7 +66,7 @@ control 'sybase-16-05' do
   title 'Verify remote access configuration'
   desc 'Sybase ASE remote access should be properly configured'
 
-  describe command("isql -U#{attribute('usernm')} -P#{attribute('passwd')} -S#{attribute('servicenm')} -w999 <<< 'select name, value from master..sysconfigures where name = \"allow remote access\" go quit'") do
+  describe command("sybase_query #{usernm} #{servicenm} 'select name, value from master..sysconfigures where name = \"allow remote access\"'") do
     its('exit_status') { should eq 0 }
     its('stdout') { should match(/allow remote access/) }
   end
@@ -73,7 +78,7 @@ control 'sybase-16-06' do
   title 'Ensure system table access is restricted'
   desc 'Sybase ASE system tables should have proper access controls'
 
-  describe command("isql -U#{attribute('usernm')} -P#{attribute('passwd')} -S#{attribute('servicenm')} -w999 <<< 'select name, value from master..sysconfigures where name = \"allow updates to system tables\" go quit'") do
+  describe command("sybase_query #{usernm} #{servicenm} 'select name, value from master..sysconfigures where name = \"allow updates to system tables\"'") do
     its('exit_status') { should eq 0 }
     its('stdout') { should match(/allow updates to system tables.*0/) }
   end

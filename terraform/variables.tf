@@ -59,28 +59,28 @@ variable "admin_username" {
 
 # Oracle Database Variables
 variable "oracle_password" {
-  description = "Password for Oracle SYS/SYSTEM accounts (must meet Oracle complexity requirements)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "oracle_registry_username" {
-  description = "Username for Oracle Container Registry (sign up at container-registry.oracle.com)"
-  type        = string
-  sensitive   = true
-  default     = ""
-}
-
-variable "oracle_registry_password" {
-  description = "Password/token for Oracle Container Registry"
+  description = "Password for Oracle SYS/SYSTEM accounts"
   type        = string
   sensitive   = true
   default     = ""
 }
 
 variable "deploy_oracle" {
-  description = "Whether to deploy Oracle container (requires Oracle Container Registry credentials)"
+  description = "Whether to deploy Oracle container"
   type        = bool
   default     = false
+}
+
+# Docker Hub Variables
+variable "dockerhub_username" {
+  description = "Docker Hub username for authenticated pulls"
+  type        = string
+  default     = ""
+}
+
+variable "dockerhub_password" {
+  description = "Docker Hub password/token for authenticated pulls"
+  type        = string
+  sensitive   = true
+  default     = ""
 }
