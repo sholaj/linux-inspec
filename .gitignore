@@ -93,3 +93,4 @@ logs/
 
 # Vault password
 .vaultpass
+test_results/
