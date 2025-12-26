@@ -212,9 +212,39 @@ ORACLE_ENV
       # Create sqlplus wrapper for easy access
       ln -sf /usr/lib/oracle/21/client64/bin/sqlplus /usr/local/bin/sqlplus 2>/dev/null || true
       echo "Oracle Instant Client installed successfully"
+
+      # Create oracle_query wrapper (password via ORACLE_PWD env var)
+      cat > /usr/local/bin/oracle_query << 'ORACLE_WRAPPER'
+#!/bin/bash
+# Oracle query wrapper - password via ORACLE_PWD environment variable
+USER="$1"; HOST="$2"; PORT="$3"; SERVICE="$4"; shift 4; QUERY="$*"
+[ -z "$ORACLE_PWD" ] && echo "ERROR: ORACLE_PWD not set" >&2 && exit 1
+sqlplus -S "${USER}/${ORACLE_PWD}@${HOST}:${PORT}/${SERVICE}" << EOF
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 LINESIZE 200
+${QUERY};
+EXIT;
+EOF
+ORACLE_WRAPPER
+      chmod +x /usr/local/bin/oracle_query
+      echo "oracle_query wrapper installed"
     else
       echo "Oracle Instant Client installation skipped (download failed)"
     fi
+
+    # Create sybase_query wrapper (password via SYBASE_PWD env var)
+    cat > /usr/local/bin/sybase_query << 'SYBASE_WRAPPER'
+#!/bin/bash
+# Sybase query wrapper - password via SYBASE_PWD environment variable
+USER="$1"; SERVER="$2"; shift 2; QUERY="$*"
+[ -z "$SYBASE_PWD" ] && echo "ERROR: SYBASE_PWD not set" >&2 && exit 1
+isql -U"${USER}" -P"${SYBASE_PWD}" -S"${SERVER}" -w999 << EOF
+${QUERY}
+go
+quit
+EOF
+SYBASE_WRAPPER
+    chmod +x /usr/local/bin/sybase_query
+    echo "sybase_query wrapper installed"
 
     # Signal completion
     touch /var/log/cloud-init-complete
