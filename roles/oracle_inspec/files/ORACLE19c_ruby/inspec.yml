@@ -7,14 +7,17 @@ summary: InSpec profile for CIS Oracle Database 19c compliance
 version: 1.0.0
 inspec_version: ">= 5.0"
 
-# NOTE: Password must be set via ORACLE_PWD environment variable
-# Example: export ORACLE_PWD='your_password' && inspec exec .
-
 inputs:
   - name: usernm
     description: Oracle username for authentication
     type: string
     required: true
+
+  - name: passwd
+    description: Oracle password for authentication
+    type: string
+    required: true
+    sensitive: true
 
   - name: hostnm
     description: Oracle database server hostname or IP address
