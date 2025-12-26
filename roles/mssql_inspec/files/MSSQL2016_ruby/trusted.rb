@@ -3,12 +3,11 @@
 
 # Establish connection to MSSQL
 sql = mssql_session(
-  user: attribute('usernm'),
-  password: attribute('passwd'),
-  host: attribute('hostnm'),
-  port: attribute('port'),
-  instance: attribute('servicenm', default: ''),
-  TrustServerCertificate: 'Yes'
+  user: input('usernm'),
+  password: input('passwd'),
+  host: input('hostnm'),
+  port: input('port', value: 1433),
+  instance: input('servicenm', value: '')
 )
 
 # Control 2.01: Ad Hoc Distributed Queries

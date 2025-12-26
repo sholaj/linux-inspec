@@ -1,35 +1,32 @@
-name: oracle19c-compliance
-title: Oracle 19c NIST Compliance
-maintainer: DevOps Team
-copyright: Internal
-license: Proprietary
-summary: Oracle 19c NIST compliance controls
+name: oracle-19c-cis
+title: CIS Oracle Database 19c Compliance
+maintainer: InSpec Compliance Team
+copyright: Copyright 2024
+license: Apache-2.0
+summary: InSpec profile for CIS Oracle Database 19c compliance
 version: 1.0.0
 inspec_version: ">= 5.0"
 
+# NOTE: Password must be set via ORACLE_PWD environment variable
+# Example: export ORACLE_PWD='your_password' && inspec exec .
+
 inputs:
-  - name: oracle_host
-    description: Oracle database server hostname or IP address
-    type: String
+  - name: usernm
+    description: Oracle username for authentication
+    type: string
     required: true
 
-  - name: oracle_port
+  - name: hostnm
+    description: Oracle database server hostname or IP address
+    type: string
+    required: true
+
+  - name: port
     description: Oracle database listener port
-    type: Numeric
+    type: numeric
     value: 1521
 
-  - name: oracle_user
-    description: Oracle username for authentication
-    type: String
-    required: true
-
-  - name: oracle_pass
-    description: Oracle password for authentication
-    type: String
-    required: true
-    sensitive: true
-
-  - name: oracle_service
+  - name: servicenm
     description: Oracle service name or SID
-    type: String
+    type: string
     required: true

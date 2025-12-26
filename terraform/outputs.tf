@@ -45,7 +45,7 @@ output "oracle_private_ip" {
 
 output "oracle_connection_string" {
   description = "Oracle connection string for sqlplus"
-  value       = var.deploy_oracle ? "sqlplus system@${azurerm_container_group.oracle[0].ip_address}:1521/XEPDB1" : "Not deployed"
+  value       = var.deploy_oracle ? "sqlplus system@${azurerm_container_group.oracle[0].ip_address}:1521/ORCLPDB1" : "Not deployed"
 }
 
 output "estimated_monthly_cost" {

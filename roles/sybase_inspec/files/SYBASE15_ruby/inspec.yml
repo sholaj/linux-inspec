@@ -1,35 +1,22 @@
-name: sybase15-compliance
-title: Sybase ASE 15 NIST Compliance
-maintainer: DevOps Team
-copyright: Internal
-license: Proprietary
-summary: Sybase ASE 15 NIST compliance controls
+name: sybase-15-cis
+title: CIS Sybase ASE 15 Compliance
+maintainer: InSpec Compliance Team
+copyright: Copyright 2024
+license: Apache-2.0
+summary: InSpec profile for CIS Sybase ASE 15 compliance
 version: 1.0.0
 inspec_version: ">= 5.0"
 
+# NOTE: Password must be set via SYBASE_PWD environment variable
+# Example: export SYBASE_PWD='your_password' && inspec exec .
+
 inputs:
-  - name: sybase_host
-    description: Sybase server hostname or IP address
-    type: String
-    required: true
-
-  - name: sybase_port
-    description: Sybase server port
-    type: Numeric
-    value: 5000
-
-  - name: sybase_user
+  - name: usernm
     description: Sybase username for authentication
-    type: String
+    type: string
     required: true
 
-  - name: sybase_pass
-    description: Sybase password for authentication
-    type: String
+  - name: servicenm
+    description: Sybase server name
+    type: string
     required: true
-    sensitive: true
-
-  - name: sybase_database
-    description: Sybase database name
-    type: String
-    value: master

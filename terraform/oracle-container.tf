@@ -1,5 +1,5 @@
-# Azure Container Instance for Oracle Database XE 21c
-# Used for InSpec compliance testing
+# Azure Container Instance for Oracle Database 19c
+# Uses doctorkirk/oracle-19c from Docker Hub
 
 resource "azurerm_container_group" "oracle" {
   count               = var.deploy_oracle ? 1 : 0
@@ -10,37 +10,36 @@ resource "azurerm_container_group" "oracle" {
   ip_address_type     = "Private"
   subnet_ids          = [azurerm_subnet.aci.id]
 
-  # Oracle Container Registry authentication
+  # Docker Hub credentials for authenticated pulls
   image_registry_credential {
-    server   = "container-registry.oracle.com"
-    username = var.oracle_registry_username
-    password = var.oracle_registry_password
+    server   = "index.docker.io"
+    username = var.dockerhub_username
+    password = var.dockerhub_password
   }
 
   container {
-    name   = "oracle-xe"
-    image  = "container-registry.oracle.com/database/express:21.3.0-xe"
+    name   = "oracle-19c"
+    image  = "doctorkirk/oracle-19c"
     cpu    = "2"
-    memory = "4"
+    memory = "8"
 
     ports {
       port     = 1521
       protocol = "TCP"
     }
 
+    ports {
+      port     = 5500
+      protocol = "TCP"
+    }
+
     environment_variables = {
-      ORACLE_CHARACTERSET = "AL32UTF8"
+      ORACLE_SID = "ORCLCDB"
+      ORACLE_PDB = "ORCLPDB1"
     }
 
     secure_environment_variables = {
       ORACLE_PWD = var.oracle_password
-    }
-
-    # Ephemeral storage for database files
-    volume {
-      name       = "oracle-data"
-      mount_path = "/opt/oracle/oradata"
-      empty_dir  = true
     }
   }
 
@@ -48,7 +47,7 @@ resource "azurerm_container_group" "oracle" {
     local.common_tags,
     {
       Database = "Oracle"
-      Version  = "21c-XE"
+      Version  = "19c"
     }
   )
 
