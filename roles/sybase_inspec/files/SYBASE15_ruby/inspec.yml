@@ -7,16 +7,34 @@ summary: InSpec profile for CIS Sybase ASE 15 compliance
 version: 1.0.0
 inspec_version: ">= 5.0"
 
-# NOTE: Password must be set via SYBASE_PWD environment variable
-# Example: export SYBASE_PWD='your_password' && inspec exec .
-
 inputs:
   - name: usernm
     description: Sybase username for authentication
     type: string
     required: true
 
-  - name: servicenm
-    description: Sybase server name
+  - name: passwd
+    description: Sybase password for authentication
     type: string
     required: true
+    sensitive: true
+
+  - name: servernm
+    description: Sybase server name (ASE server identifier)
+    type: string
+    required: true
+
+  - name: database
+    description: Sybase database name
+    type: string
+    value: master
+
+  - name: sybase_home
+    description: Path to Sybase installation directory
+    type: string
+    required: false
+
+  - name: isql_bin
+    description: Custom path to isql binary
+    type: string
+    required: false
