@@ -48,82 +48,30 @@
     sybase_environment:
       PATH: "{{ sybase_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
+      SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
 
-- name: Test database connectivity with tsql (FreeTDS)
-  shell: |
-    set -e
-
-    # Export environment variables explicitly
-    export PATH="{{ sybase_environment.PATH }}"
-    export LD_LIBRARY_PATH="{{ sybase_environment.LD_LIBRARY_PATH }}"
-
-    # Check if tsql is available
-    if ! command -v tsql &> /dev/null; then
-      echo "ERROR: tsql command not found in PATH"
-      echo "PATH: $PATH"
-      exit 127
-    fi
-
-    echo "Testing connectivity to {{ sybase_server }}:{{ sybase_port }}..."
-
-    # Run connectivity test with timeout using tsql (FreeTDS)
-    echo -e "select 1\ngo" | timeout 10 tsql -H "{{ sybase_server }}" -p "{{ sybase_port }}" -U "{{ sybase_username }}" -P '{{ sybase_password }}' 2>&1
-
-    exit_code=$?
-
-    if [ $exit_code -eq 0 ]; then
-      echo "SUCCESS: Database connection verified"
-    elif [ $exit_code -eq 124 ]; then
-      echo "ERROR: Connection timeout after 10 seconds"
-      exit 124
-    else
-      echo "ERROR: Connection failed with exit code $exit_code"
-      exit $exit_code
-    fi
-  args:
-    executable: /bin/bash
-  register: tsql_test
-  changed_when: false
-  failed_when: false
-  delegate_to: "{{ inspec_execution_target }}"
-  no_log: true
-
-- name: Fail if database is not reachable
-  fail:
+- name: Display execution info
+  debug:
     msg: |
-      CRITICAL: Cannot connect to Sybase database {{ sybase_server }}:{{ sybase_port }}
+      Sybase InSpec Execution Configuration
+      =====================================
+      Target Server: {{ sybase_server }}:{{ sybase_port }}
+      Service Name: {{ sybase_service }}
+      Database: {{ sybase_database | default('master') }}
+      SSH Mode: {{ sybase_use_ssh | default(true) }}
+      Execution Target: {{ inspec_execution_target }}
 
-      Exit Code: {{ tsql_test.rc | default('undefined') }}
+      Note: Connectivity will be validated by InSpec's sybase_session resource
+  when: inspec_debug_mode | default(false)
 
-      Diagnostics:
-      {{ tsql_test.stdout | default('') }}
-
-      This could be due to:
-      - tsql not in PATH (exit code 127)
-      - Connection timeout (exit code 124)
-      - Incorrect credentials
-      - Network connectivity issues
-      - Database server not running
-      - FreeTDS configuration issues
-      - Firewall blocking connection
-
-      Current PATH: {{ sybase_environment.PATH }}
-  when:
-    - tsql_test.rc is defined
-    - tsql_test.rc != 0
-
-- name: Execute Sybase InSpec controls via SSH
+- name: Execute Sybase InSpec profile via SSH
   shell: |
-    export PATH="{{ sybase_environment.PATH }}"
-    export LD_LIBRARY_PATH="{{ sybase_environment.LD_LIBRARY_PATH }}"
-    export SYBASE="{{ sybase_environment.SYBASE }}"
-    export SYBASE_OCS="{{ sybase_environment.SYBASE_OCS }}"
-    export INSPEC_DB_SERVICE="{{ sybase_service | default('') }}"
-    export INSPEC_DB_PORT="{{ sybase_port }}"
-    
-    inspec exec {{ item.path }} \
+    # Source Sybase environment
+    source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
+
+    inspec exec {{ sybase_profile_path }} \
       --ssh://'{{ sybase_ssh_user }}':'{{ sybase_ssh_password }}'@'{{ sybase_server }}' \
       -o {{ sybase_ssh_key_path }} \
       --input usernm='{{ sybase_username }}' \
@@ -135,25 +83,18 @@
   args:
     executable: /bin/bash
   register: sybase_inspec_results
-  loop: "{{ sybase_control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: sybase_inspec_results.rc not in [0, 100, 101]
-  no_log: true
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
   delegate_to: "{{ inspec_execution_target }}"
   when: sybase_use_ssh | default(true)
 
-- name: Execute InSpec controls
+- name: Execute InSpec profile (direct mode)
   shell: |
-    export PATH="{{ sybase_environment.PATH }}"
-    export LD_LIBRARY_PATH="{{ sybase_environment.LD_LIBRARY_PATH }}"
-    export SYBASE="{{ sybase_environment.SYBASE }}"
-    export SYBASE_OCS="{{ sybase_environment.SYBASE_OCS }}"
-    export INSPEC_DB_SERVICE="{{ sybase_service | default('') }}"
-    export INSPEC_DB_PORT="{{ sybase_port }}"
-    
-    inspec exec {{ item.path }} \
+    # Source Sybase environment
+    source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
+
+    inspec exec {{ sybase_profile_path }} \
       --input usernm='{{ sybase_username }}' \
               passwd='{{ sybase_password }}' \
               servernm='{{ sybase_service }}' \
@@ -163,12 +104,9 @@
   args:
     executable: /bin/bash
   register: sybase_inspec_results_direct
-  loop: "{{ sybase_control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
   changed_when: false
   failed_when: sybase_inspec_results_direct.rc not in [0, 100, 101]
-  no_log: true
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
   delegate_to: "{{ inspec_execution_target }}"
   when: not (sybase_use_ssh | default(true))
 
@@ -179,7 +117,7 @@
         | ternary(sybase_inspec_results | default({}), sybase_inspec_results_direct | default({}))
     }}"
 
-- name: Display sanitized execution summary (debug mode only)
+- name: Display execution summary (debug mode only)
   debug:
     msg: |
       Sybase InSpec Execution Summary
@@ -189,24 +127,18 @@
       SSH Mode: {{ sybase_use_ssh | default(true) }}
       {% if sybase_use_ssh | default(true) %}
       SSH User: {{ sybase_ssh_user }}
-      SSH Password: [PROTECTED - passed via environment variable]
+      SSH Password: [PROTECTED]
       {% endif %}
       DB Username: {{ sybase_username }}
-      DB Password: [PROTECTED - passed via environment variable]
-      Control: {{ item.item.path | basename }}
-      Status: {{ 'PASS' if item.rc == 0 else 'FAIL' }}
-      Exit Code: {{ item.rc }}
-  loop: "{{ sybase_final_results.results | default([]) }}"
-  loop_control:
-    label: "{{ item.item.path | basename }}"
-  when:
-    - inspec_debug_mode | default(false)
+      DB Password: [PROTECTED]
+      Profile: {{ sybase_profile_path }}
+      Exit Code: {{ sybase_final_results.rc }}
+      Status: {{ 'PASS' if sybase_final_results.rc == 0 else 'CONTROLS FAILED' if sybase_final_results.rc in [100, 101] else 'ERROR' }}
+  when: inspec_debug_mode | default(false)
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Process Sybase InSpec results
   include_tasks: process_results.yml
-  loop: "{{ sybase_final_results.results | default([]) }}"
-  loop_control:
-    index_var: idx
-    label: "Processing Sybase result {{ idx + 1 }}"
-  when: sybase_final_results is defined
+  vars:
+    inspec_result: "{{ sybase_final_results }}"
+    profile_name: "sybase-16-cis"

@@ -14,38 +14,58 @@
         state: directory
         mode: "0755"
 
+    - name: Create SAP ASE directory structure
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ sybase_environment_base.SYBASE }}"
+        - "{{ sybase_environment_base.SYBASE }}/{{ sybase_environment_base.SYBASE_OCS }}/bin"
+        - "{{ sybase_environment_base.SYBASE }}/{{ sybase_environment_base.SYBASE_OCS }}/lib"
+      become: true
+
+    - name: Deploy SYBASE.sh environment script
+      template:
+        src: SYBASE.sh.j2
+        dest: "{{ sybase_environment_base.SYBASE }}/SYBASE.sh"
+        mode: "0755"
+      become: true
+
+    - name: Deploy Sybase interfaces file
+      template:
+        src: interfaces.j2
+        dest: "{{ sybase_environment_base.SYBASE }}/interfaces"
+        mode: "0644"
+      become: true
+
     - name: Create Sybase temporary working directory
       tempfile:
         state: directory
         suffix: "_sybase_inspec"
       register: sybase_temp_dir
 
-    - name: Find all Ruby control files for specified Sybase version
-      find:
-        paths: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
-        patterns: "*.rb"
-        file_type: file
-        recurse: true
-      register: sybase_control_files_raw
-
-    - name: Cache Sybase control files for execution tasks
+    - name: Set Sybase InSpec profile path
       set_fact:
-        sybase_control_files: "{{ sybase_control_files_raw }}"
+        sybase_profile_path: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
         cacheable: yes
 
-    - name: Display Sybase control files to be executed
+    - name: Verify Sybase InSpec profile exists
+      stat:
+        path: "{{ sybase_profile_path }}/inspec.yml"
+      register: sybase_profile_check
+
+    - name: Display Sybase profile to be executed
       debug:
         msg: |
-          Sybase {{ sybase_version }} controls to execute:
-          {% for file in sybase_control_files.files %}
-          - {{ file.path | basename }}
-          {% endfor %}
-          Total controls: {{ sybase_control_files.files | length }}
+          Sybase {{ sybase_version }} InSpec Profile
+          =========================================
+          Profile path: {{ sybase_profile_path }}
           SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
       when: inspec_debug_mode | default(false)
 
-    - name: Fail if no Sybase control files found
+    - name: Fail if Sybase InSpec profile not found
       fail:
-        msg: "No Sybase control files found in {{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
-      when: sybase_control_files.files | length == 0
+        msg: "Sybase InSpec profile not found at {{ sybase_profile_path }}"
+      when: not sybase_profile_check.stat.exists
   delegate_to: "{{ inspec_execution_target }}"

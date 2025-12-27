@@ -28,6 +28,11 @@ inspec_delegate_host: "localhost"
 sybase_service_name: "SAP_ASE"
 sybase_charset: "iso_1"
 
+# Sybase client paths (for isql/sybase_session)
+# Set these if isql is not in PATH or SYBASE env is non-standard
+sybase_isql_bin: ""  # Leave empty to auto-detect, or set full path e.g. "/tools/ver/sybase/OCS-16_0/bin/isql"
+sybase_home: ""      # Leave empty to use SYBASE env var, or set e.g. "/tools/ver/sybase"
+
 # Error handling
 create_error_reports: true
 continue_on_errors: true

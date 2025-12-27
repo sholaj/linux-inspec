@@ -55,7 +55,7 @@ output "sybase_private_ip" {
 
 output "sybase_connection_info" {
   description = "Sybase connection information"
-  value       = var.deploy_sybase ? "isql -S SYBASE -U sa -P <password>" : "Not deployed"
+  value       = var.deploy_sybase ? "source /opt/sap/SYBASE.sh && isql -S MYSYBASE -U sa -P <password>" : "Not deployed"
 }
 
 output "acr_login_server" {
