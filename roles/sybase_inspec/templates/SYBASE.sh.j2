@@ -1,0 +1,11 @@
+#!/bin/bash
+# SAP ASE Environment Variables
+# Deployed by sybase_inspec Ansible role
+
+export SYBASE="{{ sybase_environment_base.SYBASE }}"
+export SYBASE_OCS="{{ sybase_environment_base.SYBASE_OCS }}"
+export PATH="$SYBASE/$SYBASE_OCS/bin:$PATH"
+export LD_LIBRARY_PATH="$SYBASE/$SYBASE_OCS/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+
+# Server interfaces file location
+export SYBASE_INTERFACES="{{ sybase_interfaces_file | default(sybase_environment_base.SYBASE + '/interfaces') }}"

@@ -25,11 +25,8 @@
 
 - name: Send Sybase results to Splunk (if enabled)
   include_tasks: splunk_integration.yml
-  loop: "{{ sybase_final_results.results | default([]) }}"
-  loop_control:
-    loop_var: splunk_result
   vars:
-    inspec_result_json: "{{ splunk_result.stdout | default('') }}"
+    inspec_result_json: "{{ sybase_final_results.stdout | default('') }}"
   when:
     - send_to_splunk | default(false)
     - splunk_hec_url is defined
@@ -73,6 +70,7 @@
       Database: {{ sybase_database }}
       Service: {{ sybase_service | default('N/A') }}
       SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
-      Controls executed: {{ sybase_control_files.files | length }}
+      Profile: {{ sybase_profile_path }}
+      Exit Code: {{ sybase_final_results.rc | default('N/A') }}
       Results directory: {{ inspec_results_dir }}
       Platform pattern: SYBASE_NIST_*_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_*.json

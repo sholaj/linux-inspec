@@ -12,13 +12,14 @@ sybase_opts = {
   database: input('database', value: 'master')
 }
 
-# Add optional parameters if provided
-sybase_home = input('sybase_home', value: nil)
-isql_bin = input('isql_bin', value: nil)
-sybase_opts[:sybase_home] = sybase_home if sybase_home
-sybase_opts[:bin] = isql_bin if isql_bin
+# Add optional parameters if provided (use empty string as default, check for non-empty)
+sybase_home_val = input('sybase_home', value: '')
+isql_bin_val = input('isql_bin', value: '')
+sybase_opts[:sybase_home] = sybase_home_val unless sybase_home_val.to_s.empty?
+sybase_opts[:bin] = isql_bin_val unless isql_bin_val.to_s.empty?
 
-sql = sybase_session(sybase_opts)
+# Use custom sybase_session_local resource that handles local execution and tsql
+sql = sybase_session_local(sybase_opts)
 
 title "Sybase ASE 16 Database Security Compliance Controls"
 

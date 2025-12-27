@@ -217,24 +217,47 @@ else
 fi
 
 # ========================================
-# Sybase/FreeTDS Client (tsql)
+# Sybase environment (for InSpec sybase_session)
 # ========================================
-echo "Installing EPEL and FreeTDS (Sybase client)..."
-dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm || true
-dnf install -y freetds
+echo "Setting up Sybase environment for InSpec..."
 
-# Create freetds.conf for Sybase server
-cat > /etc/freetds.conf << 'FREETDS_CONF'
-[global]
-  tds version = 5.0
+# Install dependencies that may be needed by train-sybase plugin
+dnf install -y libaio ncurses-libs
 
-[MYSYBASE]
-  host = 10.0.2.5
-  port = 5000
-  tds version = 5.0
-FREETDS_CONF
+# Create SAP ASE directory structure (for production compatibility)
+mkdir -p /opt/sap/OCS-16_0/bin
+mkdir -p /opt/sap/OCS-16_0/lib
+chown -R azureuser:azureuser /opt/sap
 
-echo "FreeTDS (Sybase client) installed successfully"
+# Create SYBASE.sh environment script
+cat > /opt/sap/SYBASE.sh << 'SYBASE_ENV'
+#!/bin/bash
+# SAP ASE Environment Variables
+export SYBASE=/opt/sap
+export SYBASE_OCS=OCS-16_0
+export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
+export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
+SYBASE_ENV
+chmod +x /opt/sap/SYBASE.sh
+
+# Add to system-wide profile
+cat > /etc/profile.d/sybase.sh << 'SYBASE_PROFILE'
+# SAP ASE Environment
+if [ -f /opt/sap/SYBASE.sh ]; then
+  source /opt/sap/SYBASE.sh
+fi
+SYBASE_PROFILE
+
+# Create interfaces file for Sybase server connections
+cat > /opt/sap/interfaces << 'INTERFACES'
+# SAP ASE Server Interfaces File
+MYSYBASE
+	query tcp ether 10.0.2.5 5000
+	master tcp ether 10.0.2.5 5000
+INTERFACES
+
+echo "Sybase environment configured"
+echo "Note: InSpec uses sybase_session resource for database connectivity"
 
 # ========================================
 # Create results directory
@@ -253,7 +276,7 @@ echo "Installed tools:"
 echo "  - InSpec: $(/usr/local/bin/inspec version 2>/dev/null || echo 'check manually')"
 echo "  - sqlcmd (MSSQL): $(which sqlcmd 2>/dev/null || echo 'not in PATH yet')"
 echo "  - sqlplus (Oracle): $(which sqlplus 2>/dev/null || echo 'not in PATH yet')"
-echo "  - tsql (Sybase/FreeTDS): $(which tsql 2>/dev/null || echo 'not in PATH yet')"
+echo "  - Sybase: Using InSpec sybase_session (interfaces file at /opt/sap/interfaces)"
 CLOUDINIT
 }
 
