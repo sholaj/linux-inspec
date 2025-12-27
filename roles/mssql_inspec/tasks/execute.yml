@@ -99,9 +99,10 @@
             path: "{{ _remote_controls_path }}"
 
 # Parse and display results
+# Note: stdout may already be parsed as dict by Jinja2, or may be a string
 - name: Parse InSpec results
   set_fact:
-    _parsed_results: "{{ _parsed_results | default([]) + [item.stdout | from_json] }}"
+    _parsed_results: "{{ _parsed_results | default([]) + [item.stdout if item.stdout is mapping else (item.stdout | from_json)] }}"
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
     label: "{{ item.item.path | basename }}"
