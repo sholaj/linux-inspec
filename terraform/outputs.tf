@@ -48,7 +48,22 @@ output "oracle_connection_string" {
   value       = var.deploy_oracle ? "sqlplus system@${azurerm_container_group.oracle[0].ip_address}:1521/ORCLPDB1" : "Not deployed"
 }
 
+output "sybase_private_ip" {
+  description = "Private IP address of the Sybase container"
+  value       = var.deploy_sybase ? azurerm_container_group.sybase[0].ip_address : "Not deployed"
+}
+
+output "sybase_connection_info" {
+  description = "Sybase connection information"
+  value       = var.deploy_sybase ? "isql -S SYBASE -U sa -P <password>" : "Not deployed"
+}
+
+output "acr_login_server" {
+  description = "Azure Container Registry login server"
+  value       = azurerm_container_registry.main.login_server
+}
+
 output "estimated_monthly_cost" {
   description = "Estimated monthly cost in USD"
-  value       = var.deploy_oracle ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Oracle ACI: ~$15/mo + Storage: ~$2/mo = ~$57/mo total" : "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Storage: ~$2/mo = ~$42/mo total"
+  value       = var.deploy_oracle && var.deploy_sybase ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Oracle ACI: ~$15/mo + Sybase ACI: ~$10/mo + Storage: ~$2/mo = ~$67/mo total" : var.deploy_oracle ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Oracle ACI: ~$15/mo + Storage: ~$2/mo = ~$57/mo total" : var.deploy_sybase ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Sybase ACI: ~$10/mo + Storage: ~$2/mo = ~$52/mo total" : "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Storage: ~$2/mo = ~$42/mo total"
 }

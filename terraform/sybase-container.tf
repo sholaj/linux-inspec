@@ -1,9 +1,9 @@
-# Azure Container Instance for Oracle Database 19c
+# Azure Container Instance for Sybase ASE
 # Uses image from Azure Container Registry
 
-resource "azurerm_container_group" "oracle" {
-  count               = var.deploy_oracle ? 1 : 0
-  name                = "aci-oracle-inspec-${var.environment}"
+resource "azurerm_container_group" "sybase" {
+  count               = var.deploy_sybase ? 1 : 0
+  name                = "aci-sybase-inspec-${var.environment}"
   location            = azurerm_resource_group.main.location
   resource_group_name = azurerm_resource_group.main.name
   os_type             = "Linux"
@@ -18,41 +18,35 @@ resource "azurerm_container_group" "oracle" {
   }
 
   container {
-    name   = "oracle-19c"
-    image  = "${azurerm_container_registry.main.login_server}/oracle:19c"
+    name   = "sybase-ase"
+    image  = "${azurerm_container_registry.main.login_server}/sybase:16.0"
     cpu    = "2"
-    memory = "8"
+    memory = "4"
 
     ports {
-      port     = 1521
-      protocol = "TCP"
-    }
-
-    ports {
-      port     = 5500
+      port     = 5000
       protocol = "TCP"
     }
 
     environment_variables = {
-      ORACLE_SID = "ORCLCDB"
-      ORACLE_PDB = "ORCLPDB1"
+      SYBASE_SERVER = "SYBASE"
     }
 
     secure_environment_variables = {
-      ORACLE_PWD = var.oracle_password
+      SA_PASSWORD = var.sybase_password
     }
   }
 
   tags = merge(
     local.common_tags,
     {
-      Database = "Oracle"
-      Version  = "19c"
+      Database = "Sybase"
+      Version  = "16"
     }
   )
 
   depends_on = [
     azurerm_subnet.aci,
-    null_resource.import_oracle_image
+    null_resource.import_sybase_image
   ]
 }
