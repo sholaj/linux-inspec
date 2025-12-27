@@ -9,14 +9,15 @@
 
 - name: Save successful result
   copy:
-    content: "{{ item.stdout }}"
+    # Handle both string and dict stdout (json-min output)
+    content: "{{ item.stdout if item.stdout is string else (item.stdout | to_json) }}"
     dest: "{{ inspec_results_dir }}/{{ _result_file }}"
     mode: "0644"
   delegate_to: "{{ _delegate_host }}"
   when:
     - item.stdout is defined
-    - item.stdout | trim != ''
-    - item.rc in [0, 100, 101]
+    # Handle rc as both string and int (e.g., '100' or 100)
+    - (item.rc | int) in [0, 100, 101]
 
 - name: Save error result
   copy:
@@ -38,4 +39,5 @@
   delegate_to: "{{ _delegate_host }}"
   when:
     - item.rc is defined
-    - item.rc not in [0, 100, 101]
+    # Handle rc as both string and int
+    - (item.rc | int) not in [0, 100, 101]
