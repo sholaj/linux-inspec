@@ -128,9 +128,8 @@
       -o {{ sybase_ssh_key_path }} \
       --input usernm='{{ sybase_username }}' \
               passwd='{{ sybase_password }}' \
-              hostnm='{{ sybase_server }}' \
-              servicenm='{{ sybase_service | default("") }}' \
-              port='{{ sybase_port }}' \
+              servernm='{{ sybase_service }}' \
+              database='{{ sybase_database | default("master") }}' \
       --reporter=json-min \
       --no-color
   args:
@@ -157,9 +156,8 @@
     inspec exec {{ item.path }} \
       --input usernm='{{ sybase_username }}' \
               passwd='{{ sybase_password }}' \
-              hostnm='{{ sybase_server }}' \
-              servicenm='{{ sybase_service | default("") }}' \
-              port='{{ sybase_port }}' \
+              servernm='{{ sybase_service }}' \
+              database='{{ sybase_database | default("master") }}' \
       --reporter=json-min \
       --no-color
   args:
