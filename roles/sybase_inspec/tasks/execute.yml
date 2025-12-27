@@ -151,8 +151,6 @@
       'Connection timeout' not in sybase_inspec_results.stdout
     )
   no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
   delegate_to: "{{ inspec_execution_target }}"
   when: sybase_use_ssh | default(true)
 
@@ -187,8 +185,6 @@
       'Connection timeout' not in sybase_inspec_results_direct.stdout
     )
   no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
   delegate_to: "{{ inspec_execution_target }}"
   when: not (sybase_use_ssh | default(true))
 
