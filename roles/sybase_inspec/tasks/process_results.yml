@@ -22,9 +22,14 @@
   block:
     - name: Save successful Sybase results to JSON file
       copy:
-        content: "{{ item.stdout }}"
+        # Handle both string and dict stdout (json-min output)
+        content: "{{ item.stdout if item.stdout is string else (item.stdout | to_json) }}"
         dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
-      when: sybase_inspec_status is defined and sybase_inspec_status in ['passed', 'failed', 'skipped']
+      when:
+        # Save results for all valid InSpec executions (0=pass, 100=failed controls, 101=skipped)
+        # Handle rc as both string and int (e.g., '100' or 100)
+        - (item.rc | int) in [0, 100, 101]
+        - item.stdout is defined
 
     - name: Log successful Sybase execution
       debug:
@@ -40,7 +45,9 @@
           {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"Cannot connect to Sybase database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect. SSH connection may have failed.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect to Sybase","statistics":{"duration":0},"version":"N/A"}]}
         dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
       when:
-        - item.rc != 0 or (sybase_inspec_status is not defined or sybase_inspec_status not in ['passed', 'failed', 'skipped'])
+        # Only create error report for actual InSpec execution failures (not rc=100/101 which are valid)
+        # Handle rc as both string and int
+        - (item.rc | int) not in [0, 100, 101]
 
     - name: Log Sybase connection error
       debug:
@@ -51,5 +58,5 @@
           Result file: {{ sybase_result_file_name }}.json
       when:
         - inspec_debug_mode | default(false)
-        - (item.rc != 0 or (sybase_inspec_status is not defined or sybase_inspec_status not in ['passed', 'failed', 'skipped']))
+        - (item.rc | int) not in [0, 100, 101]
   delegate_to: "{{ inspec_execution_target }}"
