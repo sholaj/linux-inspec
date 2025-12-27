@@ -17,8 +17,12 @@ Scan Results Summary:
 {% if oracle_inspec_results is defined and oracle_inspec_results.results | length > 0 %}
 {% set ns = namespace(passed=0, failed=0, skipped=0, errors=0, total=0) %}
 {% for result in oracle_inspec_results.results %}
-  {% if result.stdout is defined and (result.stdout | trim) %}
+  {% if result.stdout is defined and result.stdout %}
+    {% if result.stdout is mapping %}
+    {% set json_result = result.stdout %}
+    {% else %}
     {% set json_result = result.stdout | from_json %}
+    {% endif %}
     {% if json_result.profiles is defined %}
       {% for profile in json_result.profiles %}
         {% if profile.controls is defined %}
