@@ -71,6 +71,20 @@ variable "deploy_oracle" {
   default     = false
 }
 
+# Sybase Database Variables
+variable "sybase_password" {
+  description = "Password for Sybase SA account"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "deploy_sybase" {
+  description = "Whether to deploy Sybase container"
+  type        = bool
+  default     = false
+}
+
 # Docker Hub Variables
 variable "dockerhub_username" {
   description = "Docker Hub username for authenticated pulls"

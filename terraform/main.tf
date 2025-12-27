@@ -138,119 +138,123 @@ locals {
 
 # Cloud-init script for Runner VM
 locals {
-  cloud_init_script = <<-EOF
-    #!/bin/bash
-    set -ex
+  cloud_init_script = <<-CLOUDINIT
+#!/bin/bash
+set -ex
 
-    # Log output
-    exec > >(tee /var/log/cloud-init-custom.log)
-    exec 2>&1
+# Log output to file
+exec > >(tee /var/log/cloud-init-custom.log) 2>&1
 
-    echo "Starting cloud-init setup at $(date)"
+echo "Starting cloud-init setup at $(date)"
 
-    # Install base tools (no epel-release on RHEL)
-    dnf install -y git python3-pip gcc make
+# Install base tools
+dnf install -y git python3-pip gcc make wget curl
 
-    # Install Python 3.9 for Ansible compatibility
-    dnf install -y python39
+# Install Python 3.9 for Ansible compatibility
+dnf install -y python39
 
-    # Install Ruby 3.1 via module stream
-    dnf module reset ruby -y || true
-    dnf module enable ruby:3.1 -y
-    dnf module install ruby:3.1 -y
-    dnf install -y ruby-devel redhat-rpm-config
+# Install Ruby 3.1 via module stream
+dnf module reset ruby -y || true
+dnf module enable ruby:3.1 -y
+dnf module install ruby:3.1 -y
+dnf install -y ruby-devel redhat-rpm-config
 
-    # Install InSpec 5.22.29 via gem
-    gem install inspec-bin -v 5.22.29 --no-document
+# Install InSpec 5.22.29 via gem
+gem install inspec-bin -v 5.22.29 --no-document
 
-    # Accept InSpec license
-    export CHEF_LICENSE=accept
-    inspec --chef-license=accept || true
+# Accept InSpec license and verify
+export CHEF_LICENSE=accept
+/usr/local/bin/inspec --chef-license=accept || true
+echo "InSpec version: $(/usr/local/bin/inspec version)"
 
-    # Verify InSpec installation
-    inspec version
+# Add InSpec to PATH
+echo 'export PATH="/usr/local/bin:$PATH"' >> /etc/profile.d/inspec.sh
 
-    # Install MSSQL tools 18 (sqlcmd)
-    curl -fsSL https://packages.microsoft.com/config/rhel/8/prod.repo -o /etc/yum.repos.d/mssql-release.repo
-    ACCEPT_EULA=Y dnf install -y mssql-tools18 unixODBC-devel
+# ========================================
+# MSSQL Client (sqlcmd)
+# ========================================
+echo "Installing MSSQL tools..."
+curl -fsSL https://packages.microsoft.com/config/rhel/8/prod.repo -o /etc/yum.repos.d/mssql-release.repo
+ACCEPT_EULA=Y dnf install -y mssql-tools18 unixODBC-devel
 
-    # Add MSSQL tools to PATH
-    echo 'export PATH="$PATH:/opt/mssql-tools18/bin"' >> /etc/profile.d/mssql.sh
+# Add MSSQL tools to PATH and create wrapper
+cat > /etc/profile.d/mssql.sh << 'MSSQL_ENV'
+export PATH="$PATH:/opt/mssql-tools18/bin"
+MSSQL_ENV
 
-    # Create sqlcmd wrapper with SSL trust (-C flag) for self-signed certs
-    cat > /usr/local/bin/sqlcmd << 'SQLCMD_WRAPPER'
+# Create sqlcmd wrapper with SSL trust for self-signed certs
+cat > /usr/local/bin/sqlcmd << 'SQLCMD_WRAPPER'
 #!/bin/bash
 /opt/mssql-tools18/bin/sqlcmd -C "$@"
 SQLCMD_WRAPPER
-    chmod +x /usr/local/bin/sqlcmd
+chmod +x /usr/local/bin/sqlcmd
+echo "MSSQL tools installed successfully"
 
-    # Create results directory
-    mkdir -p /tmp/compliance_scans
-    chmod 777 /tmp/compliance_scans
+# ========================================
+# Oracle Instant Client (sqlplus)
+# ========================================
+echo "Installing Oracle Instant Client..."
+dnf install -y libaio
 
-    # Install Oracle Instant Client 21c
-    echo "Installing Oracle Instant Client..."
-    dnf install -y libaio
+cd /tmp
+curl -LO https://download.oracle.com/otn_software/linux/instantclient/2113000/oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm || echo "Oracle basic download failed"
+curl -LO https://download.oracle.com/otn_software/linux/instantclient/2113000/oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm || echo "Oracle sqlplus download failed"
 
-    # Download Oracle Instant Client (Basic + SQLPlus)
-    cd /tmp
-    curl -LO https://download.oracle.com/otn_software/linux/instantclient/2113000/oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm || echo "Oracle basic client download failed"
-    curl -LO https://download.oracle.com/otn_software/linux/instantclient/2113000/oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm || echo "Oracle sqlplus download failed"
+if [ -f oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm ]; then
+  dnf install -y oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm
+  dnf install -y oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm || true
 
-    # Install Oracle RPMs if downloaded
-    if [ -f oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm ]; then
-      dnf install -y oracle-instantclient-basic-21.13.0.0.0-1.el8.x86_64.rpm
-      dnf install -y oracle-instantclient-sqlplus-21.13.0.0.0-1.el8.x86_64.rpm || true
-
-      # Set Oracle environment variables
-      cat >> /etc/profile.d/oracle.sh << 'ORACLE_ENV'
+  cat > /etc/profile.d/oracle.sh << 'ORACLE_ENV'
 export ORACLE_HOME=/usr/lib/oracle/21/client64
 export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME/bin:$PATH
 ORACLE_ENV
 
-      # Create sqlplus wrapper for easy access
-      ln -sf /usr/lib/oracle/21/client64/bin/sqlplus /usr/local/bin/sqlplus 2>/dev/null || true
-      echo "Oracle Instant Client installed successfully"
+  ln -sf /usr/lib/oracle/21/client64/bin/sqlplus /usr/local/bin/sqlplus 2>/dev/null || true
+  echo "Oracle Instant Client installed successfully"
+else
+  echo "Oracle Instant Client installation skipped"
+fi
 
-      # Create oracle_query wrapper (password via ORACLE_PWD env var)
-      cat > /usr/local/bin/oracle_query << 'ORACLE_WRAPPER'
-#!/bin/bash
-# Oracle query wrapper - password via ORACLE_PWD environment variable
-USER="$1"; HOST="$2"; PORT="$3"; SERVICE="$4"; shift 4; QUERY="$*"
-[ -z "$ORACLE_PWD" ] && echo "ERROR: ORACLE_PWD not set" >&2 && exit 1
-sqlplus -S "${USER}/${ORACLE_PWD}@${HOST}:${PORT}/${SERVICE}" << EOF
-SET HEADING OFF FEEDBACK OFF PAGESIZE 0 LINESIZE 200
-${QUERY};
-EXIT;
-EOF
-ORACLE_WRAPPER
-      chmod +x /usr/local/bin/oracle_query
-      echo "oracle_query wrapper installed"
-    else
-      echo "Oracle Instant Client installation skipped (download failed)"
-    fi
+# ========================================
+# Sybase/FreeTDS Client (tsql)
+# ========================================
+echo "Installing EPEL and FreeTDS (Sybase client)..."
+dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm || true
+dnf install -y freetds
 
-    # Create sybase_query wrapper (password via SYBASE_PWD env var)
-    cat > /usr/local/bin/sybase_query << 'SYBASE_WRAPPER'
-#!/bin/bash
-# Sybase query wrapper - password via SYBASE_PWD environment variable
-USER="$1"; SERVER="$2"; shift 2; QUERY="$*"
-[ -z "$SYBASE_PWD" ] && echo "ERROR: SYBASE_PWD not set" >&2 && exit 1
-isql -U"${USER}" -P"${SYBASE_PWD}" -S"${SERVER}" -w999 << EOF
-${QUERY}
-go
-quit
-EOF
-SYBASE_WRAPPER
-    chmod +x /usr/local/bin/sybase_query
-    echo "sybase_query wrapper installed"
+# Create freetds.conf for Sybase server
+cat > /etc/freetds.conf << 'FREETDS_CONF'
+[global]
+  tds version = 5.0
 
-    # Signal completion
-    touch /var/log/cloud-init-complete
+[MYSYBASE]
+  host = 10.0.2.5
+  port = 5000
+  tds version = 5.0
+FREETDS_CONF
 
-    echo "Cloud-init setup completed at $(date)"
-  EOF
+echo "FreeTDS (Sybase client) installed successfully"
+
+# ========================================
+# Create results directory
+# ========================================
+mkdir -p /tmp/compliance_scans
+chmod 777 /tmp/compliance_scans
+
+mkdir -p /tmp/inspec_profiles
+chmod 777 /tmp/inspec_profiles
+
+# Signal completion
+touch /var/log/cloud-init-complete
+
+echo "Cloud-init setup completed at $(date)"
+echo "Installed tools:"
+echo "  - InSpec: $(/usr/local/bin/inspec version 2>/dev/null || echo 'check manually')"
+echo "  - sqlcmd (MSSQL): $(which sqlcmd 2>/dev/null || echo 'not in PATH yet')"
+echo "  - sqlplus (Oracle): $(which sqlplus 2>/dev/null || echo 'not in PATH yet')"
+echo "  - tsql (Sybase/FreeTDS): $(which tsql 2>/dev/null || echo 'not in PATH yet')"
+CLOUDINIT
 }
 
 # Runner VM
