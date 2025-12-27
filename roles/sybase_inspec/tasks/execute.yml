@@ -51,30 +51,28 @@
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
 
-- name: Test database connectivity with isql
+- name: Test database connectivity with tsql (FreeTDS)
   shell: |
     set -e
-    
+
     # Export environment variables explicitly
     export PATH="{{ sybase_environment.PATH }}"
     export LD_LIBRARY_PATH="{{ sybase_environment.LD_LIBRARY_PATH }}"
-    export SYBASE="{{ sybase_environment_base.SYBASE }}"
-    export SYBASE_OCS="{{ sybase_environment.SYBASE_OCS }}"
-    
-    # Check if isql is available
-    if ! command -v isql &> /dev/null; then
-      echo "ERROR: isql command not found in PATH"
+
+    # Check if tsql is available
+    if ! command -v tsql &> /dev/null; then
+      echo "ERROR: tsql command not found in PATH"
       echo "PATH: $PATH"
       exit 127
     fi
-    
+
     echo "Testing connectivity to {{ sybase_server }}:{{ sybase_port }}..."
-    
-    # Run connectivity test with timeout
-    echo "SELECT 'CONNECTION_OK'" | timeout 10 isql -U "{{ sybase_username }}" -P '{{ sybase_password }}' -S "{{ sybase_server }}:{{ sybase_port }}" 2>&1
-    
+
+    # Run connectivity test with timeout using tsql (FreeTDS)
+    echo -e "select 1\ngo" | timeout 10 tsql -H "{{ sybase_server }}" -p "{{ sybase_port }}" -U "{{ sybase_username }}" -P '{{ sybase_password }}' 2>&1
+
     exit_code=$?
-    
+
     if [ $exit_code -eq 0 ]; then
       echo "SUCCESS: Database connection verified"
     elif [ $exit_code -eq 124 ]; then
@@ -86,7 +84,7 @@
     fi
   args:
     executable: /bin/bash
-  register: isql_test
+  register: tsql_test
   changed_when: false
   failed_when: false
   delegate_to: "{{ inspec_execution_target }}"
@@ -96,27 +94,25 @@
   fail:
     msg: |
       CRITICAL: Cannot connect to Sybase database {{ sybase_server }}:{{ sybase_port }}
-      
-      Exit Code: {{ isql_test.rc | default('undefined') }}
-      
+
+      Exit Code: {{ tsql_test.rc | default('undefined') }}
+
       Diagnostics:
-      {{ isql_test.stdout | default('') }}
-      
+      {{ tsql_test.stdout | default('') }}
+
       This could be due to:
-      - isql not in PATH (exit code 127)
+      - tsql not in PATH (exit code 127)
       - Connection timeout (exit code 124)
       - Incorrect credentials
       - Network connectivity issues
       - Database server not running
-      - Interfaces file configuration issues
+      - FreeTDS configuration issues
       - Firewall blocking connection
-      
+
       Current PATH: {{ sybase_environment.PATH }}
-      SYBASE: {{ sybase_environment_base.SYBASE }}
-      SYBASE_OCS: {{ sybase_environment.SYBASE_OCS }}
-  when: 
-    - isql_test.rc is defined
-    - isql_test.rc != 0
+  when:
+    - tsql_test.rc is defined
+    - tsql_test.rc != 0
 
 - name: Execute Sybase InSpec controls via SSH
   shell: |
