@@ -19,6 +19,7 @@
   find:
     paths: "{{ _local_controls_path }}"
     patterns: "*.rb"
+    recurse: true
   register: _control_files_found
   delegate_to: localhost
 
