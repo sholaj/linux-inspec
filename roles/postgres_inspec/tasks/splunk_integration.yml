@@ -1,0 +1,23 @@
+---
+# Splunk HEC integration for PostgreSQL InSpec results
+
+- name: Send InSpec result to Splunk HEC
+  uri:
+    url: "{{ splunk_hec_url }}"
+    method: POST
+    headers:
+      Authorization: "Splunk {{ splunk_hec_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      index: "{{ splunk_index }}"
+      sourcetype: "inspec:postgres"
+      source: "postgres_inspec_role"
+      host: "{{ postgres_server }}"
+      event: "{{ inspec_result_json | from_json if inspec_result_json is string else inspec_result_json }}"
+    validate_certs: false
+    status_code: [200, 201]
+  when:
+    - inspec_result_json | length > 0
+  delegate_to: localhost
+  no_log: true

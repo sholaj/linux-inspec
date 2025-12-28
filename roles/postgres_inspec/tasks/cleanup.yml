@@ -1,0 +1,49 @@
+---
+# Cleanup tasks for PostgreSQL InSpec role
+# _delegate_host is always set: to inspec_delegate_host or inventory_hostname
+
+- name: Generate summary report
+  block:
+    - name: Create summary report
+      template:
+        src: summary_report.j2
+        dest: "{{ inspec_results_dir }}/summary_{{ _timestamp }}.txt"
+        mode: "0644"
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Read summary
+      slurp:
+        src: "{{ inspec_results_dir }}/summary_{{ _timestamp }}.txt"
+      register: _summary
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Show summary report
+      debug:
+        msg: "{{ _summary.content | b64decode }}"
+  when:
+    - generate_summary_report | default(true)
+    - inspec_results is defined
+
+# Clean up copied control files
+- name: Clean up control files
+  file:
+    path: "{{ _remote_controls_path }}"
+    state: absent
+  delegate_to: "{{ _delegate_host }}"
+  when:
+    - cleanup_temp_files | default(true)
+    - _remote_controls_path is defined
+
+# Splunk integration (optional)
+- name: Send results to Splunk
+  include_tasks: splunk_integration.yml
+  loop: "{{ inspec_results.results | default([]) }}"
+  loop_control:
+    loop_var: _splunk_item
+  vars:
+    inspec_result_json: "{{ _splunk_item.stdout | default('') }}"
+  when:
+    - send_to_splunk | default(false) | bool
+    - splunk_hec_url | default('') | length > 0
+    - splunk_hec_token | default('') | length > 0
+    - inspec_results is defined

@@ -1,0 +1,49 @@
+---
+# PostgreSQL InSpec Role - Main Task File
+# ========================================
+#
+# EXECUTION MODES:
+# 1. Localhost Mode: inspec_delegate_host is empty, undefined, or "localhost"
+#    - InSpec runs on the Ansible control node
+#    - Control files are used directly from role_path
+#
+# 2. Delegate Mode: inspec_delegate_host is set to a remote hostname
+#    - InSpec runs on the remote delegate host
+#    - Control files are copied to the delegate host
+#    - Results are fetched back to the control node
+
+# Step 1: Determine execution mode (set once, use everywhere)
+- name: Determine execution mode
+  set_fact:
+    # Use delegate if a remote host is specified (not empty, not 'localhost', not inventory_hostname)
+    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
+    # Delegate host: remote host if specified, otherwise run on inventory host
+    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] else inventory_hostname }}"
+    _timestamp: "{{ ansible_date_time.epoch }}"
+  tags: always
+
+- name: Display execution mode
+  debug:
+    msg: "Execution mode: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate else 'LOCALHOST (target host)' }}"
+  when: inspec_debug_mode | default(false)
+  tags: always
+
+# Step 2: Validate parameters
+- name: Validate PostgreSQL connection parameters
+  include_tasks: validate.yml
+  tags: always
+
+# Step 3: Setup - prepare directories and control files
+- name: Setup execution environment
+  include_tasks: setup.yml
+  tags: setup
+
+# Step 4: Execute InSpec scans
+- name: Execute InSpec compliance scans
+  include_tasks: execute.yml
+  tags: execute
+
+# Step 5: Cleanup and reporting
+- name: Generate reports and cleanup
+  include_tasks: cleanup.yml
+  tags: cleanup

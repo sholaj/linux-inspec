@@ -1,0 +1,86 @@
+---
+# Setup tasks for PostgreSQL InSpec role
+# Control files are always copied to the execution host (_delegate_host)
+
+# Create results directory on execution host
+- name: Create results directory
+  file:
+    path: "{{ inspec_results_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ _delegate_host }}"
+
+# Find control files on Ansible controller
+- name: Set local controls path
+  set_fact:
+    _local_controls_path: "{{ role_path }}/files/POSTGRES{{ postgres_version }}_ruby"
+
+- name: Find control files for PostgreSQL version
+  find:
+    paths: "{{ _local_controls_path }}"
+    patterns: "*.rb"
+    recurse: true
+  register: _control_files_found
+  delegate_to: localhost
+
+- name: Check for inspec.yml profile metadata
+  stat:
+    path: "{{ _local_controls_path }}/inspec.yml"
+  register: _inspec_yml_stat
+  delegate_to: localhost
+
+- name: Validate control files exist
+  fail:
+    msg: "No control files found in {{ _local_controls_path }}"
+  when: _control_files_found.files | length == 0
+
+- name: Display control files count
+  debug:
+    msg: "Found {{ _control_files_found.files | length }} control file(s) for PostgreSQL {{ postgres_version }}"
+  when: inspec_debug_mode | default(false)
+
+# Copy control files to execution host with proper InSpec profile structure
+- name: Create temp directory on execution host
+  tempfile:
+    state: directory
+    prefix: inspec_controls_
+  register: _remote_dir
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Create controls subdirectory for InSpec profile structure
+  file:
+    path: "{{ _remote_dir.path }}/controls"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Copy inspec.yml profile metadata
+  copy:
+    src: "{{ _local_controls_path }}/inspec.yml"
+    dest: "{{ _remote_dir.path }}/inspec.yml"
+    mode: "0644"
+  delegate_to: "{{ _delegate_host }}"
+  when: _inspec_yml_stat.stat.exists
+
+- name: Copy control files to execution host
+  copy:
+    src: "{{ item.path }}"
+    dest: "{{ _remote_dir.path }}/controls/"
+    mode: "0644"
+  loop: "{{ _control_files_found.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Build remote control files list
+  set_fact:
+    _remote_files_list: "{{ _remote_files_list | default([]) + [{'path': _remote_dir.path + '/controls/' + (item.path | basename)}] }}"
+  loop: "{{ _control_files_found.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+
+- name: Set control files with remote paths
+  set_fact:
+    control_files:
+      files: "{{ _remote_files_list }}"
+    _remote_controls_path: "{{ _remote_dir.path }}"
