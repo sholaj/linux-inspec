@@ -58,6 +58,16 @@ output "sybase_connection_info" {
   value       = var.deploy_sybase ? "source /opt/sap/SYBASE.sh && isql -S MYSYBASE -U sa -P <password>" : "Not deployed"
 }
 
+output "postgres_private_ip" {
+  description = "Private IP address of the PostgreSQL container"
+  value       = var.deploy_postgres ? azurerm_container_group.postgres[0].ip_address : "Not deployed"
+}
+
+output "postgres_connection_string" {
+  description = "PostgreSQL connection string for psql"
+  value       = var.deploy_postgres ? "psql -h ${azurerm_container_group.postgres[0].ip_address} -U postgres -d testdb" : "Not deployed"
+}
+
 output "acr_login_server" {
   description = "Azure Container Registry login server"
   value       = azurerm_container_registry.main.login_server
@@ -65,5 +75,5 @@ output "acr_login_server" {
 
 output "estimated_monthly_cost" {
   description = "Estimated monthly cost in USD"
-  value       = var.deploy_oracle && var.deploy_sybase ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Oracle ACI: ~$15/mo + Sybase ACI: ~$10/mo + Storage: ~$2/mo = ~$67/mo total" : var.deploy_oracle ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Oracle ACI: ~$15/mo + Storage: ~$2/mo = ~$57/mo total" : var.deploy_sybase ? "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Sybase ACI: ~$10/mo + Storage: ~$2/mo = ~$52/mo total" : "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo + Storage: ~$2/mo = ~$42/mo total"
+  value       = "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo${var.deploy_oracle ? " + Oracle ACI: ~$15/mo" : ""}${var.deploy_sybase ? " + Sybase ACI: ~$10/mo" : ""}${var.deploy_postgres ? " + PostgreSQL ACI: ~$8/mo" : ""} + Storage: ~$2/mo = ~$${42 + (var.deploy_oracle ? 15 : 0) + (var.deploy_sybase ? 10 : 0) + (var.deploy_postgres ? 8 : 0)}/mo total"
 }

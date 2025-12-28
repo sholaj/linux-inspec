@@ -1,0 +1,39 @@
+---
+# PostgreSQL InSpec Role - Default Variables
+# ==========================================
+
+# PostgreSQL Connection Parameters (Required)
+postgres_server: ""
+postgres_port: 5432
+postgres_database: "postgres"
+postgres_username: ""
+postgres_password: ""
+postgres_version: "15"
+
+# Execution Mode
+# - "localhost" or empty: Run InSpec on Ansible control node
+# - "<hostname>": Run InSpec on remote delegate host via SSH
+inspec_delegate_host: "localhost"
+
+# Results Configuration
+inspec_results_dir: "/tmp/inspec_postgres_results"
+generate_summary_report: true
+cleanup_temp_files: true
+
+# Debug Mode - shows additional output
+inspec_debug_mode: false
+
+# Splunk Integration (optional)
+send_to_splunk: false
+splunk_hec_url: ""
+splunk_hec_token: ""
+splunk_index: "compliance_scans"
+
+# Supported PostgreSQL versions (for validation)
+supported_postgres_versions:
+  - "12"
+  - "13"
+  - "14"
+  - "15"
+  - "16"
+  - "17"

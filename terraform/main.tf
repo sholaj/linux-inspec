@@ -95,6 +95,18 @@ resource "azurerm_network_security_group" "runner" {
     destination_address_prefix = "VirtualNetwork"
   }
 
+  security_rule {
+    name                       = "AllowPostgresOutbound"
+    priority                   = 120
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "5432"
+    source_address_prefix      = "*"
+    destination_address_prefix = "VirtualNetwork"
+  }
+
   tags = azurerm_resource_group.main.tags
 }
 
@@ -217,6 +229,16 @@ else
 fi
 
 # ========================================
+# PostgreSQL Client (psql)
+# ========================================
+echo "Installing PostgreSQL client..."
+dnf install -y postgresql
+
+# Verify psql installation
+psql --version || echo "psql installation check failed"
+echo "PostgreSQL client installed successfully"
+
+# ========================================
 # Sybase environment (for InSpec sybase_session)
 # ========================================
 echo "Setting up Sybase environment for InSpec..."
@@ -276,6 +298,7 @@ echo "Installed tools:"
 echo "  - InSpec: $(/usr/local/bin/inspec version 2>/dev/null || echo 'check manually')"
 echo "  - sqlcmd (MSSQL): $(which sqlcmd 2>/dev/null || echo 'not in PATH yet')"
 echo "  - sqlplus (Oracle): $(which sqlplus 2>/dev/null || echo 'not in PATH yet')"
+echo "  - psql (PostgreSQL): $(which psql 2>/dev/null || echo 'not in PATH yet')"
 echo "  - Sybase: Using InSpec sybase_session (interfaces file at /opt/sap/interfaces)"
 CLOUDINIT
 }

@@ -85,6 +85,20 @@ variable "deploy_sybase" {
   default     = false
 }
 
+# PostgreSQL Database Variables
+variable "postgres_password" {
+  description = "Password for PostgreSQL postgres account"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "deploy_postgres" {
+  description = "Whether to deploy PostgreSQL container"
+  type        = bool
+  default     = false
+}
+
 # Docker Hub Variables
 variable "dockerhub_username" {
   description = "Docker Hub username for authenticated pulls"

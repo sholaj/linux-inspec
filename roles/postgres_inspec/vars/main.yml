@@ -1,0 +1,12 @@
+---
+# PostgreSQL InSpec Role - Variables
+# ===================================
+
+# Base environment paths for PostgreSQL tools
+# These are prepended to the system PATH on the execution target
+postgres_tools_paths:
+  - "/usr/local/bin"
+  - "/usr/bin"
+  - "/usr/pgsql-15/bin"
+  - "/usr/pgsql-14/bin"
+  - "/opt/postgresql/bin"
