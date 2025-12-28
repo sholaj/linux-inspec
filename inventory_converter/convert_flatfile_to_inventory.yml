@@ -33,11 +33,16 @@
               sybase_username: nist_scan_user
               sybase_use_ssh: true
               sybase_ssh_user: sybase_admin
+          postgres_databases:
+            hosts: {}
+            vars:
+              postgres_username: nist_scan_user
 
     platform_counts:
       mssql: 0
       oracle: 0
       sybase: 0
+      postgres: 0
 
   tasks:
     - name: Check input file exists
@@ -100,6 +105,15 @@
                   'inspec_debug_mode': false,
                   'generate_summary_report': true
                 })
+              },
+              'postgres_databases': {
+                'hosts': inventory_data.all.children.postgres_databases.hosts,
+                'vars': inventory_data.all.children.postgres_databases.vars | combine({
+                  'inspec_delegate_host': '',
+                  'inspec_results_dir': '/tmp/inspec_postgres_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
               }
             })
           }
@@ -145,6 +159,15 @@
                   'inspec_debug_mode': false,
                   'generate_summary_report': true
                 })
+              },
+              'postgres_databases': {
+                'hosts': inventory_data.all.children.postgres_databases.hosts,
+                'vars': inventory_data.all.children.postgres_databases.vars | combine({
+                  'inspec_delegate_host': delegate_host,
+                  'inspec_results_dir': '/tmp/inspec_postgres_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
               }
             })
           }
@@ -176,7 +199,8 @@
           - MSSQL: {{ platform_counts.mssql }} hosts
           - Oracle: {{ platform_counts.oracle }} hosts
           - Sybase: {{ platform_counts.sybase }} hosts
-          - Total: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase }} hosts
+          - PostgreSQL: {{ platform_counts.postgres }} hosts
+          - Total: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase + platform_counts.postgres }} hosts
           {% if delegate_host | length > 0 %}
           - Delegate Host: {{ delegate_host }} ({{ delegate_address }})
           {% else %}
