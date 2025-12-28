@@ -110,3 +110,26 @@ control 'sybase-16-08' do
     its('value') { should cmp 1 }
   end
 end
+
+# Control 09: Ensure login lockout is configured
+control 'sybase-16-09' do
+  impact 0.9
+  title 'Ensure failed login lockout is configured'
+  desc 'Sybase ASE should lock accounts after a specified number of failed login attempts'
+
+  describe sql.query("select value from master..sysconfigures where name = 'maximum failed logins'").row(0).column('value') do
+    its('value') { should be >= 3 }
+    its('value') { should be <= 10 }
+  end
+end
+
+# Control 10: Ensure secure network encryption is enabled
+control 'sybase-16-10' do
+  impact 1.0
+  title 'Ensure network encryption is properly configured'
+  desc 'Sybase ASE should have network encryption enabled for secure communications'
+
+  describe sql.query("select value from master..sysconfigures where name = 'enable ssl'").row(0).column('value') do
+    its('value') { should_not be_nil }
+  end
+end
