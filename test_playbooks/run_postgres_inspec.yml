@@ -3,8 +3,9 @@
 # Run CIS PostgreSQL 15 Benchmark controls against a PostgreSQL database
 
 - name: Run PostgreSQL InSpec Compliance Scan
-  hosts: runner
+  hosts: localhost
   gather_facts: true
+  connection: local
 
   vars:
     # PostgreSQL Connection (override via inventory or command line)
