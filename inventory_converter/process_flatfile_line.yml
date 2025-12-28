@@ -107,3 +107,35 @@
             }, recursive=true) }}"
         - set_fact:
             platform_counts: "{{ platform_counts | combine({'sybase': platform_counts.sybase + 1}) }}"
+
+    # PostgreSQL - database level
+    - name: Add PostgreSQL host
+      when: platform == 'POSTGRES' or platform == 'POSTGRESQL'
+      block:
+        - set_fact:
+            inventory_data: "{{ inventory_data | combine({
+              'all': {
+                'children': {
+                  'postgres_databases': {
+                    'hosts': inventory_data.all.children.postgres_databases.hosts | combine({
+                      host_id: {
+                        'postgres_server': server,
+                        'postgres_database': database,
+                        'postgres_service': service if service != 'null' else '',
+                        'postgres_port': port | int,
+                        'postgres_version': version,
+                        'database_platform': 'postgres'
+                      }
+                    })
+                  }
+                }
+              }
+            }, recursive=true) }}"
+        - set_fact:
+            platform_counts: "{{ platform_counts | combine({'postgres': platform_counts.postgres + 1}) }}"
+
+    # Warn on unknown platform
+    - name: Warn on unknown platform
+      when: platform not in ['MSSQL', 'ORACLE', 'SYBASE', 'POSTGRES', 'POSTGRESQL']
+      debug:
+        msg: "WARNING: Unknown platform '{{ platform }}' on line {{ idx + 1 }}, skipping"
