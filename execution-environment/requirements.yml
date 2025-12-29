@@ -1,7 +1,6 @@
 ---
 # Ansible collections for database compliance scanning EE
 collections:
-  - name: ansible.builtin
   - name: community.general
     version: ">=7.0.0"
   - name: ansible.posix
