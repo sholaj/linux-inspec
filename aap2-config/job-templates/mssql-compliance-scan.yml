@@ -1,0 +1,56 @@
+---
+# AAP2 Job Template Configuration: MSSQL Compliance Scan
+# Use this as reference when creating the job template in AAP2 UI
+
+job_template:
+  name: "MSSQL Compliance Scan"
+  description: "Execute InSpec CIS Benchmark compliance scans on MSSQL servers"
+  job_type: run
+  inventory: "Database Compliance Inventory"
+  project: "linux-inspec"
+  playbook: "test_playbooks/run_mssql_inspec.yml"
+  execution_environment: "db-compliance-ee"
+
+  credentials:
+    - name: "MSSQL Scan Account"
+      credential_type: "MSSQL Database Credential"
+    - name: "Delegate Host SSH Key"
+      credential_type: "Machine"
+    # Optional - uncomment to enable Splunk integration:
+    # - name: "Splunk HEC"
+    #   credential_type: "Splunk HEC Credential"
+
+  extra_vars:
+    base_results_dir: "/tmp/compliance_scans/mssql"
+    inspec_debug_mode: false
+    generate_summary_report: true
+    cleanup_temp_files: true
+
+  limit: "mssql_databases"
+  verbosity: 0
+  forks: 5
+  timeout: 3600
+
+  survey_enabled: true
+  survey_spec:
+    name: "MSSQL Scan Options"
+    description: "Configure MSSQL compliance scan options"
+    spec:
+      - question_name: "Enable Debug Mode"
+        question_description: "Show detailed scan progress and InSpec output"
+        variable: "inspec_debug_mode"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false
+      - question_name: "Generate Summary Report"
+        question_description: "Create human-readable summary report"
+        variable: "generate_summary_report"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "true"
+        required: false

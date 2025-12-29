@@ -1,0 +1,33 @@
+{
+  "name": "PostgreSQL Database Credential",
+  "description": "Credentials for PostgreSQL database compliance scanning with InSpec",
+  "kind": "cloud",
+  "inputs": {
+    "fields": [
+      {
+        "id": "username",
+        "type": "string",
+        "label": "Database Username",
+        "help_text": "PostgreSQL username for compliance scanning (e.g., nist_scan_user)"
+      },
+      {
+        "id": "password",
+        "type": "string",
+        "label": "Database Password",
+        "secret": true,
+        "help_text": "Password for the PostgreSQL scan account"
+      }
+    ],
+    "required": ["username", "password"]
+  },
+  "injectors": {
+    "env": {
+      "POSTGRES_USERNAME": "{{ username }}",
+      "POSTGRES_PASSWORD": "{{ password }}"
+    },
+    "extra_vars": {
+      "postgres_username": "{{ username }}",
+      "postgres_password": "{{ password }}"
+    }
+  }
+}

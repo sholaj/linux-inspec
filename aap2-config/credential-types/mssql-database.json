@@ -1,0 +1,33 @@
+{
+  "name": "MSSQL Database Credential",
+  "description": "Credentials for MSSQL database compliance scanning with InSpec",
+  "kind": "cloud",
+  "inputs": {
+    "fields": [
+      {
+        "id": "username",
+        "type": "string",
+        "label": "Database Username",
+        "help_text": "MSSQL username for compliance scanning (e.g., nist_scan_user)"
+      },
+      {
+        "id": "password",
+        "type": "string",
+        "label": "Database Password",
+        "secret": true,
+        "help_text": "Password for the MSSQL scan account"
+      }
+    ],
+    "required": ["username", "password"]
+  },
+  "injectors": {
+    "env": {
+      "MSSQL_USERNAME": "{{ username }}",
+      "MSSQL_PASSWORD": "{{ password }}"
+    },
+    "extra_vars": {
+      "mssql_username": "{{ username }}",
+      "mssql_password": "{{ password }}"
+    }
+  }
+}

@@ -112,3 +112,23 @@ variable "dockerhub_password" {
   sensitive   = true
   default     = ""
 }
+
+# AAP2 (Ansible Automation Platform 2) Variables
+variable "deploy_aap2" {
+  description = "Whether to deploy AAP2 Controller VM"
+  type        = bool
+  default     = false
+}
+
+variable "aap2_vm_size" {
+  description = "VM size for AAP2 Controller (minimum 4 vCPU, 16GB RAM recommended)"
+  type        = string
+  default     = "Standard_D4s_v3"
+}
+
+variable "aap2_admin_password" {
+  description = "Admin password for AAP2 web UI (set during AAP2 installation)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}

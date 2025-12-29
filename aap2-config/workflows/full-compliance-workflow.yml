@@ -1,0 +1,127 @@
+---
+# AAP2 Workflow Template: Full Database Compliance Scan
+# Use this as reference when creating the workflow in AAP2 UI
+#
+# This workflow runs all database platform scans sequentially with error handling
+
+workflow_template:
+  name: "Full Database Compliance Workflow"
+  description: "Complete compliance scan workflow for all database platforms"
+  organization: "Default"
+  allow_simultaneous: false
+
+  survey_enabled: true
+  survey_spec:
+    name: "Workflow Options"
+    description: "Configure workflow execution options"
+    spec:
+      - question_name: "Enable Debug Mode"
+        question_description: "Show detailed scan progress for all platforms"
+        variable: "inspec_debug_mode"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false
+      - question_name: "Send Results to Splunk"
+        question_description: "Forward all scan results to Splunk HEC"
+        variable: "send_to_splunk"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false
+      - question_name: "Continue on Failure"
+        question_description: "Continue scanning other platforms if one fails"
+        variable: "continue_on_failure"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "true"
+        required: false
+
+  # Workflow node definitions
+  # Visual representation:
+  #
+  #   ┌──────────┐     ┌──────────┐     ┌──────────┐     ┌──────────┐
+  #   │  MSSQL   │────▶│  Oracle  │────▶│  Sybase  │────▶│ Postgres │
+  #   │   Scan   │     │   Scan   │     │   Scan   │     │   Scan   │
+  #   └──────────┘     └──────────┘     └──────────┘     └──────────┘
+  #        │               │                │                │
+  #        ▼               ▼                ▼                ▼
+  #   (on failure)    (on failure)     (on failure)    (on failure)
+  #        │               │                │                │
+  #        └───────────────┴────────────────┴────────────────┘
+  #                                │
+  #                                ▼
+  #                        ┌──────────────┐
+  #                        │   Summary    │
+  #                        │   Report     │
+  #                        └──────────────┘
+
+  workflow_nodes:
+    # Node 1: MSSQL Scan (Start)
+    - identifier: "mssql_scan"
+      unified_job_template:
+        name: "MSSQL Compliance Scan"
+        type: job_template
+      success_nodes:
+        - "oracle_scan"
+      failure_nodes:
+        - "oracle_scan"  # Continue to next platform on failure
+      always_nodes: []
+
+    # Node 2: Oracle Scan
+    - identifier: "oracle_scan"
+      unified_job_template:
+        name: "Oracle Compliance Scan"
+        type: job_template
+      success_nodes:
+        - "sybase_scan"
+      failure_nodes:
+        - "sybase_scan"  # Continue to next platform on failure
+      always_nodes: []
+
+    # Node 3: Sybase Scan
+    - identifier: "sybase_scan"
+      unified_job_template:
+        name: "Sybase Compliance Scan"
+        type: job_template
+      success_nodes:
+        - "postgres_scan"
+      failure_nodes:
+        - "postgres_scan"  # Continue to next platform on failure
+      always_nodes: []
+
+    # Node 4: PostgreSQL Scan
+    - identifier: "postgres_scan"
+      unified_job_template:
+        name: "PostgreSQL Compliance Scan"
+        type: job_template
+      success_nodes:
+        - "workflow_summary"
+      failure_nodes:
+        - "workflow_summary"
+      always_nodes: []
+
+    # Node 5: Workflow Summary (always runs)
+    - identifier: "workflow_summary"
+      unified_job_template:
+        name: "Compliance Scan Summary"
+        type: job_template
+      all_parents_must_converge: false
+
+# Alternative: Parallel Execution Workflow
+# Uncomment below for parallel scanning (faster but uses more resources)
+#
+# parallel_workflow_nodes:
+#   - identifier: "parallel_scans"
+#     type: "workflow_approval"  # Placeholder - replace with actual fork node
+#     always_nodes:
+#       - "mssql_scan_parallel"
+#       - "oracle_scan_parallel"
+#       - "sybase_scan_parallel"
+#       - "postgres_scan_parallel"

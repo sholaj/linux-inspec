@@ -1,0 +1,107 @@
+---
+# AAP2 Compatible Inventory for Database Compliance Scanning
+# This is an example inventory - generate your own using the inventory converter:
+#   ansible-playbook inventory_converter/convert_flatfile_to_inventory.yml \
+#     -e "flatfile_input=databases.txt" \
+#     -e "inventory_output=inventory.yml"
+#
+# Credentials are NOT stored in this inventory - they are injected by AAP2 Custom Credentials
+
+all:
+  vars:
+    # Common settings for all database scans
+    base_results_dir: /tmp/compliance_scans
+    inspec_debug_mode: false
+    generate_summary_report: true
+    cleanup_temp_files: true
+
+  children:
+    # Delegate host for remote InSpec execution (optional)
+    # Use this when databases are only accessible from a jump server
+    delegate_hosts:
+      hosts:
+        inspec-runner:
+          ansible_host: 10.0.1.4
+          ansible_user: azureuser
+          ansible_connection: ssh
+          ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+    # MSSQL Databases
+    # Note: MSSQL is scanned at server level (one entry per server:port)
+    mssql_databases:
+      hosts:
+        mssql_prod_01:
+          mssql_server: 10.0.2.4
+          mssql_port: 1433
+          mssql_version: "2019"
+          mssql_database: master
+          database_platform: mssql
+      vars:
+        ansible_connection: local
+        inspec_delegate_host: ""  # Empty = run on AAP2 execution node
+        inspec_results_dir: /tmp/compliance_scans/mssql
+        # mssql_username: injected by AAP2 Custom Credential
+        # mssql_password: injected by AAP2 Custom Credential
+
+    # Oracle Databases
+    # Note: Oracle is scanned per database/service
+    oracle_databases:
+      hosts:
+        oracle_prod_01:
+          oracle_server: 10.0.2.6
+          oracle_port: 1521
+          oracle_service: ORCLCDB
+          oracle_database: ORCLCDB
+          oracle_version: "19c"
+          database_platform: oracle
+      vars:
+        ansible_connection: local
+        inspec_delegate_host: ""
+        inspec_results_dir: /tmp/compliance_scans/oracle
+        # oracle_username: injected by AAP2 Custom Credential
+        # oracle_password: injected by AAP2 Custom Credential
+
+    # Sybase Databases
+    # Note: Sybase is scanned per database
+    sybase_databases:
+      hosts:
+        sybase_prod_01:
+          sybase_server: 10.0.2.5
+          sybase_port: 5000
+          sybase_service: MYSYBASE
+          sybase_database: master
+          sybase_version: "16"
+          database_platform: sybase
+          sybase_use_ssh: false
+      vars:
+        ansible_connection: local
+        inspec_delegate_host: ""
+        inspec_results_dir: /tmp/compliance_scans/sybase
+        sybase_ssh_user: sybase_admin
+        # sybase_username: injected by AAP2 Custom Credential
+        # sybase_password: injected by AAP2 Custom Credential
+
+    # PostgreSQL Databases
+    # Note: PostgreSQL is scanned per database
+    postgres_databases:
+      hosts:
+        postgres_prod_01:
+          postgres_server: 10.0.2.4
+          postgres_port: 5432
+          postgres_database: testdb
+          postgres_version: "15"
+          database_platform: postgres
+      vars:
+        ansible_connection: local
+        inspec_delegate_host: ""
+        inspec_results_dir: /tmp/compliance_scans/postgres
+        # postgres_username: injected by AAP2 Custom Credential
+        # postgres_password: injected by AAP2 Custom Credential
+
+    # Combined group for multi-platform scans
+    all_databases:
+      children:
+        mssql_databases:
+        oracle_databases:
+        sybase_databases:
+        postgres_databases:
