@@ -1,0 +1,27 @@
+# System packages for database connectivity
+# These are installed via microdnf in the EE build
+
+# ODBC for database connections
+unixODBC [platform:redhat]
+unixODBC-devel [platform:redhat]
+
+# Oracle dependencies
+libaio [platform:redhat]
+
+# SSL/TLS
+openssl [platform:redhat]
+openssl-devel [platform:redhat]
+
+# FreeTDS for Sybase
+freetds [platform:redhat]
+freetds-devel [platform:redhat]
+
+# PostgreSQL client
+postgresql [platform:redhat]
+postgresql-devel [platform:redhat]
+
+# Build tools for Ruby gems
+gcc [platform:redhat]
+gcc-c++ [platform:redhat]
+make [platform:redhat]
+redhat-rpm-config [platform:redhat]
