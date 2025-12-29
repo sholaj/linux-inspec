@@ -1,0 +1,53 @@
+---
+# AAP2 Job Template Configuration: Sybase Compliance Scan
+
+job_template:
+  name: "Sybase Compliance Scan"
+  description: "Execute InSpec CIS Benchmark compliance scans on Sybase/SAP ASE databases"
+  job_type: run
+  inventory: "Database Compliance Inventory"
+  project: "linux-inspec"
+  playbook: "test_playbooks/run_sybase_inspec.yml"
+  execution_environment: "db-compliance-ee"
+
+  credentials:
+    - name: "Sybase Scan Account"
+      credential_type: "Sybase Database Credential"
+    - name: "Delegate Host SSH Key"
+      credential_type: "Machine"
+
+  extra_vars:
+    base_results_dir: "/tmp/compliance_scans/sybase"
+    inspec_debug_mode: false
+    generate_summary_report: true
+    cleanup_temp_files: true
+    sybase_use_ssh: false
+
+  limit: "sybase_databases"
+  verbosity: 0
+  forks: 5
+  timeout: 3600
+
+  survey_enabled: true
+  survey_spec:
+    name: "Sybase Scan Options"
+    description: "Configure Sybase compliance scan options"
+    spec:
+      - question_name: "Enable Debug Mode"
+        question_description: "Show detailed scan progress and InSpec output"
+        variable: "inspec_debug_mode"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false
+      - question_name: "Use SSH Tunnel"
+        question_description: "Connect via SSH tunnel to Sybase server"
+        variable: "sybase_use_ssh"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false

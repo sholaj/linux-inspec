@@ -1,0 +1,61 @@
+---
+# AAP2 Job Template Configuration: Multi-Platform Compliance Scan
+
+job_template:
+  name: "Multi-Platform Compliance Scan"
+  description: "Execute compliance scans across all database platforms (MSSQL, Oracle, Sybase, PostgreSQL)"
+  job_type: run
+  inventory: "Database Compliance Inventory"
+  project: "linux-inspec"
+  playbook: "test_playbooks/run_compliance_scans.yml"
+  execution_environment: "db-compliance-ee"
+
+  credentials:
+    - name: "MSSQL Scan Account"
+      credential_type: "MSSQL Database Credential"
+    - name: "Oracle Scan Account"
+      credential_type: "Oracle Database Credential"
+    - name: "Sybase Scan Account"
+      credential_type: "Sybase Database Credential"
+    - name: "PostgreSQL Scan Account"
+      credential_type: "PostgreSQL Database Credential"
+    - name: "Delegate Host SSH Key"
+      credential_type: "Machine"
+    # Optional - uncomment to enable Splunk integration:
+    # - name: "Splunk HEC"
+    #   credential_type: "Splunk HEC Credential"
+
+  extra_vars:
+    base_results_dir: "/tmp/compliance_scans"
+    inspec_debug_mode: false
+    generate_summary_report: true
+    cleanup_temp_files: true
+
+  # No limit - runs against all database groups
+  verbosity: 0
+  forks: 5
+  timeout: 7200  # 2 hours for full scan
+
+  survey_enabled: true
+  survey_spec:
+    name: "Multi-Platform Scan Options"
+    description: "Configure compliance scan options for all platforms"
+    spec:
+      - question_name: "Enable Debug Mode"
+        question_description: "Show detailed scan progress and InSpec output"
+        variable: "inspec_debug_mode"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false
+      - question_name: "Send Results to Splunk"
+        question_description: "Forward scan results to Splunk HEC"
+        variable: "send_to_splunk"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false

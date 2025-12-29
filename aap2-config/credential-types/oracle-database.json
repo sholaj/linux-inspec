@@ -1,0 +1,33 @@
+{
+  "name": "Oracle Database Credential",
+  "description": "Credentials for Oracle database compliance scanning with InSpec",
+  "kind": "cloud",
+  "inputs": {
+    "fields": [
+      {
+        "id": "username",
+        "type": "string",
+        "label": "Database Username",
+        "help_text": "Oracle username for compliance scanning (e.g., nist_scan_user)"
+      },
+      {
+        "id": "password",
+        "type": "string",
+        "label": "Database Password",
+        "secret": true,
+        "help_text": "Password for the Oracle scan account"
+      }
+    ],
+    "required": ["username", "password"]
+  },
+  "injectors": {
+    "env": {
+      "ORACLE_USERNAME": "{{ username }}",
+      "ORACLE_PASSWORD": "{{ password }}"
+    },
+    "extra_vars": {
+      "oracle_username": "{{ username }}",
+      "oracle_password": "{{ password }}"
+    }
+  }
+}

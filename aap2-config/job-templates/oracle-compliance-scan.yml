@@ -1,0 +1,43 @@
+---
+# AAP2 Job Template Configuration: Oracle Compliance Scan
+
+job_template:
+  name: "Oracle Compliance Scan"
+  description: "Execute InSpec CIS Benchmark compliance scans on Oracle databases"
+  job_type: run
+  inventory: "Database Compliance Inventory"
+  project: "linux-inspec"
+  playbook: "test_playbooks/run_oracle_inspec.yml"
+  execution_environment: "db-compliance-ee"
+
+  credentials:
+    - name: "Oracle Scan Account"
+      credential_type: "Oracle Database Credential"
+    - name: "Delegate Host SSH Key"
+      credential_type: "Machine"
+
+  extra_vars:
+    base_results_dir: "/tmp/compliance_scans/oracle"
+    inspec_debug_mode: false
+    generate_summary_report: true
+    cleanup_temp_files: true
+
+  limit: "oracle_databases"
+  verbosity: 0
+  forks: 5
+  timeout: 3600
+
+  survey_enabled: true
+  survey_spec:
+    name: "Oracle Scan Options"
+    description: "Configure Oracle compliance scan options"
+    spec:
+      - question_name: "Enable Debug Mode"
+        question_description: "Show detailed scan progress and InSpec output"
+        variable: "inspec_debug_mode"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false

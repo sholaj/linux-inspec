@@ -1,0 +1,42 @@
+{
+  "name": "Sybase Database Credential",
+  "description": "Credentials for Sybase/SAP ASE database compliance scanning with InSpec (includes optional SSH tunnel)",
+  "kind": "cloud",
+  "inputs": {
+    "fields": [
+      {
+        "id": "username",
+        "type": "string",
+        "label": "Database Username",
+        "help_text": "Sybase username for compliance scanning"
+      },
+      {
+        "id": "password",
+        "type": "string",
+        "label": "Database Password",
+        "secret": true,
+        "help_text": "Password for the Sybase scan account"
+      },
+      {
+        "id": "ssh_password",
+        "type": "string",
+        "label": "SSH Tunnel Password (Optional)",
+        "secret": true,
+        "help_text": "Password for SSH tunnel to Sybase server (only if sybase_use_ssh is true)"
+      }
+    ],
+    "required": ["username", "password"]
+  },
+  "injectors": {
+    "env": {
+      "SYBASE_USERNAME": "{{ username }}",
+      "SYBASE_PASSWORD": "{{ password }}",
+      "SYBASE_SSH_PASSWORD": "{{ ssh_password | default('') }}"
+    },
+    "extra_vars": {
+      "sybase_username": "{{ username }}",
+      "sybase_password": "{{ password }}",
+      "sybase_ssh_password": "{{ ssh_password | default('') }}"
+    }
+  }
+}

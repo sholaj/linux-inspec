@@ -1,0 +1,47 @@
+---
+# Execution Environment Definition for Database Compliance Scanning
+# Build with: ansible-builder build --tag <registry>/db-compliance-ee:1.0.0
+
+version: 3
+
+images:
+  base_image:
+    name: registry.redhat.io/ansible-automation-platform-24/ee-minimal-rhel9:latest
+
+options:
+  package_manager_path: /usr/bin/microdnf
+
+dependencies:
+  galaxy: requirements.yml
+  python: requirements.txt
+  system: bindep.txt
+
+additional_build_files:
+  - src: scripts/install-db-clients.sh
+    dest: scripts
+
+additional_build_steps:
+  prepend_base:
+    - RUN microdnf install -y tar gzip unzip wget curl
+
+  append_final:
+    # Install database clients
+    - COPY _build/scripts/install-db-clients.sh /tmp/
+    - RUN chmod +x /tmp/install-db-clients.sh && /tmp/install-db-clients.sh
+
+    # Install Ruby and InSpec
+    - RUN microdnf install -y ruby ruby-devel gcc gcc-c++ make redhat-rpm-config
+    - RUN gem install inspec-bin -v 5.22.29 --no-document
+    - RUN /usr/local/bin/inspec --chef-license=accept-silent || true
+
+    # Environment variables for database clients
+    - ENV PATH="/opt/mssql-tools18/bin:/opt/oracle/instantclient_19_16:/opt/sap/OCS-16_0/bin:/usr/local/bin:${PATH}"
+    - ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_19_16:/opt/sap/OCS-16_0/lib"
+    - ENV ORACLE_HOME="/opt/oracle/instantclient_19_16"
+    - ENV SYBASE="/opt/sap"
+    - ENV SYBASE_OCS="OCS-16_0"
+    - ENV NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
+    - ENV CHEF_LICENSE="accept-silent"
+
+    # Create results directory
+    - RUN mkdir -p /tmp/compliance_scans && chmod 777 /tmp/compliance_scans
