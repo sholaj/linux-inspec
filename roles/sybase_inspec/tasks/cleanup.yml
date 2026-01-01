@@ -1,6 +1,43 @@
 ---
 # Sybase cleanup and reporting tasks
+#
+# Handles both:
+# 1. Successful scans - generates compliance summary report
+# 2. Skipped databases - generates skip report with reason
 
+# Ensure results directory exists (needed for both scan and skip reports)
+- name: Ensure results directory exists
+  file:
+    path: "{{ inspec_results_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
+# Handle skipped databases (preflight failed)
+- name: Generate skip report for failed preflight
+  block:
+    - name: Create skip report
+      template:
+        src: skip_report.j2
+        dest: "{{ inspec_results_dir }}/SKIPPED_{{ sybase_server | replace('.', '_') }}_{{ sybase_database }}_{{ ansible_date_time.epoch }}.json"
+        mode: "0644"
+      delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
+    - name: Display skip summary
+      debug:
+        msg: |
+          ═══════════════════════════════════════════════════════════════════
+           DATABASE SKIPPED - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }}
+          ═══════════════════════════════════════════════════════════════════
+           Status:     SKIPPED
+           Reason:     {{ preflight_skip_reason }}
+           Error Code: {{ preflight_error_code }}
+           Timestamp:  {{ ansible_date_time.iso8601 }}
+          ═══════════════════════════════════════════════════════════════════
+  when:
+    - not (preflight_passed | default(true))
+
+# Generate summary report (only for successful scans)
 - name: Generate and display Sybase summary report
   block:
     - name: Generate Sybase summary report
@@ -18,36 +55,77 @@
       debug:
         msg: "{{ sybase_summary_content.content | b64decode }}"
   when:
+    - preflight_passed | default(true)
     - generate_summary_report | default(true)
     - sybase_final_results is defined
   ignore_errors: true
   delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
+# Splunk integration - send scan results (only for successful scans)
 - name: Send Sybase results to Splunk (if enabled)
   include_tasks: splunk_integration.yml
   vars:
     inspec_result_json: "{{ sybase_final_results.stdout | default('') }}"
   when:
+    - preflight_passed | default(true)
     - send_to_splunk | default(false)
     - splunk_hec_url is defined
     - splunk_hec_token is defined
     - sybase_final_results is defined
 
+# Splunk integration - send skip notification
+- name: Send skip notification to Splunk
+  uri:
+    url: "{{ splunk_hec_url }}"
+    method: POST
+    headers:
+      Authorization: "Splunk {{ splunk_hec_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      event:
+        type: "database_scan_skipped"
+        db_type: "sybase"
+        host: "{{ sybase_server }}"
+        port: "{{ sybase_port }}"
+        database: "{{ sybase_database }}"
+        service: "{{ sybase_service }}"
+        skip_reason: "{{ preflight_skip_reason }}"
+        error_code: "{{ preflight_error_code }}"
+        timestamp: "{{ ansible_date_time.iso8601 }}"
+        inventory_host: "{{ inventory_hostname }}"
+      index: "{{ splunk_index | default('compliance_scans') }}"
+      sourcetype: "inspec:skip"
+    validate_certs: "{{ splunk_validate_certs | default(true) }}"
+    status_code: [200, 201]
+  ignore_errors: true
+  when:
+    - not (preflight_passed | default(true))
+    - send_to_splunk | default(false) | bool
+    - splunk_hec_url | default('') | length > 0
+    - splunk_hec_token | default('') | length > 0
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
+# Clean up SSH private key (only for successful scans or when SSH was used)
 - name: Clean up SSH private key
   file:
     path: "{{ sybase_ssh_key_path }}"
     state: absent
   when:
+    - preflight_passed | default(true)
     - sybase_use_ssh | default(true)
     - sybase_ssh_key_path is defined
   ignore_errors: true
   delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
+# Clean up temporary files (only for successful scans)
 - name: Clean up Sybase temporary files
   file:
     path: "{{ sybase_temp_dir.path }}"
     state: absent
-  when: sybase_temp_dir is defined
+  when:
+    - preflight_passed | default(true)
+    - sybase_temp_dir is defined
   ignore_errors: true
   delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
@@ -56,11 +134,13 @@
     path: "{{ delegate_controls_dir.path }}"
     state: absent
   when:
+    - preflight_passed | default(true)
     - delegate_controls_dir is defined
     - delegate_controls_dir.path is defined
   ignore_errors: true
   delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
+# Display completion summary (only for successful scans)
 - name: Display Sybase scan completion summary
   debug:
     msg: |
@@ -74,3 +154,6 @@
       Exit Code: {{ sybase_final_results.rc | default('N/A') }}
       Results directory: {{ inspec_results_dir }}
       Platform pattern: SYBASE_NIST_*_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_*.json
+  when:
+    - preflight_passed | default(true)
+    - sybase_final_results is defined

@@ -24,6 +24,22 @@ cleanup_temp_files: true
 # Debug Mode - shows additional output
 inspec_debug_mode: false
 
+# Pre-flight Check Configuration
+# ==============================
+# Enable/disable pre-flight connectivity checks before InSpec scan
+preflight_enabled: true
+
+# Timeout for TCP port connectivity check (seconds)
+preflight_port_timeout: 5
+
+# Timeout for authentication/query test (seconds)
+preflight_auth_timeout: 10
+
+# Continue processing other databases if this one fails preflight
+# When true: skips this database and continues with others
+# When false: fails the entire playbook on first unreachable database
+preflight_continue_on_failure: true
+
 # Splunk Integration (optional)
 send_to_splunk: false
 splunk_hec_url: ""

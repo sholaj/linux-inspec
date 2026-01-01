@@ -11,6 +11,11 @@
 #    - InSpec runs on the remote delegate host
 #    - Control files are copied to the delegate host
 #    - Results are fetched back to the control node
+#
+# PREFLIGHT FLOW:
+# 1. Run pre-flight checks (port + auth)
+# 2. If preflight fails → generate skip report, skip scan
+# 3. If preflight passes → execute InSpec controls
 
 # Step 1: Determine execution mode (set once, use everywhere)
 - name: Determine execution mode
@@ -33,17 +38,55 @@
   include_tasks: validate.yml
   tags: always
 
-# Step 3: Setup - prepare directories and control files
-- name: Setup execution environment
-  include_tasks: setup.yml
-  tags: setup
+# Step 3: Pre-flight connectivity checks
+- name: Run pre-flight connectivity checks
+  include_tasks: preflight.yml
+  when: preflight_enabled | default(true)
+  tags: [preflight, always]
 
-# Step 4: Execute InSpec scans
-- name: Execute InSpec compliance scans
-  include_tasks: execute.yml
-  tags: execute
+# Step 4: Handle preflight failure - skip scan gracefully
+- name: Handle preflight failure
+  block:
+    - name: Display skip notification
+      debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════════╗
+          ║  SKIPPING DATABASE - Pre-flight check failed                     ║
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║  Server:   {{ postgres_server }}:{{ postgres_port }}
+          ║  Database: {{ postgres_database }}
+          ║  Reason:   {{ preflight_skip_reason }}
+          ║  Code:     {{ preflight_error_code }}
+          ╚══════════════════════════════════════════════════════════════════╝
 
-# Step 5: Cleanup and reporting
-- name: Generate reports and cleanup
-  include_tasks: cleanup.yml
-  tags: cleanup
+    - name: Fail if continue_on_failure is disabled
+      fail:
+        msg: "Pre-flight check failed: {{ preflight_skip_reason }} [{{ preflight_error_code }}]. Set preflight_continue_on_failure=true to skip and continue."
+      when: not (preflight_continue_on_failure | default(true))
+
+    # Generate skip report and cleanup even when skipping
+    - name: Generate skip report and cleanup
+      include_tasks: cleanup.yml
+  when:
+    - preflight_enabled | default(true)
+    - not preflight_passed
+  tags: [preflight]
+
+# Step 5: Execute scan only if preflight passed (or disabled)
+- name: Execute PostgreSQL InSpec scan
+  block:
+    # Setup - prepare directories and control files
+    - name: Setup execution environment
+      include_tasks: setup.yml
+      tags: setup
+
+    # Execute InSpec scans
+    - name: Execute InSpec compliance scans
+      include_tasks: execute.yml
+      tags: execute
+
+    # Cleanup and reporting
+    - name: Generate reports and cleanup
+      include_tasks: cleanup.yml
+      tags: cleanup
+  when: preflight_passed | default(true)

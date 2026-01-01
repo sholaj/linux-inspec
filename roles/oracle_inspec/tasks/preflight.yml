@@ -1,0 +1,146 @@
+---
+# Pre-flight connectivity checks for Oracle InSpec role
+# =====================================================
+# Validates database connectivity before running InSpec scans.
+# Sets facts to skip execution if database is unreachable or auth fails.
+
+- name: Initialize preflight results
+  set_fact:
+    preflight_passed: false
+    preflight_skip_reason: ""
+    preflight_error_code: ""
+    _preflight_port_open: false
+    _preflight_auth_valid: false
+
+# Step 1: TCP Port Connectivity Check
+- name: Test TCP port connectivity
+  wait_for:
+    host: "{{ oracle_server }}"
+    port: "{{ oracle_port }}"
+    timeout: "{{ preflight_port_timeout | default(5) }}"
+    state: started
+  register: _port_check
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
+- name: Set port connectivity result
+  set_fact:
+    _preflight_port_open: "{{ _port_check is succeeded }}"
+    preflight_skip_reason: "{{ 'Connection timeout - port ' ~ oracle_port ~ ' unreachable on ' ~ oracle_server if _port_check is failed else '' }}"
+    preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
+
+# Step 2: Authentication Check (only if port is open)
+- name: Test database authentication
+  shell: |
+    export PATH="{{ oracle_environment_base.PATH | default('/usr/local/bin:/usr/bin') }}:$PATH"
+    export LD_LIBRARY_PATH="{{ oracle_environment_base.LD_LIBRARY_PATH | default('') }}"
+    export ORACLE_HOME="{{ oracle_environment_base.ORACLE_HOME | default('') }}"
+    export TNS_ADMIN="{{ oracle_environment_base.TNS_ADMIN | default('') }}"
+    export NLS_LANG="{{ oracle_environment_base.NLS_LANG | default('AMERICAN_AMERICA.AL32UTF8') }}"
+
+    # Find sqlplus
+    SQLPLUS=$(command -v sqlplus 2>/dev/null)
+    if [ -z "$SQLPLUS" ]; then
+      echo "SQLPLUS_NOT_FOUND"
+      exit 127
+    fi
+
+    # Test connection with simple query
+    echo "SELECT 'PREFLIGHT_OK' FROM DUAL;" | timeout {{ preflight_auth_timeout | default(10) }} "$SQLPLUS" -S \
+      "{{ oracle_username }}/{{ oracle_password }}@//{{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}" 2>&1
+
+    exit $?
+  args:
+    executable: /bin/bash
+  register: _auth_check
+  ignore_errors: true
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  when: _preflight_port_open
+
+- name: Parse authentication result
+  set_fact:
+    _preflight_auth_valid: "{{ _auth_check.rc == 0 and 'PREFLIGHT_OK' in (_auth_check.stdout | default('')) if _auth_check is defined else false }}"
+    _auth_error_msg: >-
+      {%- if _auth_check is skipped -%}
+      Port check failed - skipped auth test
+      {%- elif _auth_check.rc | default(0) == 127 -%}
+      sqlplus not found on execution host
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      Authentication timeout after {{ preflight_auth_timeout | default(10) }}s
+      {%- elif 'ORA-01017' in (_auth_check.stdout | default('')) -%}
+      Invalid username/password (ORA-01017)
+      {%- elif 'ORA-12154' in (_auth_check.stdout | default('')) -%}
+      TNS could not resolve service name (ORA-12154)
+      {%- elif 'ORA-12541' in (_auth_check.stdout | default('')) -%}
+      No listener (ORA-12541)
+      {%- elif 'ORA-12514' in (_auth_check.stdout | default('')) -%}
+      Service not registered with listener (ORA-12514)
+      {%- elif 'ORA-12505' in (_auth_check.stdout | default('')) -%}
+      Unknown service name (ORA-12505)
+      {%- elif 'ORA-' in (_auth_check.stdout | default('')) -%}
+      Oracle error: {{ (_auth_check.stdout | default('') | regex_search('ORA-[0-9]+')) | default('unknown') }}
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      Database connection failed (exit code: {{ _auth_check.rc | default('unknown') }})
+      {%- else -%}
+      {%- endif -%}
+  when: _preflight_port_open
+
+- name: Set authentication error details
+  set_fact:
+    preflight_skip_reason: "{{ _auth_error_msg }}"
+    preflight_error_code: >-
+      {%- if _auth_check.rc | default(0) == 127 -%}
+      SQLPLUS_NOT_FOUND
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      AUTH_TIMEOUT
+      {%- elif 'ORA-01017' in (_auth_check.stdout | default('')) -%}
+      AUTH_FAILED
+      {%- elif 'ORA-12154' in (_auth_check.stdout | default('')) or 'ORA-12514' in (_auth_check.stdout | default('')) or 'ORA-12505' in (_auth_check.stdout | default('')) -%}
+      SERVICE_NOT_FOUND
+      {%- elif 'ORA-12541' in (_auth_check.stdout | default('')) -%}
+      NO_LISTENER
+      {%- elif 'ORA-' in (_auth_check.stdout | default('')) -%}
+      ORACLE_ERROR
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      CONNECTION_ERROR
+      {%- else -%}
+      {%- endif -%}
+  when:
+    - _preflight_port_open
+    - not _preflight_auth_valid
+
+# Step 3: Set final preflight result
+- name: Set final preflight status
+  set_fact:
+    preflight_passed: "{{ _preflight_port_open and _preflight_auth_valid }}"
+
+- name: Log preflight success
+  debug:
+    msg: "Preflight PASSED - {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }} is reachable and authenticated"
+  when:
+    - preflight_passed
+    - inspec_debug_mode | default(false)
+
+- name: Log preflight failure
+  debug:
+    msg: "Preflight FAILED - {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
+  when:
+    - not preflight_passed
+    - inspec_debug_mode | default(false)
+
+# Step 4: Register this database in the scan results tracker
+- name: Register database scan attempt
+  set_fact:
+    _db_scan_record:
+      host: "{{ oracle_server }}"
+      port: "{{ oracle_port }}"
+      database: "{{ oracle_database }}"
+      service: "{{ oracle_service }}"
+      db_type: "oracle"
+      version: "{{ oracle_version }}"
+      preflight_passed: "{{ preflight_passed }}"
+      skip_reason: "{{ preflight_skip_reason }}"
+      error_code: "{{ preflight_error_code }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      inventory_host: "{{ inventory_hostname }}"

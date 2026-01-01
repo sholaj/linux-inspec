@@ -26,32 +26,8 @@
   set_fact:
     _psql_bin: "{{ _psql_check.stdout | trim }}"
 
-# Test database connectivity
-- name: Test database connectivity
-  shell: |
-    export PATH="{{ _postgres_env.PATH }}"
-    export PGPASSWORD='{{ postgres_password }}'
-    timeout 10 "{{ _psql_bin }}" \
-      -h '{{ postgres_server }}' \
-      -p '{{ postgres_port }}' \
-      -U '{{ postgres_username }}' \
-      -d '{{ postgres_database }}' \
-      -c "SELECT 1 AS test" -t
-  args:
-    executable: /bin/bash
-  register: _db_test
-  changed_when: false
-  failed_when: false
-  no_log: true
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Fail if database unreachable
-  fail:
-    msg: |
-      Cannot connect to {{ postgres_server }}:{{ postgres_port }}
-      Exit code: {{ _db_test.rc }}
-      Possible causes: wrong credentials, network issues, or database not running
-  when: _db_test.rc != 0
+# Note: Database connectivity is validated in preflight.yml
+# If we reach here, preflight_passed is true and database is reachable
 
 # Verify InSpec is available
 - name: Verify InSpec binary
