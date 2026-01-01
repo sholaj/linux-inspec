@@ -1,6 +1,11 @@
 ---
 # Main task file for Oracle InSpec role
 # Following the same modular pattern as MSSQL role
+#
+# PREFLIGHT FLOW:
+# 1. Run pre-flight checks (port + auth)
+# 2. If preflight fails → generate skip report, skip scan
+# 3. If preflight passes → execute InSpec controls
 
 - name: Oracle InSpec Compliance Scan Starting
   debug:
@@ -18,52 +23,91 @@
 - name: Validate Oracle connection parameters and environment
   include_tasks: validate.yml
 
-- name: Copy control files to delegate host (when using remote delegate)
+# Step 1: Pre-flight connectivity checks
+- name: Run pre-flight connectivity checks
+  include_tasks: preflight.yml
+  when: preflight_enabled | default(true)
+  tags: [preflight, always]
+
+# Step 2: Handle preflight failure - skip scan gracefully
+- name: Handle preflight failure
   block:
-    - name: Create temporary directory for control files on delegate host
-      tempfile:
-        state: directory
-        suffix: "_oracle_controls"
-      register: delegate_controls_dir
-      delegate_to: "{{ inspec_delegate_host }}"
+    - name: Display skip notification
+      debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════════╗
+          ║  SKIPPING DATABASE - Pre-flight check failed                     ║
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║  Server:   {{ oracle_server }}:{{ oracle_port }}
+          ║  Service:  {{ oracle_service }}
+          ║  Database: {{ oracle_database }}
+          ║  Reason:   {{ preflight_skip_reason }}
+          ║  Code:     {{ preflight_error_code }}
+          ╚══════════════════════════════════════════════════════════════════╝
 
-    - name: Copy Oracle control files to delegate host
-      copy:
-        src: "{{ role_path }}/files/ORACLE{{ oracle_version }}_ruby/"
-        dest: "{{ delegate_controls_dir.path }}/ORACLE{{ oracle_version }}_ruby/"
-        mode: '0755'
-      delegate_to: "{{ inspec_delegate_host }}"
+    - name: Fail if continue_on_failure is disabled
+      fail:
+        msg: "Pre-flight check failed: {{ preflight_skip_reason }} [{{ preflight_error_code }}]. Set preflight_continue_on_failure=true to skip and continue."
+      when: not (preflight_continue_on_failure | default(true))
 
-    - name: Set control files location for delegate host
-      set_fact:
-        oracle_controls_base_dir: "{{ delegate_controls_dir.path }}"
+    # Generate skip report and cleanup even when skipping
+    - name: Generate skip report and cleanup
+      include_tasks: cleanup.yml
   when:
-    - inspec_delegate_host is defined
-    - inspec_delegate_host | length > 0
-    - inspec_delegate_host != 'localhost'
+    - preflight_enabled | default(true)
+    - not preflight_passed
+  tags: [preflight]
 
-- name: Set control files location for local execution
-  set_fact:
-    oracle_controls_base_dir: "{{ role_path }}/files"
-  when: >
-    inspec_delegate_host is not defined or
-    inspec_delegate_host | length == 0 or
-    inspec_delegate_host == 'localhost'
+# Step 3: Execute scan only if preflight passed (or disabled)
+- name: Execute Oracle InSpec scan
+  block:
+    - name: Copy control files to delegate host (when using remote delegate)
+      block:
+        - name: Create temporary directory for control files on delegate host
+          tempfile:
+            state: directory
+            suffix: "_oracle_controls"
+          register: delegate_controls_dir
+          delegate_to: "{{ inspec_delegate_host }}"
 
-- name: Setup directories and find Oracle control files
-  include_tasks: setup.yml
+        - name: Copy Oracle control files to delegate host
+          copy:
+            src: "{{ role_path }}/files/ORACLE{{ oracle_version }}_ruby/"
+            dest: "{{ delegate_controls_dir.path }}/ORACLE{{ oracle_version }}_ruby/"
+            mode: '0755'
+          delegate_to: "{{ inspec_delegate_host }}"
 
-- name: Execute Oracle InSpec controls and process results
-  include_tasks: execute.yml
+        - name: Set control files location for delegate host
+          set_fact:
+            oracle_controls_base_dir: "{{ delegate_controls_dir.path }}"
+      when:
+        - inspec_delegate_host is defined
+        - inspec_delegate_host | length > 0
+        - inspec_delegate_host != 'localhost'
 
-- name: Generate reports and cleanup
-  include_tasks: cleanup.yml
+    - name: Set control files location for local execution
+      set_fact:
+        oracle_controls_base_dir: "{{ role_path }}/files"
+      when: >
+        inspec_delegate_host is not defined or
+        inspec_delegate_host | length == 0 or
+        inspec_delegate_host == 'localhost'
 
-- name: Oracle InSpec Compliance Scan Complete
-  debug:
-    msg: |
-      [OK] Oracle InSpec scan completed successfully!
-      Results directory: {{ inspec_results_dir }}
-      Platform: ORACLE
-      Database: {{ oracle_database }}
-      Version: {{ oracle_version }}
+    - name: Setup directories and find Oracle control files
+      include_tasks: setup.yml
+
+    - name: Execute Oracle InSpec controls and process results
+      include_tasks: execute.yml
+
+    - name: Generate reports and cleanup
+      include_tasks: cleanup.yml
+
+    - name: Oracle InSpec Compliance Scan Complete
+      debug:
+        msg: |
+          [OK] Oracle InSpec scan completed successfully!
+          Results directory: {{ inspec_results_dir }}
+          Platform: ORACLE
+          Database: {{ oracle_database }}
+          Version: {{ oracle_version }}
+  when: preflight_passed | default(true)

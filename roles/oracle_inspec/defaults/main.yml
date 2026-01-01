@@ -26,6 +26,15 @@ oracle_service_type: "service_name"  # or "sid"
 create_error_reports: true
 continue_on_errors: true
 
+# Pre-flight Check Configuration
+# ==============================
+# Pre-flight checks validate database connectivity before running InSpec scans.
+# This prevents wasted time on unreachable databases and provides clear skip reports.
+preflight_enabled: true              # Enable/disable pre-flight checks
+preflight_port_timeout: 5            # TCP port check timeout (seconds)
+preflight_auth_timeout: 10           # Database auth check timeout (seconds)
+preflight_continue_on_failure: true  # Continue to next DB if preflight fails (vs fail role)
+
 # Splunk integration
 send_to_splunk: false
 splunk_hec_url: ""

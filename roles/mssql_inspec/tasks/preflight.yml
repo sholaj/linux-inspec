@@ -1,0 +1,139 @@
+---
+# Pre-flight connectivity checks for MSSQL InSpec role
+# =====================================================
+# Validates database connectivity before running InSpec scans.
+# Sets facts to skip execution if database is unreachable or auth fails.
+#
+# Output facts:
+#   - preflight_passed: true/false - whether to proceed with InSpec scan
+#   - preflight_skip_reason: string - reason for skipping (if applicable)
+#   - preflight_error_code: string - error classification code
+
+- name: Initialize preflight results
+  set_fact:
+    preflight_passed: false
+    preflight_skip_reason: ""
+    preflight_error_code: ""
+    _preflight_port_open: false
+    _preflight_auth_valid: false
+
+# Step 1: TCP Port Connectivity Check
+- name: Test TCP port connectivity
+  wait_for:
+    host: "{{ mssql_server }}"
+    port: "{{ mssql_port }}"
+    timeout: "{{ preflight_port_timeout | default(5) }}"
+    state: started
+  register: _port_check
+  ignore_errors: true
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Set port connectivity result
+  set_fact:
+    _preflight_port_open: "{{ _port_check is succeeded }}"
+    preflight_skip_reason: "{{ 'Connection timeout - port ' ~ mssql_port ~ ' unreachable on ' ~ mssql_server if _port_check is failed else '' }}"
+    preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
+
+# Step 2: Authentication Check (only if port is open)
+- name: Test database authentication
+  shell: |
+    export PATH="{{ mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
+
+    # Find sqlcmd
+    SQLCMD=$(command -v sqlcmd 2>/dev/null)
+    if [ -z "$SQLCMD" ]; then
+      echo "SQLCMD_NOT_FOUND"
+      exit 127
+    fi
+
+    # Test connection with simple query (with timeout)
+    timeout {{ preflight_auth_timeout | default(10) }} "$SQLCMD" \
+      -S '{{ mssql_server }},{{ mssql_port }}' \
+      -U '{{ mssql_username }}' \
+      -P '{{ mssql_password }}' \
+      -d '{{ mssql_database }}' \
+      -Q "SELECT 1 AS preflight_check" \
+      -h -1 -W -C 2>&1
+
+    exit $?
+  args:
+    executable: /bin/bash
+  register: _auth_check
+  ignore_errors: true
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
+  delegate_to: "{{ _delegate_host }}"
+  when: _preflight_port_open
+
+- name: Parse authentication result
+  set_fact:
+    _preflight_auth_valid: "{{ _auth_check.rc == 0 if _auth_check is defined and _auth_check.rc is defined else false }}"
+    _auth_error_msg: >-
+      {%- if _auth_check is skipped -%}
+      Port check failed - skipped auth test
+      {%- elif _auth_check.rc | default(0) == 127 -%}
+      sqlcmd not found on execution host
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      Authentication timeout after {{ preflight_auth_timeout | default(10) }}s
+      {%- elif 'Login failed' in (_auth_check.stdout | default('')) or 'Login failed' in (_auth_check.stderr | default('')) -%}
+      Login failed for user '{{ mssql_username }}'
+      {%- elif 'Cannot open database' in (_auth_check.stdout | default('')) -%}
+      Cannot open database '{{ mssql_database }}'
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      Database connection failed (exit code: {{ _auth_check.rc | default('unknown') }})
+      {%- else -%}
+      {%- endif -%}
+  when: _preflight_port_open
+
+- name: Set authentication error details
+  set_fact:
+    preflight_skip_reason: "{{ _auth_error_msg }}"
+    preflight_error_code: >-
+      {%- if _auth_check.rc | default(0) == 127 -%}
+      SQLCMD_NOT_FOUND
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      AUTH_TIMEOUT
+      {%- elif 'Login failed' in (_auth_check.stdout | default('')) or 'Login failed' in (_auth_check.stderr | default('')) -%}
+      AUTH_FAILED
+      {%- elif 'Cannot open database' in (_auth_check.stdout | default('')) -%}
+      DATABASE_NOT_FOUND
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      CONNECTION_ERROR
+      {%- else -%}
+      {%- endif -%}
+  when:
+    - _preflight_port_open
+    - not _preflight_auth_valid
+
+# Step 3: Set final preflight result
+- name: Set final preflight status
+  set_fact:
+    preflight_passed: "{{ _preflight_port_open and _preflight_auth_valid }}"
+
+- name: Log preflight success
+  debug:
+    msg: "Preflight PASSED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }} is reachable and authenticated"
+  when:
+    - preflight_passed
+    - inspec_debug_mode | default(false)
+
+- name: Log preflight failure
+  debug:
+    msg: "Preflight FAILED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
+  when:
+    - not preflight_passed
+    - inspec_debug_mode | default(false)
+
+# Step 4: Register this database in the scan results tracker
+- name: Register database scan attempt
+  set_fact:
+    _db_scan_record:
+      host: "{{ mssql_server }}"
+      port: "{{ mssql_port }}"
+      database: "{{ mssql_database }}"
+      db_type: "mssql"
+      version: "{{ mssql_version }}"
+      preflight_passed: "{{ preflight_passed }}"
+      skip_reason: "{{ preflight_skip_reason }}"
+      error_code: "{{ preflight_error_code }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      inventory_host: "{{ inventory_hostname }}"

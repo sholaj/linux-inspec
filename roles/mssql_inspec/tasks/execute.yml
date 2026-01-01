@@ -25,30 +25,8 @@
   set_fact:
     _sqlcmd_bin: "{{ _sqlcmd_check.stdout | trim }}"
 
-# Test database connectivity
-- name: Test database connectivity
-  shell: |
-    export PATH="{{ _mssql_env.PATH }}"
-    timeout 10 "{{ _sqlcmd_bin }}" \
-      -S '{{ mssql_server }},{{ mssql_port }}' \
-      -U '{{ mssql_username }}' \
-      -P '{{ mssql_password }}' \
-      -Q "SELECT 1 AS test" -h -1
-  args:
-    executable: /bin/bash
-  register: _db_test
-  changed_when: false
-  failed_when: false
-  no_log: true
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Fail if database unreachable
-  fail:
-    msg: |
-      Cannot connect to {{ mssql_server }}:{{ mssql_port }}
-      Exit code: {{ _db_test.rc }}
-      Possible causes: wrong credentials, network issues, or database not running
-  when: _db_test.rc != 0
+# Note: Database connectivity is validated in preflight.yml
+# If we reach here, preflight_passed is true and database is reachable
 
 # Verify InSpec is available
 - name: Verify InSpec binary

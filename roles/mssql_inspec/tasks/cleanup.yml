@@ -1,7 +1,44 @@
 ---
 # Cleanup tasks for MSSQL InSpec role
 # _delegate_host is always set: to inspec_delegate_host or inventory_hostname
+#
+# Handles both:
+# 1. Successful scans - generates compliance summary report
+# 2. Skipped databases - generates skip report with reason
 
+# Ensure results directory exists (for skip reports too)
+- name: Ensure results directory exists
+  file:
+    path: "{{ inspec_results_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ _delegate_host }}"
+
+# Handle skipped databases (preflight failed)
+- name: Generate skip report for failed preflight
+  block:
+    - name: Create skip report
+      template:
+        src: skip_report.j2
+        dest: "{{ inspec_results_dir }}/SKIPPED_{{ mssql_server | replace('.', '_') }}_{{ mssql_database }}_{{ _timestamp }}.json"
+        mode: "0644"
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Display skip summary
+      debug:
+        msg: |
+          ═══════════════════════════════════════════════════════════════════
+           DATABASE SKIPPED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
+          ═══════════════════════════════════════════════════════════════════
+           Status:     SKIPPED
+           Reason:     {{ preflight_skip_reason }}
+           Error Code: {{ preflight_error_code }}
+           Timestamp:  {{ ansible_date_time.iso8601 }}
+          ═══════════════════════════════════════════════════════════════════
+  when:
+    - not preflight_passed
+
+# Generate summary report (only for successful scans)
 - name: Generate summary report
   block:
     - name: Create summary report
@@ -21,6 +58,7 @@
       debug:
         msg: "{{ _summary.content | b64decode }}"
   when:
+    - preflight_passed
     - generate_summary_report | default(true)
     - inspec_results is defined
 
@@ -33,8 +71,9 @@
   when:
     - cleanup_temp_files | default(true)
     - _remote_controls_path is defined
+    - preflight_passed
 
-# Splunk integration (optional)
+# Splunk integration (optional) - send scan results
 - name: Send results to Splunk
   include_tasks: splunk_integration.yml
   loop: "{{ inspec_results.results | default([]) }}"
@@ -43,7 +82,40 @@
   vars:
     inspec_result_json: "{{ _splunk_item.stdout | default('') }}"
   when:
+    - preflight_passed
     - send_to_splunk | default(false) | bool
     - splunk_hec_url | default('') | length > 0
     - splunk_hec_token | default('') | length > 0
     - inspec_results is defined
+
+# Splunk integration (optional) - send skip notification
+- name: Send skip notification to Splunk
+  uri:
+    url: "{{ splunk_hec_url }}"
+    method: POST
+    headers:
+      Authorization: "Splunk {{ splunk_hec_token }}"
+      Content-Type: "application/json"
+    body_format: json
+    body:
+      event:
+        type: "database_scan_skipped"
+        db_type: "mssql"
+        host: "{{ mssql_server }}"
+        port: "{{ mssql_port }}"
+        database: "{{ mssql_database }}"
+        skip_reason: "{{ preflight_skip_reason }}"
+        error_code: "{{ preflight_error_code }}"
+        timestamp: "{{ ansible_date_time.iso8601 }}"
+        inventory_host: "{{ inventory_hostname }}"
+      index: "{{ splunk_index | default('compliance_scans') }}"
+      sourcetype: "inspec:skip"
+    validate_certs: "{{ splunk_validate_certs | default(true) }}"
+    status_code: [200, 201]
+  ignore_errors: true
+  when:
+    - not preflight_passed
+    - send_to_splunk | default(false) | bool
+    - splunk_hec_url | default('') | length > 0
+    - splunk_hec_token | default('') | length > 0
+  delegate_to: "{{ _delegate_host }}"

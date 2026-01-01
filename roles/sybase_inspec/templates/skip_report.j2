@@ -1,0 +1,29 @@
+{
+  "type": "database_scan_skipped",
+  "db_type": "sybase",
+  "version": "{{ sybase_version }}",
+  "server": {
+    "host": "{{ sybase_server }}",
+    "port": {{ sybase_port }},
+    "database": "{{ sybase_database }}",
+    "service": "{{ sybase_service | default('') }}"
+  },
+  "skip_details": {
+    "reason": "{{ preflight_skip_reason }}",
+    "error_code": "{{ preflight_error_code }}",
+    "preflight_passed": false
+  },
+  "execution": {
+    "timestamp": "{{ ansible_date_time.iso8601 }}",
+    "epoch": {{ ansible_date_time.epoch }},
+    "inventory_host": "{{ inventory_hostname }}",
+    "delegate_host": "{{ inspec_delegate_host | default('localhost') }}",
+    "execution_mode": "{{ 'delegate' if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}",
+    "ssh_mode": {{ sybase_use_ssh | default(true) | lower }}
+  },
+  "metadata": {
+    "role": "sybase_inspec",
+    "profile": "sybase-{{ sybase_version }}-cis",
+    "status": "SKIPPED"
+  }
+}
