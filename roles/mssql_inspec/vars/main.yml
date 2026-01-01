@@ -1,10 +1,10 @@
 ---
-# Variables for mssql_inspec role
+# MSSQL InSpec Role - Variables
+# ==============================
 
-# Environment variables matching original NIST.ksh script
-# From NIST.ksh: export PATH=/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin:$PATH
-# From NIST.ksh: export LD_LIBRARY_PATH=/tools/ver/oracle-19.16.0.0-64
-# NOTE: These will be combined with delegate host's environment at runtime
-mssql_environment_base:
-  PATH: "/opt/mssql-tools/bin:/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
-  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
+# Base environment paths for MSSQL tools
+# These are prepended to the system PATH on the execution target
+mssql_tools_paths:
+  - "/usr/local/bin"
+  - "/opt/mssql-tools18/bin"
+  - "/opt/mssql-tools/bin"

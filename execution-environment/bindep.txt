@@ -1,0 +1,22 @@
+# System packages for database connectivity
+# These are installed via dnf in the EE build
+
+# ODBC for database connections
+unixODBC [platform:redhat]
+unixODBC-devel [platform:redhat]
+
+# Oracle dependencies
+libaio [platform:redhat]
+
+# PostgreSQL client
+postgresql [platform:redhat]
+postgresql-devel [platform:redhat]
+
+# Build tools for Ruby gems
+gcc [platform:redhat]
+gcc-c++ [platform:redhat]
+make [platform:redhat]
+redhat-rpm-config [platform:redhat]
+
+# rsync for file operations
+rsync [platform:redhat]

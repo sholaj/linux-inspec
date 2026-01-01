@@ -1,0 +1,154 @@
+---
+# Pre-flight connectivity checks for Sybase InSpec role
+# =====================================================
+# Validates database connectivity before running InSpec scans.
+# Sets facts to skip execution if database is unreachable or auth fails.
+# Uses tsql (FreeTDS) for connectivity testing.
+
+- name: Initialize preflight results
+  set_fact:
+    preflight_passed: false
+    preflight_skip_reason: ""
+    preflight_error_code: ""
+    _preflight_port_open: false
+    _preflight_auth_valid: false
+
+# Determine execution host (same logic as execute.yml)
+- name: Determine preflight execution target
+  set_fact:
+    _preflight_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
+# Step 1: TCP Port Connectivity Check
+- name: Test TCP port connectivity
+  wait_for:
+    host: "{{ sybase_server }}"
+    port: "{{ sybase_port }}"
+    timeout: "{{ preflight_port_timeout | default(5) }}"
+    state: started
+  register: _port_check
+  ignore_errors: true
+  delegate_to: "{{ _preflight_target }}"
+
+- name: Set port connectivity result
+  set_fact:
+    _preflight_port_open: "{{ _port_check is succeeded }}"
+    preflight_skip_reason: "{{ 'Connection timeout - port ' ~ sybase_port ~ ' unreachable on ' ~ sybase_server if _port_check is failed else '' }}"
+    preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
+
+# Step 2: Authentication Check (only if port is open)
+# Uses tsql (FreeTDS) to test Sybase connectivity
+- name: Test database authentication with tsql
+  shell: |
+    # Build PATH with common FreeTDS locations
+    export PATH="/usr/local/bin:/usr/bin:/opt/freetds/bin:$PATH"
+
+    # Find tsql binary
+    TSQL=$(command -v tsql 2>/dev/null)
+    if [ -z "$TSQL" ]; then
+      echo "TSQL_NOT_FOUND"
+      exit 127
+    fi
+
+    # Test connection with simple query using tsql
+    # tsql returns 0 on success, non-zero on failure
+    echo -e "SELECT 1\ngo\nquit" | timeout {{ preflight_auth_timeout | default(10) }} "$TSQL" \
+      -H '{{ sybase_server }}' \
+      -p '{{ sybase_port }}' \
+      -U '{{ sybase_username }}' \
+      -P '{{ sybase_password }}' 2>&1
+
+    exit $?
+  args:
+    executable: /bin/bash
+  register: _auth_check
+  ignore_errors: true
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
+  delegate_to: "{{ _preflight_target }}"
+  when: _preflight_port_open
+
+- name: Parse authentication result
+  set_fact:
+    _preflight_auth_valid: "{{ _auth_check.rc == 0 if _auth_check is defined and _auth_check.rc is defined else false }}"
+    _auth_error_msg: >-
+      {%- if _auth_check is skipped -%}
+      Port check failed - skipped auth test
+      {%- elif _auth_check.rc | default(0) == 127 -%}
+      tsql (FreeTDS) not found on execution host
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      Authentication timeout after {{ preflight_auth_timeout | default(10) }}s
+      {%- elif 'Login failed' in (_auth_check.stdout | default('')) or 'Login incorrect' in (_auth_check.stdout | default('')) -%}
+      Invalid username/password
+      {%- elif 'Unknown host' in (_auth_check.stdout | default('')) or 'could not connect' in (_auth_check.stdout | default('')) -%}
+      Cannot resolve hostname or connect to server
+      {%- elif 'Connection refused' in (_auth_check.stdout | default('')) -%}
+      Connection refused by server
+      {%- elif 'Connection timed out' in (_auth_check.stdout | default('')) -%}
+      Connection timed out
+      {%- elif 'Adaptive Server is unavailable' in (_auth_check.stdout | default('')) -%}
+      Adaptive Server is unavailable or not responding
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      Database connection failed (exit code: {{ _auth_check.rc | default('unknown') }})
+      {%- else -%}
+      {%- endif -%}
+  when: _preflight_port_open
+
+- name: Set authentication error details
+  set_fact:
+    preflight_skip_reason: "{{ _auth_error_msg }}"
+    preflight_error_code: >-
+      {%- if _auth_check.rc | default(0) == 127 -%}
+      TSQL_NOT_FOUND
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      AUTH_TIMEOUT
+      {%- elif 'Login failed' in (_auth_check.stdout | default('')) or 'Login incorrect' in (_auth_check.stdout | default('')) -%}
+      AUTH_FAILED
+      {%- elif 'Unknown host' in (_auth_check.stdout | default('')) or 'could not connect' in (_auth_check.stdout | default('')) -%}
+      HOST_UNREACHABLE
+      {%- elif 'Connection refused' in (_auth_check.stdout | default('')) -%}
+      CONNECTION_REFUSED
+      {%- elif 'Connection timed out' in (_auth_check.stdout | default('')) -%}
+      CONNECTION_TIMEOUT
+      {%- elif 'Adaptive Server is unavailable' in (_auth_check.stdout | default('')) -%}
+      SERVER_UNAVAILABLE
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      CONNECTION_ERROR
+      {%- else -%}
+      {%- endif -%}
+  when:
+    - _preflight_port_open
+    - not _preflight_auth_valid
+
+# Step 3: Set final preflight result
+- name: Set final preflight status
+  set_fact:
+    preflight_passed: "{{ _preflight_port_open and _preflight_auth_valid }}"
+
+- name: Log preflight success
+  debug:
+    msg: "Preflight PASSED - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }} is reachable and authenticated"
+  when:
+    - preflight_passed
+    - inspec_debug_mode | default(false)
+
+- name: Log preflight failure
+  debug:
+    msg: "Preflight FAILED - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
+  when:
+    - not preflight_passed
+    - inspec_debug_mode | default(false)
+
+# Step 4: Register this database in the scan results tracker
+- name: Register database scan attempt
+  set_fact:
+    _db_scan_record:
+      host: "{{ sybase_server }}"
+      port: "{{ sybase_port }}"
+      database: "{{ sybase_database }}"
+      service: "{{ sybase_service }}"
+      db_type: "sybase"
+      version: "{{ sybase_version }}"
+      preflight_passed: "{{ preflight_passed }}"
+      skip_reason: "{{ preflight_skip_reason }}"
+      error_code: "{{ preflight_error_code }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      inventory_host: "{{ inventory_hostname }}"

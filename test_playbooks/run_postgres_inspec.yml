@@ -1,0 +1,28 @@
+---
+# PostgreSQL InSpec Compliance Scan Playbook
+# Run CIS PostgreSQL 15 Benchmark controls against a PostgreSQL database
+
+- name: Run PostgreSQL InSpec Compliance Scan
+  hosts: localhost
+  gather_facts: true
+  connection: local
+
+  vars:
+    # PostgreSQL Connection (override via inventory or command line)
+    postgres_server: "{{ hostvars[inventory_hostname].postgres_server | default('10.0.2.4') }}"
+    postgres_port: "{{ hostvars[inventory_hostname].postgres_port | default(5432) }}"
+    postgres_database: "{{ hostvars[inventory_hostname].postgres_database | default('testdb') }}"
+    postgres_username: "{{ hostvars[inventory_hostname].postgres_username | default('postgres') }}"
+    postgres_password: "{{ hostvars[inventory_hostname].postgres_password | default('PostgresPass123') }}"
+    postgres_version: "{{ hostvars[inventory_hostname].postgres_version | default('15') }}"
+
+    # Execution mode - localhost for running on runner
+    inspec_delegate_host: ""
+
+    # Results
+    inspec_results_dir: "/tmp/compliance_scans"
+    generate_summary_report: true
+    inspec_debug_mode: true
+
+  roles:
+    - postgres_inspec

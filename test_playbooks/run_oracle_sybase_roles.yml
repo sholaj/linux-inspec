@@ -1,0 +1,182 @@
+---
+# Run Oracle and Sybase InSpec Roles
+# Usage: ansible-playbook test_playbooks/run_oracle_sybase_roles.yml
+
+- name: Setup and Run Oracle InSpec Role
+  hosts: localhost
+  gather_facts: no
+  vars:
+    # Runner VM configuration
+    runner_host: 40.114.45.75
+    runner_user: azureuser
+    runner_ssh_key: ~/.ssh/inspec_azure
+
+    # Oracle configuration
+    oracle_server: 10.0.2.5
+    oracle_port: 1521
+    oracle_service: ORCLCDB
+    oracle_database: ORCLCDB
+    oracle_version: "19c"
+    oracle_username: system
+    oracle_password: OraclePass123
+
+    # Sybase configuration
+    sybase_server: 10.0.2.6
+    sybase_port: 5000
+    sybase_service: SYBASE
+    sybase_database: master
+    sybase_version: "16"
+    sybase_username: sa
+    sybase_password: SybasePass123
+
+    # Common settings
+    base_results_dir: /tmp/compliance_scans
+    inspec_debug_mode: true
+
+  tasks:
+    - name: "=== ORACLE INSPEC ROLE EXECUTION ==="
+      debug:
+        msg: |
+          Oracle InSpec Scan Configuration
+          =================================
+          Server: {{ oracle_server }}:{{ oracle_port }}
+          Service: {{ oracle_service }}
+          Database: {{ oracle_database }}
+          Version: {{ oracle_version }}
+          Runner: {{ runner_host }}
+
+    # Add the runner as a host for delegation
+    - name: Add runner host
+      add_host:
+        name: runner
+        ansible_host: "{{ runner_host }}"
+        ansible_user: "{{ runner_user }}"
+        ansible_ssh_private_key_file: "{{ runner_ssh_key }}"
+        ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new -o UserKnownHostsFile=/dev/null"
+        ansible_python_interpreter: /usr/bin/python3
+
+    - name: Test SSH connectivity to runner
+      command: ssh -o StrictHostKeyChecking=accept-new -i {{ runner_ssh_key }} {{ runner_user }}@{{ runner_host }} "echo 'SSH OK'"
+      register: ssh_test
+      changed_when: false
+
+    - name: Display SSH test result
+      debug:
+        msg: "SSH to runner: {{ 'SUCCESS' if ssh_test.rc == 0 else 'FAILED' }}"
+
+    - name: Test Oracle connectivity from runner
+      command: >
+        ssh -o StrictHostKeyChecking=accept-new -i {{ runner_ssh_key }} {{ runner_user }}@{{ runner_host }}
+        "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/{{ oracle_server }}/{{ oracle_port }}' && echo 'OPEN' || echo 'CLOSED'"
+      register: oracle_port_test
+      changed_when: false
+
+    - name: Display Oracle connectivity
+      debug:
+        msg: "Oracle {{ oracle_server }}:{{ oracle_port }} - {{ oracle_port_test.stdout | trim }}"
+
+    - name: Sync Oracle InSpec profile to runner
+      command: >
+        scp -o StrictHostKeyChecking=accept-new -r -i {{ runner_ssh_key }}
+        {{ playbook_dir }}/../roles/oracle_inspec/files/ORACLE{{ oracle_version }}_ruby
+        {{ runner_user }}@{{ runner_host }}:/tmp/inspec_profiles/
+      changed_when: true
+
+    - name: Run Oracle InSpec profile
+      command: >
+        ssh -o StrictHostKeyChecking=accept-new -i {{ runner_ssh_key }} {{ runner_user }}@{{ runner_host }}
+        "cd /tmp/inspec_profiles/ORACLE{{ oracle_version }}_ruby &&
+        CHEF_LICENSE=accept /usr/local/bin/inspec exec .
+        --input usernm={{ oracle_username }} passwd='{{ oracle_password }}' hostnm={{ oracle_server }} port={{ oracle_port }} servicenm={{ oracle_service }}
+        --reporter json:{{ base_results_dir }}/oracle_ansible_$(date +%Y%m%d_%H%M%S).json cli"
+      register: oracle_inspec_result
+      ignore_errors: yes
+
+    - name: Display Oracle InSpec output
+      debug:
+        msg: "{{ oracle_inspec_result.stdout_lines }}"
+
+    - name: Oracle InSpec result summary
+      debug:
+        msg: "Oracle InSpec completed with exit code: {{ oracle_inspec_result.rc }} (0=all passed, 100=some failed, 101=skipped)"
+
+    # =====================================================
+    # SYBASE INSPEC ROLE
+    # =====================================================
+    - name: "=== SYBASE INSPEC ROLE EXECUTION ==="
+      debug:
+        msg: |
+          Sybase InSpec Scan Configuration
+          =================================
+          Server: {{ sybase_server }}:{{ sybase_port }}
+          Service: {{ sybase_service }}
+          Database: {{ sybase_database }}
+          Version: {{ sybase_version }}
+          Runner: {{ runner_host }}
+
+    - name: Test Sybase connectivity from runner
+      command: >
+        ssh -o StrictHostKeyChecking=accept-new -i {{ runner_ssh_key }} {{ runner_user }}@{{ runner_host }}
+        "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/{{ sybase_server }}/{{ sybase_port }}' && echo 'OPEN' || echo 'CLOSED'"
+      register: sybase_port_test
+      changed_when: false
+
+    - name: Display Sybase connectivity
+      debug:
+        msg: "Sybase {{ sybase_server }}:{{ sybase_port }} - {{ sybase_port_test.stdout | trim }}"
+
+    - name: Check if Sybase is reachable
+      set_fact:
+        sybase_available: "{{ 'OPEN' in sybase_port_test.stdout }}"
+
+    - name: Sync Sybase InSpec profile to runner
+      command: >
+        scp -o StrictHostKeyChecking=accept-new -r -i {{ runner_ssh_key }}
+        {{ playbook_dir }}/../roles/sybase_inspec/files/SYBASE{{ sybase_version }}_ruby
+        {{ runner_user }}@{{ runner_host }}:/tmp/inspec_profiles/
+      when: sybase_available
+      changed_when: true
+
+    - name: Run Sybase InSpec profile
+      command: >
+        ssh -o StrictHostKeyChecking=accept-new -i {{ runner_ssh_key }} {{ runner_user }}@{{ runner_host }}
+        "cd /tmp/inspec_profiles/SYBASE{{ sybase_version }}_ruby &&
+        CHEF_LICENSE=accept /usr/local/bin/inspec exec .
+        --input usernm={{ sybase_username }} passwd='{{ sybase_password }}' servernm={{ sybase_service }} database={{ sybase_database }}
+        --reporter json:{{ base_results_dir }}/sybase_ansible_$(date +%Y%m%d_%H%M%S).json cli"
+      register: sybase_inspec_result
+      when: sybase_available
+      ignore_errors: yes
+
+    - name: Display Sybase InSpec output
+      debug:
+        msg: "{{ sybase_inspec_result.stdout_lines | default(['Sybase not available - skipped']) }}"
+
+    - name: Sybase not available message
+      debug:
+        msg: "SKIPPED: Sybase server {{ sybase_server }}:{{ sybase_port }} is not reachable. No Sybase container deployed."
+      when: not sybase_available
+
+    # =====================================================
+    # SUMMARY
+    # =====================================================
+    - name: "=== EXECUTION SUMMARY ==="
+      debug:
+        msg: |
+          Execution Summary
+          =================
+          Oracle InSpec: {{ 'COMPLETED (exit ' ~ oracle_inspec_result.rc ~ ')' if oracle_inspec_result is defined else 'NOT RUN' }}
+          Sybase InSpec: {{ 'COMPLETED (exit ' ~ sybase_inspec_result.rc ~ ')' if sybase_inspec_result is defined and sybase_available else 'SKIPPED (not deployed)' }}
+
+          Results location: {{ base_results_dir }}/
+
+    - name: List result files on runner
+      command: >
+        ssh -o StrictHostKeyChecking=accept-new -i {{ runner_ssh_key }} {{ runner_user }}@{{ runner_host }}
+        "ls -la {{ base_results_dir }}/*.json | tail -10"
+      register: result_files
+      changed_when: false
+
+    - name: Display result files
+      debug:
+        msg: "{{ result_files.stdout_lines }}"

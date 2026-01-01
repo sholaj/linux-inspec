@@ -1,51 +1,68 @@
 # MSSQL InSpec Ansible Role
 
-This Ansible role executes InSpec compliance checks against Microsoft SQL Server databases, refactored from the original `NIST_for_db.ksh` Bash script.
-
-## Purpose
-
-The `mssql_inspec` role performs NIST compliance scanning on MSSQL databases using InSpec controls. It provides:
-- Modular, version-specific compliance checks
-- Secure credential management
-- Comprehensive error handling
-- JSON-formatted compliance results
+Executes InSpec compliance checks against Microsoft SQL Server databases.
 
 ## Requirements
 
 - Ansible 2.9+
-- InSpec installed on the target system (`/usr/bin/inspec`)
+- InSpec 5.22+ installed on the execution host
+- sqlcmd (MSSQL Tools 18) installed on the execution host
 - Network connectivity to target MSSQL servers
-- Valid MSSQL credentials with appropriate permissions
+
+## Execution Modes
+
+The role supports two execution modes controlled by `inspec_delegate_host`:
+
+### Localhost Mode (Default)
+
+InSpec runs on the inventory target host. Control files are copied from the Ansible controller.
+
+```yaml
+inspec_delegate_host: ""        # Empty string
+inspec_delegate_host: "localhost"  # Explicit localhost
+```
+
+### Delegate Mode
+
+InSpec runs on a remote bastion/jump server that has database connectivity.
+
+```yaml
+inspec_delegate_host: "inspec-runner"  # Inventory hostname of delegate
+```
+
+**Note:** Use the inventory hostname (not `ansible_host` value) for delegate mode.
 
 ## Role Variables
 
 ### Required Variables
+
 ```yaml
-mssql_server: ""          # MSSQL server hostname/IP
-mssql_port: 1433         # MSSQL port (default: 1433)
-mssql_database: ""       # Target database name
-mssql_username: ""       # Database username
-mssql_password: ""       # Database password
-mssql_version: ""        # MSSQL version (2008/2012/2014/2016/2018/2019)
+mssql_server: ""        # MSSQL server hostname/IP
+mssql_port: 1433        # MSSQL port
+mssql_database: "master"  # Target database
+mssql_username: ""      # Database username
+mssql_password: ""      # Database password (use vault/AAP credential)
+mssql_version: "2019"   # MSSQL version (2016, 2017, 2019)
 ```
 
 ### Optional Variables
+
 ```yaml
-mssql_service: ""                    # Named instance (if applicable)
-inspec_debug_mode: false            # Enable debug output
-inspec_results_dir: "/tmp/inspec_mssql_results_{{ ansible_date_time.epoch }}"
-generate_summary_report: true       # Generate summary report
-cleanup_temp_files: true           # Clean up temporary files
-use_vault: false                   # Use Ansible Vault for credentials
+mssql_service: ""                        # Named instance (if applicable)
+inspec_delegate_host: ""                 # Execution host (empty = target host)
+inspec_results_dir: "/tmp/inspec_mssql_results"  # Results directory
+inspec_debug_mode: false                 # Enable debug output
+generate_summary_report: true            # Generate summary report
+cleanup_temp_files: true                 # Clean up temp control files
+send_to_splunk: false                    # Send results to Splunk
+splunk_hec_url: ""                       # Splunk HEC endpoint
+splunk_hec_token: ""                     # Splunk HEC token
 ```
 
 ## Supported MSSQL Versions
 
-- MSSQL 2008
-- MSSQL 2012
-- MSSQL 2014
 - MSSQL 2016
-- MSSQL 2018
+- MSSQL 2017
 - MSSQL 2019
 
 ## Directory Structure
@@ -53,136 +70,139 @@ use_vault: false                   # Use Ansible Vault for credentials
 ```
 mssql_inspec/
 ├── tasks/
-│   ├── main.yml              # Main task file
-│   └── process_results.yml   # Result processing tasks
+│   ├── main.yml              # Entry point - determines execution mode
+│   ├── validate.yml          # Parameter validation
+│   ├── setup.yml             # Setup directories and copy controls
+│   ├── execute.yml           # Run InSpec controls
+│   ├── process_results.yml   # Save results to files
+│   ├── cleanup.yml           # Generate reports, cleanup
+│   └── splunk_integration.yml # Optional Splunk integration
 ├── defaults/main.yml         # Default variables
-├── vars/main.yml             # Role variables
+├── vars/main.yml             # Role variables (tool paths)
 ├── files/
-│   ├── MSSQL2008_ruby/      # MSSQL 2008 controls
-│   ├── MSSQL2012_ruby/      # MSSQL 2012 controls
-│   ├── MSSQL2014_ruby/      # MSSQL 2014 controls
-│   ├── MSSQL2016_ruby/      # MSSQL 2016 controls
-│   ├── MSSQL2018_ruby/      # MSSQL 2018 controls
-│   └── MSSQL2019_ruby/      # MSSQL 2019 controls
+│   ├── MSSQL2016_ruby/       # MSSQL 2016 controls
+│   ├── MSSQL2017_ruby/       # MSSQL 2017 controls
+│   └── MSSQL2019_ruby/       # MSSQL 2019 controls
 ├── templates/
-│   └── summary_report.j2    # Summary report template
-└── README.md                # This file
+│   └── summary_report.j2     # Summary report template
+└── README.md
 ```
 
 ## Usage
 
-### Basic Usage
-
-1. Include the role in your playbook:
+### Basic Playbook (Localhost Mode)
 
 ```yaml
 ---
-- name: Run MSSQL InSpec Compliance Checks
-  hosts: localhost
+- name: Run MSSQL Compliance Scan
+  hosts: runner
+  gather_facts: true
+
+  vars:
+    mssql_server: "sqlserver.example.com"
+    mssql_port: 1433
+    mssql_database: "master"
+    mssql_username: "scan_user"
+    mssql_password: "{{ vault_mssql_password }}"
+    mssql_version: "2019"
+    inspec_delegate_host: ""
+
   roles:
-    - role: mssql_inspec
-      vars:
-        mssql_server: "sql-server.example.com"
-        mssql_port: 1433
-        mssql_database: "production_db"
-        mssql_username: "nist_scan_user"
-        mssql_password: "{{ vault_mssql_password }}"
-        mssql_version: "2019"
+    - mssql_inspec
 ```
 
-### Using with Ansible Vault
-
-For secure credential management:
-
-```bash
-# Create encrypted variable file
-ansible-vault create group_vars/mssql/vault.yml
-
-# Run playbook with vault
-ansible-playbook -i inventory run_mssql_inspec.yml --ask-vault-pass
-```
-
-### Multiple Database Scanning
+### Delegate Mode Playbook
 
 ```yaml
 ---
-- name: Scan Multiple MSSQL Databases
-  hosts: localhost
-  tasks:
-    - name: Run compliance checks on multiple databases
-      include_role:
-        name: mssql_inspec
+- name: Run MSSQL Compliance Scan via Delegate
+  hosts: mssql_databases
+  gather_facts: true
+
+  vars:
+    inspec_delegate_host: "inspec-runner"
+
+  roles:
+    - mssql_inspec
+```
+
+### Inventory Example (Delegate Mode)
+
+```yaml
+all:
+  hosts:
+    inspec-runner:
+      ansible_host: jumphost.example.com
+      ansible_connection: ssh
+      ansible_user: ansible_svc
+
+  children:
+    mssql_databases:
+      hosts:
+        SQLPROD01_1433:
+          mssql_server: sqlprod01.example.com
+          mssql_port: 1433
+          mssql_version: "2019"
       vars:
-        mssql_server: "{{ item.server }}"
-        mssql_port: "{{ item.port }}"
-        mssql_database: "{{ item.database }}"
-        mssql_username: "{{ item.username }}"
-        mssql_password: "{{ item.password }}"
-        mssql_version: "{{ item.version }}"
-      loop: "{{ mssql_databases }}"
+        inspec_delegate_host: "inspec-runner"
+        mssql_username: scan_user
 ```
 
 ## Output
 
-The role generates JSON-formatted compliance results in the specified results directory:
+Results are saved as JSON files in `inspec_results_dir`:
+
 - Individual control results: `MSSQL_<server>_<database>_<version>_<timestamp>_<control>.json`
-- Error reports for failed connections
-- Optional summary report
+- Summary report: `summary_<timestamp>.txt`
 
 ### Result Structure
 
 ```json
 {
   "controls": [{
-    "timestamp": "2024-01-15T10:30:00",
-    "hostname": "sql-server.example.com",
-    "database": "production_db",
-    "port": "1433",
-    "DBVersion": "2019",
     "id": "2.01",
     "status": "passed",
-    "code_desc": "Ad Hoc Distributed Queries disabled",
-    "statistics": {
-      "duration": 0.123
-    }
-  }]
+    "code_desc": "Ad Hoc Distributed Queries disabled"
+  }],
+  "statistics": {
+    "duration": 0.123
+  },
+  "version": "5.22.29"
 }
 ```
 
 ## Error Handling
 
-The role handles various error conditions:
-- Missing or invalid InSpec installation
-- Connection failures to MSSQL server
+The role handles:
+- Missing InSpec or sqlcmd binaries
+- Database connection failures
 - Invalid credentials
 - Unsupported MSSQL versions
-- Missing required parameters
-
-## Security Considerations
-
-1. **Credential Management**: Use Ansible Vault or external secret management systems
-2. **Network Security**: Ensure secure network connections to MSSQL servers
-3. **Audit Logging**: Results are stored locally; implement appropriate log retention
-4. **Minimal Permissions**: Use dedicated scanning accounts with read-only permissions
+- InSpec exit codes (0=passed, 100=failed, 101=skipped)
 
 ## Troubleshooting
 
 ### InSpec Not Found
+
 ```bash
-# Verify InSpec installation
-which inspec
-# Install if missing
-gem install inspec
+# Check InSpec installation
+inspec version
+
+# Install via gem
+gem install inspec-bin -v 5.22.29
 ```
 
-### Connection Failures
-- Verify network connectivity: `telnet <server> <port>`
-- Check firewall rules
-- Verify MSSQL service is running
-- Confirm credentials are valid
+### Database Connection Failed
+
+```bash
+# Test connectivity
+sqlcmd -S server,port -U user -P password -Q "SELECT @@VERSION"
+```
 
 ### Debug Mode
-Enable debug mode for detailed output:
+
+Enable verbose output:
+
 ```yaml
 inspec_debug_mode: true
 ```
@@ -194,7 +214,3 @@ Internal use only
 ## Author
 
 DevOps Team
-
-## Support
-
-For issues or questions, contact the DevOps team or raise an issue in the project repository.

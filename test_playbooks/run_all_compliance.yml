@@ -1,0 +1,217 @@
+---
+# Unified Compliance Test Playbook - All Databases
+# =================================================
+# Runs MSSQL, Oracle, and Sybase InSpec scans in both modes
+#
+# Usage (localhost mode):
+#   ansible-playbook -i inventories/hosts.yml test_playbooks/run_all_compliance.yml \
+#     -e "execution_mode=localhost"
+#
+# Usage (delegate mode):
+#   ansible-playbook -i inventories/hosts.yml test_playbooks/run_all_compliance.yml \
+#     -e "execution_mode=delegate"
+#
+# Required Environment Variables:
+#   MSSQL_PASSWORD, ORACLE_PASSWORD, SYBASE_PASSWORD
+
+- name: "=== COMPLIANCE SCAN INITIALIZATION ==="
+  hosts: localhost
+  gather_facts: no
+  vars:
+    execution_mode: "{{ execution_mode | default('localhost') }}"
+    timestamp: "{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}"
+  tasks:
+    - name: Display execution parameters
+      debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════╗
+          ║         DATABASE COMPLIANCE SCANNING - {{ execution_mode | upper }}
+          ╠══════════════════════════════════════════════════════════════╣
+          ║  Timestamp: {{ timestamp }}
+          ║  Mode: {{ execution_mode }}
+          ║  Results Dir: /tmp/compliance_scans
+          ╚══════════════════════════════════════════════════════════════╝
+
+    - name: Create results directories
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /tmp/compliance_scans/mssql
+        - /tmp/compliance_scans/oracle
+        - /tmp/compliance_scans/sybase
+      delegate_to: "{{ 'inspec-runner' if execution_mode == 'delegate' else 'localhost' }}"
+
+    - name: Set execution facts
+      set_fact:
+        scan_timestamp: "{{ timestamp }}"
+        scan_mode: "{{ execution_mode }}"
+      cacheable: yes
+
+# =====================================================
+# MSSQL COMPLIANCE SCAN
+# =====================================================
+- name: "=== MSSQL COMPLIANCE SCAN ==="
+  hosts: mssql_databases
+  gather_facts: no
+  connection: "{{ 'ssh' if (execution_mode | default('localhost')) == 'delegate' else 'local' }}"
+  vars:
+    execution_mode: "{{ execution_mode | default('localhost') }}"
+    inspec_delegate_host: "{{ 'inspec-runner' if execution_mode == 'delegate' else 'localhost' }}"
+
+  pre_tasks:
+    - name: "[MSSQL] Validate credentials"
+      assert:
+        that:
+          - mssql_server is defined and mssql_server | length > 0
+          - mssql_username is defined
+          - mssql_password is defined and mssql_password | length > 0
+        fail_msg: "Missing MSSQL credentials. Set MSSQL_PASSWORD environment variable."
+        quiet: yes
+
+    - name: "[MSSQL] Test network connectivity"
+      wait_for:
+        host: "{{ mssql_server }}"
+        port: "{{ mssql_port }}"
+        timeout: 10
+      register: mssql_network
+      ignore_errors: yes
+      delegate_to: "{{ inspec_delegate_host if inspec_delegate_host != 'localhost' else omit }}"
+
+    - name: "[MSSQL] Display status"
+      debug:
+        msg: "MSSQL {{ mssql_server }}:{{ mssql_port }} - {{ 'REACHABLE' if mssql_network is succeeded else 'UNREACHABLE' }}"
+
+  roles:
+    - role: mssql_inspec
+      when: mssql_network is succeeded
+
+  post_tasks:
+    - name: "[MSSQL] Scan complete"
+      debug:
+        msg: "MSSQL scan completed for {{ mssql_server }}"
+      when: mssql_network is succeeded
+
+# =====================================================
+# ORACLE COMPLIANCE SCAN
+# =====================================================
+- name: "=== ORACLE COMPLIANCE SCAN ==="
+  hosts: oracle_databases
+  gather_facts: no
+  connection: "{{ 'ssh' if (execution_mode | default('localhost')) == 'delegate' else 'local' }}"
+  vars:
+    execution_mode: "{{ execution_mode | default('localhost') }}"
+    inspec_delegate_host: "{{ 'inspec-runner' if execution_mode == 'delegate' else 'localhost' }}"
+
+  pre_tasks:
+    - name: "[ORACLE] Validate credentials"
+      assert:
+        that:
+          - oracle_server is defined and oracle_server | length > 0
+          - oracle_username is defined
+          - oracle_password is defined and oracle_password | length > 0
+        fail_msg: "Missing Oracle credentials. Set ORACLE_PASSWORD environment variable."
+        quiet: yes
+
+    - name: "[ORACLE] Test network connectivity"
+      wait_for:
+        host: "{{ oracle_server }}"
+        port: "{{ oracle_port }}"
+        timeout: 10
+      register: oracle_network
+      ignore_errors: yes
+      delegate_to: "{{ inspec_delegate_host if inspec_delegate_host != 'localhost' else omit }}"
+
+    - name: "[ORACLE] Display status"
+      debug:
+        msg: "Oracle {{ oracle_server }}:{{ oracle_port }} - {{ 'REACHABLE' if oracle_network is succeeded else 'UNREACHABLE' }}"
+
+  roles:
+    - role: oracle_inspec
+      when: oracle_network is succeeded
+
+  post_tasks:
+    - name: "[ORACLE] Scan complete"
+      debug:
+        msg: "Oracle scan completed for {{ oracle_server }}"
+      when: oracle_network is succeeded
+
+# =====================================================
+# SYBASE COMPLIANCE SCAN
+# =====================================================
+- name: "=== SYBASE COMPLIANCE SCAN ==="
+  hosts: sybase_databases
+  gather_facts: no
+  connection: "{{ 'ssh' if (execution_mode | default('localhost')) == 'delegate' else 'local' }}"
+  vars:
+    execution_mode: "{{ execution_mode | default('localhost') }}"
+    inspec_delegate_host: "{{ 'inspec-runner' if execution_mode == 'delegate' else 'localhost' }}"
+
+  pre_tasks:
+    - name: "[SYBASE] Validate credentials"
+      assert:
+        that:
+          - sybase_server is defined and sybase_server | length > 0
+          - sybase_username is defined
+          - sybase_password is defined and sybase_password | length > 0
+        fail_msg: "Missing Sybase credentials. Set SYBASE_PASSWORD environment variable."
+        quiet: yes
+
+    - name: "[SYBASE] Test network connectivity"
+      wait_for:
+        host: "{{ sybase_server }}"
+        port: "{{ sybase_port }}"
+        timeout: 10
+      register: sybase_network
+      ignore_errors: yes
+      delegate_to: "{{ inspec_delegate_host if inspec_delegate_host != 'localhost' else omit }}"
+
+    - name: "[SYBASE] Display status"
+      debug:
+        msg: "Sybase {{ sybase_server }}:{{ sybase_port }} - {{ 'REACHABLE' if sybase_network is succeeded else 'UNREACHABLE' }}"
+
+  roles:
+    - role: sybase_inspec
+      when: sybase_network is succeeded
+
+  post_tasks:
+    - name: "[SYBASE] Scan complete"
+      debug:
+        msg: "Sybase scan completed for {{ sybase_server }}"
+      when: sybase_network is succeeded
+
+# =====================================================
+# SUMMARY REPORT
+# =====================================================
+- name: "=== COMPLIANCE SCAN SUMMARY ==="
+  hosts: localhost
+  gather_facts: no
+  vars:
+    execution_mode: "{{ execution_mode | default('localhost') }}"
+  tasks:
+    - name: Collect results from delegate host
+      find:
+        paths: /tmp/compliance_scans
+        patterns: "*.json"
+        recurse: yes
+      register: result_files
+      delegate_to: "{{ 'inspec-runner' if execution_mode == 'delegate' else omit }}"
+
+    - name: Display summary
+      debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════╗
+          ║                    SCAN SUMMARY                              ║
+          ╠══════════════════════════════════════════════════════════════╣
+          ║  Execution Mode: {{ execution_mode | upper }}
+          ║  Result Files: {{ result_files.files | length }}
+          ║  Results Location: /tmp/compliance_scans/
+          ╚══════════════════════════════════════════════════════════════╝
+
+    - name: List result files
+      debug:
+        msg: "{{ item.path }}"
+      loop: "{{ result_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"

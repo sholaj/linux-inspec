@@ -32,6 +32,7 @@ Example:
 MSSQL server01 master svc1 1433 2019
 ORACLE oraserver db01 db01_svc 1521 19
 SYBASE sybserver db01 dummy 5000 16
+POSTGRES pgserver testdb null 5432 15
 ```
 
 ## Output
@@ -74,7 +75,19 @@ all:
       vars:
         sybase_username: nist_scan_user
         sybase_use_ssh: true
-        sybase_ssh_user: oracle
+        sybase_ssh_user: sybase_admin
+
+    postgres_databases:
+      hosts:
+        pgserver_testdb_5432:
+          postgres_server: pgserver
+          postgres_database: testdb
+          postgres_service: ""
+          postgres_port: 5432
+          postgres_version: "15"
+          database_platform: postgres
+      vars:
+        postgres_username: nist_scan_user
 ```
 
 ### With Remote Delegate Host
@@ -104,9 +117,19 @@ all:
 | `""` (empty) | Local | InSpec runs on AAP2 execution node |
 | `"<hostname>"` | SSH | InSpec runs on specified host via SSH |
 
+## Supported Platforms
+
+| Platform | Input Value | Deduplication | Notes |
+|----------|-------------|---------------|-------|
+| MSSQL | `MSSQL` | `server:port` | Server-level scanning |
+| Oracle | `ORACLE` | `server:database:port` | Per-database scanning |
+| Sybase | `SYBASE` | `server:database:port` | Per-database scanning |
+| PostgreSQL | `POSTGRES` or `POSTGRESQL` | `server:database:port` | Per-database scanning |
+
 ## Notes
 
 - MSSQL entries are deduplicated by `server:port` (server-level scanning)
-- Oracle/Sybase entries are per-database
+- Oracle/Sybase/PostgreSQL entries are per-database
 - Credentials (passwords) are handled by AAP2, not stored in inventory
 - Group vars include default usernames for each platform
+- Use `null` for the SERVICE field when not applicable (e.g., PostgreSQL)

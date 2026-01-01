@@ -1,0 +1,43 @@
+---
+# Process and save InSpec results to files
+# Loop variable: item (from execute.yml loop)
+# Index variable: _result_idx
+
+- name: Set result file name
+  set_fact:
+    _result_file: "POSTGRES_{{ postgres_server }}_{{ postgres_database }}_{{ postgres_version }}_{{ _timestamp }}_{{ control_files.files[_result_idx].path | basename | regex_replace('\\.rb$', '') }}.json"
+
+- name: Save successful result
+  copy:
+    # Handle both string and dict stdout (json-min output)
+    content: "{{ item.stdout if item.stdout is string else (item.stdout | to_json) }}"
+    dest: "{{ inspec_results_dir }}/{{ _result_file }}"
+    mode: "0644"
+  delegate_to: "{{ _delegate_host }}"
+  when:
+    - item.stdout is defined
+    # Handle rc as both string and int (e.g., '100' or 100)
+    - (item.rc | int) in [0, 100, 101]
+
+- name: Save error result
+  copy:
+    content: |
+      {
+        "controls": [{
+          "id": "ERROR",
+          "title": "InSpec execution failed",
+          "status": "error",
+          "hostname": "{{ postgres_server }}",
+          "database": "{{ postgres_database }}",
+          "port": "{{ postgres_port }}",
+          "version": "{{ postgres_version }}",
+          "error": "{{ item.stderr | default('Unknown error') | regex_replace('\"', '\\\"') }}"
+        }]
+      }
+    dest: "{{ inspec_results_dir }}/{{ _result_file }}"
+    mode: "0644"
+  delegate_to: "{{ _delegate_host }}"
+  when:
+    - item.rc is defined
+    # Handle rc as both string and int
+    - (item.rc | int) not in [0, 100, 101]

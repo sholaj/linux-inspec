@@ -1,0 +1,23 @@
+#!/bin/bash
+# Oracle query wrapper - password passed via ORACLE_PWD environment variable
+# Usage: oracle_query <user> <host> <port> <service> "<query>"
+#
+# Install: sudo cp oracle_query /usr/local/bin/ && sudo chmod +x /usr/local/bin/oracle_query
+
+USER="$1"
+HOST="$2"
+PORT="$3"
+SERVICE="$4"
+shift 4
+QUERY="$*"
+
+if [ -z "$ORACLE_PWD" ]; then
+    echo "ERROR: ORACLE_PWD environment variable not set" >&2
+    exit 1
+fi
+
+sqlplus -S "${USER}/${ORACLE_PWD}@${HOST}:${PORT}/${SERVICE}" << SQLEOF
+SET HEADING OFF FEEDBACK OFF PAGESIZE 0 LINESIZE 200
+${QUERY};
+EXIT;
+SQLEOF

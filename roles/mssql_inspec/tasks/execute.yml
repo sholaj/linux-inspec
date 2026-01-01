@@ -1,167 +1,56 @@
 ---
 # InSpec execution tasks for MSSQL
-#
-# EXECUTION MODES:
-# Mode 1: Delegate/Bastion Mode (when inspec_delegate_host is defined)
-#   - Ansible SSHs to delegate host using ansible_user (from inventory)
-#   - InSpec runs on delegate host
-#   - InSpec connects to database using mssql_username/mssql_password (from vault)
-#
-# Mode 2: Local/Direct Mode (when inspec_delegate_host is undefined or empty)
-#   - InSpec runs directly on AAP2 execution node or local machine
-#   - InSpec connects to database using mssql_username/mssql_password (from vault)
-#
-# These are DIFFERENT execution paths based on infrastructure setup
+# _delegate_host is always set: to inspec_delegate_host or inventory_hostname
 
-- name: Determine execution mode and target host
+# Build PATH with MSSQL tools directories
+- name: Build execution environment
   set_fact:
-    use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
-    inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
-    cacheable: yes
+    _mssql_env:
+      PATH: "{{ mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
+      CHEF_LICENSE: "accept"
 
-- name: Gather environment facts from execution target
-  setup:
-    gather_subset:
-      - env
-  delegate_to: "{{ inspec_execution_target }}"
-  delegate_facts: true
-
-- name: Set target environment from execution host
-  set_fact:
-    _target_env: "{{ hostvars[inspec_execution_target].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
-
-- name: Get system PATH from delegate host if not available in facts
-  shell: echo "$PATH"
-  register: delegate_system_path
-  changed_when: false
-  delegate_to: "{{ inspec_execution_target }}"
-  when: not _target_env.PATH or _target_env.PATH == ''
-
-- name: Update target environment with system PATH
-  set_fact:
-    _target_env: "{{ _target_env | combine({'PATH': delegate_system_path.stdout}) }}"
-  when: delegate_system_path.stdout is defined
-
-- name: Build environment variables
-  set_fact:
-    mssql_environment:
-      PATH: "{{ mssql_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
-      LD_LIBRARY_PATH: "{{ mssql_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
-
-- name: Detect and validate sqlcmd binary
-  block:
-    - name: Detect sqlcmd binary location
-      shell: |
-        export PATH="{{ mssql_environment.PATH }}"
-        set -euo pipefail
-        
-        # 1) Check PATH first
-        if command -v sqlcmd >/dev/null 2>&1; then
-          command -v sqlcmd
-          exit 0
-        fi
-        
-        # 2) Check common install locations
-        for dir in /opt/mssql-tools18/bin /opt/mssql-tools/bin /usr/local/bin /usr/bin; do
-          if [ -x "$dir/sqlcmd" ]; then
-            echo "$dir/sqlcmd"
-            exit 0
-          fi
-        done
-        
-        # 3) Last resort: search (limited depth for speed)
-        find /opt /usr -maxdepth 5 -type f -name sqlcmd -perm -111 2>/dev/null | head -n 1 || exit 1
-      args:
-        executable: /bin/bash
-      register: sqlcmd_detect
-      changed_when: false
-      failed_when: false
-      delegate_to: "{{ inspec_execution_target }}"
-
-    - name: Set sqlcmd_bin fact
-      set_fact:
-        sqlcmd_bin: "{{ (sqlcmd_detect.stdout | trim) if (sqlcmd_detect.rc == 0 and (sqlcmd_detect.stdout | trim) != '') else '' }}"
-
-    - name: Fail if sqlcmd not found
-      fail:
-        msg: |
-          CRITICAL: sqlcmd not found on {{ inspec_execution_target }}
-          
-          Detection output: {{ sqlcmd_detect.stdout | default('EMPTY') }}
-          Exit code: {{ sqlcmd_detect.rc | default('UNDEFINED') }}
-          Search PATH: {{ mssql_environment.PATH }}
-          
-          Install mssql-tools package or ensure sqlcmd is in PATH.
-      when: sqlcmd_bin == ""
-
-    - name: Update PATH with sqlcmd directory
-      set_fact:
-        mssql_environment:
-          PATH: "{{ sqlcmd_bin | dirname }}:{{ mssql_environment.PATH }}"
-          LD_LIBRARY_PATH: "{{ mssql_environment.LD_LIBRARY_PATH }}"
-      when: "'/' in sqlcmd_bin"
-
-    - name: Detect inspec binary location
-      shell: |
-        export PATH="{{ mssql_environment.PATH }}"
-        command -v inspec || which inspec || echo "/usr/bin/inspec"
-      args:
-        executable: /bin/bash
-      register: inspec_detect
-      changed_when: false
-      delegate_to: "{{ inspec_execution_target }}"
-
-    - name: Set inspec_bin fact
-      set_fact:
-        inspec_bin: "{{ (inspec_detect.stdout | trim) if (inspec_detect.stdout | trim) != '' else 'inspec' }}"
-
-- name: Test database connectivity with sqlcmd
+# Verify sqlcmd is available
+- name: Verify sqlcmd binary
   shell: |
-    export PATH="{{ mssql_environment.PATH }}"
-    set -euo pipefail
-    
-    timeout 10 "{{ sqlcmd_bin }}" \
-      -S '{{ mssql_server }},{{ mssql_port }}' \
-      -U '{{ mssql_username }}' \
-      -P '{{ mssql_password }}' \
-      -Q "SELECT @@VERSION" 2>&1
-    
-    echo "SUCCESS: Database connection verified"
-  register: sqlcmd_test
+    export PATH="{{ _mssql_env.PATH }}"
+    command -v sqlcmd
+  args:
+    executable: /bin/bash
+  register: _sqlcmd_check
   changed_when: false
-  failed_when: false
-  delegate_to: "{{ inspec_execution_target }}"
-  no_log: true
+  failed_when: _sqlcmd_check.rc != 0
+  delegate_to: "{{ _delegate_host }}"
 
-- name: Fail if database is not reachable
-  fail:
-    msg: |
-      CRITICAL: Cannot connect to database {{ mssql_server }}:{{ mssql_port }}
-      
-      Exit Code: {{ sqlcmd_test.rc | default('undefined') }}
-      
-      Diagnostics:
-      {{ sqlcmd_test.stdout | default('') }}
-      
-      This could be due to:
-      - sqlcmd not in PATH (exit code 127)
-      - Connection timeout (exit code 124)
-      - Incorrect credentials
-      - Network connectivity issues
-      - Database server not running
-      - Firewall blocking connection
-      
-      Current PATH: {{ mssql_environment.PATH }}
-  when: 
-    - sqlcmd_test.rc is defined
-    - sqlcmd_test.rc != 0
+- name: Set sqlcmd path
+  set_fact:
+    _sqlcmd_bin: "{{ _sqlcmd_check.stdout | trim }}"
 
-- name: Execute InSpec controls
+# Note: Database connectivity is validated in preflight.yml
+# If we reach here, preflight_passed is true and database is reachable
+
+# Verify InSpec is available
+- name: Verify InSpec binary
   shell: |
-    export PATH="{{ mssql_environment.PATH }}"
-    export LD_LIBRARY_PATH="{{ mssql_environment.LD_LIBRARY_PATH }}"
-    
-    "{{ inspec_bin }}" exec {{ item.path }} \
+    export PATH="{{ _mssql_env.PATH }}"
+    command -v inspec
+  args:
+    executable: /bin/bash
+  register: _inspec_check
+  changed_when: false
+  failed_when: _inspec_check.rc != 0
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Set InSpec path
+  set_fact:
+    _inspec_bin: "{{ _inspec_check.stdout | trim }}"
+
+# Execute InSpec profile (contains all controls)
+- name: Execute InSpec profile
+  shell: |
+    export PATH="{{ _mssql_env.PATH }}"
+    export CHEF_LICENSE=accept
+
+    "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
       --input usernm='{{ mssql_username }}' \
               passwd='{{ mssql_password }}' \
               hostnm='{{ mssql_server }}' \
@@ -171,108 +60,60 @@
       --no-color
   args:
     executable: /bin/bash
-  register: inspec_results
-  loop: "{{ control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
+  register: _inspec_profile_result
   changed_when: false
-  failed_when: |
-    (inspec_results.rc != 0 and
-     inspec_results.rc != 100 and
-     'Cannot connect' not in inspec_results.stdout and
-     'Unreachable' not in inspec_results.stdout)
+  failed_when: _inspec_profile_result.rc not in [0, 100, 101]
   no_log: true
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
 
-- name: Parse InSpec results for display
+# Convert single result to list for compatibility with downstream tasks
+- name: Wrap InSpec result for processing
   set_fact:
-    parsed_results: "{{ parsed_results | default([]) + [item.stdout | from_json] }}"
+    inspec_results:
+      results:
+        - stdout: "{{ _inspec_profile_result.stdout }}"
+          rc: "{{ _inspec_profile_result.rc }}"
+          item:
+            path: "{{ _remote_controls_path }}"
+
+# Parse and display results
+# Note: stdout may already be parsed as dict by Jinja2, or may be a string
+- name: Parse InSpec results
+  set_fact:
+    _parsed_results: "{{ _parsed_results | default([]) + [item.stdout if item.stdout is mapping else (item.stdout | from_json)] }}"
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
     label: "{{ item.item.path | basename }}"
-  when: 
-    - item.stdout is defined 
-    - item.stdout != ''
+  when: item.stdout is defined and item.stdout != ''
   no_log: true
 
-# TEMP DEBUG: show first stdout (passwords redacted). Remove after verification.
-- name: Debug first InSpec stdout (sanitized)
+- name: Display scan summary
   debug:
     msg: |
-      InSpec stdout (first item, sanitized):
-      {{ inspec_results.results[0].stdout | regex_replace(mssql_password, '****') if (inspec_results.results | length) > 0 else 'NO STDOUT' }}
-  when:
-    - inspec_results is defined
-    - inspec_results.results is defined
-    - (inspec_results.results | length) > 0
-  no_log: false
-
-- name: Display InSpec execution summary
-  debug:
-    msg: |
-      
-      ╔════════════════════════════════════════════════════════════════════════════════════════
-      ║ InSpec Compliance Scan Results
-      ║ Database: {{ mssql_server }}:{{ mssql_port }}
-      ║ Scan User: {{ mssql_username }}
-      ╚════════════════════════════════════════════════════════════════════════════════════════
-      {% set ns = namespace(pass=0, fail=0, total=0) %}
-      {% for result in parsed_results | default([]) %}
+      ═══════════════════════════════════════════════════════════════════
+       MSSQL InSpec Compliance Scan Results
+       Database: {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
+      ═══════════════════════════════════════════════════════════════════
+      {% set ns = namespace(passed=0, failed=0, total=0) %}
+      {% for result in _parsed_results | default([]) %}
       {% for control in result.controls | default([]) %}
       {% set res = control.results | default([]) %}
-      {% set status = res[0].status | upper if res | length > 0 else (control.status | default('UNKNOWN') | upper) %}
-      {% set message = res[0].message | default(control.code_desc | default('No message')) if res | length > 0 else (control.code_desc | default('No message')) %}
+      {% set status = res[0].status | default(control.status | default('unknown')) %}
       {% set ns.total = ns.total + 1 %}
-      {% if status == 'PASSED' %}{% set ns.pass = ns.pass + 1 %}{% endif %}
-      {% if status == 'FAILED' %}{% set ns.fail = ns.fail + 1 %}{% endif %}
-      
-      Control: {{ control.id }}
-      Title  : {{ control.title | default('N/A') }}
-      Status : {{ status }}
-      {% if status != 'PASSED' %}
-      Message: {{ message | regex_replace('\\n', ' ') | truncate(120) }}
-      {% endif %}
-      ────────────────────────────────────────────────────────────────────────────────────────
+      {% if status == 'passed' %}{% set ns.passed = ns.passed + 1 %}{% elif status == 'failed' %}{% set ns.failed = ns.failed + 1 %}{% endif %}
+      {{ control.id }}: {{ status | upper }} - {{ control.title | default('N/A') | truncate(60) }}
       {% endfor %}
       {% endfor %}
-      
-      Summary:
-      --------
-      Total Controls: {{ ns.total }}
-      Passed        : {{ ns.pass }}
-      Failed        : {{ ns.fail }}
-      
-  when:
-    - parsed_results is defined
-    - (parsed_results | default([])) | length > 0
+      ───────────────────────────────────────────────────────────────────
+       Total: {{ ns.total }} | Passed: {{ ns.passed }} | Failed: {{ ns.failed }}
+      ═══════════════════════════════════════════════════════════════════
+  when: _parsed_results is defined and (_parsed_results | length) > 0
 
-# Lightweight summary-only output to ensure totals are always visible
-- name: Display InSpec summary totals
-  debug:
-    msg: |
-      {% set ns = namespace(pass=0, fail=0, total=0) %}
-      {% for result in parsed_results | default([]) %}
-      {% for control in result.controls | default([]) %}
-      {% set res = control.results | default([]) %}
-      {% set status = res[0].status | upper if res | length > 0 else (control.status | default('UNKNOWN') | upper) %}
-      {% set ns.total = ns.total + 1 %}
-      {% if status == 'PASSED' %}{% set ns.pass = ns.pass + 1 %}{% elif status == 'FAILED' %}{% set ns.fail = ns.fail + 1 %}{% endif %}
-      {% endfor %}
-      {% endfor %}
-      Summary:
-      --------
-      Total Controls: {{ ns.total }}
-      Passed        : {{ ns.pass }}
-      Failed        : {{ ns.fail }}
-      {% if ns.total == 0 %}Note: No controls were parsed from InSpec output.{% endif %}
-  when:
-    - parsed_results is defined
-    - (parsed_results | default([])) | length > 0
-
+# Process results for file output
 - name: Process InSpec results
   include_tasks: process_results.yml
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
-    index_var: idx
-    label: "Processing result {{ idx + 1 }}"
+    index_var: _result_idx
+    label: "Result {{ _result_idx + 1 }}"
   when: inspec_results.results is defined

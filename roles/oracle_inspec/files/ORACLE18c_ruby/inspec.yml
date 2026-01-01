@@ -1,0 +1,35 @@
+name: oracle18c-compliance
+title: Oracle 18c NIST Compliance
+maintainer: DevOps Team
+copyright: Internal
+license: Proprietary
+summary: Oracle 18c NIST compliance controls
+version: 1.0.0
+inspec_version: ">= 5.0"
+
+inputs:
+  - name: oracle_host
+    description: Oracle database server hostname or IP address
+    type: String
+    required: true
+
+  - name: oracle_port
+    description: Oracle database listener port
+    type: Numeric
+    value: 1521
+
+  - name: oracle_user
+    description: Oracle username for authentication
+    type: String
+    required: true
+
+  - name: oracle_pass
+    description: Oracle password for authentication
+    type: String
+    required: true
+    sensitive: true
+
+  - name: oracle_service
+    description: Oracle service name or SID
+    type: String
+    required: true

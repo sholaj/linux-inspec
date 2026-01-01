@@ -1,0 +1,45 @@
+================================================================================
+PostgreSQL InSpec Compliance Scan Summary
+================================================================================
+Generated: {{ ansible_date_time.iso8601 }}
+Target: {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }}
+Version: PostgreSQL {{ postgres_version }}
+Execution Host: {{ _delegate_host }}
+================================================================================
+
+{% set ns = namespace(passed=0, failed=0, skipped=0, total=0) %}
+{% for result in _parsed_results | default([]) %}
+{% for control in result.controls | default([]) %}
+{% set res = control.results | default([]) %}
+{% set status = res[0].status | default(control.status | default('unknown')) %}
+{% set ns.total = ns.total + 1 %}
+{% if status == 'passed' %}{% set ns.passed = ns.passed + 1 %}
+{% elif status == 'failed' %}{% set ns.failed = ns.failed + 1 %}
+{% elif status == 'skipped' %}{% set ns.skipped = ns.skipped + 1 %}{% endif %}
+{% endfor %}
+{% endfor %}
+
+SUMMARY
+-------
+Total Controls: {{ ns.total }}
+Passed:         {{ ns.passed }}
+Failed:         {{ ns.failed }}
+Skipped:        {{ ns.skipped }}
+Pass Rate:      {{ ((ns.passed / ns.total) * 100) | round(1) if ns.total > 0 else 0 }}%
+
+CONTROL RESULTS
+---------------
+{% for result in _parsed_results | default([]) %}
+{% for control in result.controls | default([]) %}
+{% set res = control.results | default([]) %}
+{% set status = res[0].status | default(control.status | default('unknown')) %}
+[{{ status | upper | center(8) }}] {{ control.id }}: {{ control.title | default('N/A') }}
+{% if status == 'failed' and res[0].message is defined %}
+             -> {{ res[0].message | truncate(70) }}
+{% endif %}
+{% endfor %}
+{% endfor %}
+
+================================================================================
+End of Report
+================================================================================

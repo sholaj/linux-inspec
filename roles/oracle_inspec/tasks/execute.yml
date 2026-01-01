@@ -51,73 +51,8 @@
       TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
       NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
 
-- name: Test database connectivity with sqlplus
-  shell: |
-    set -e
-    
-    # Export environment variables explicitly
-    export PATH="{{ oracle_environment.PATH }}"
-    export LD_LIBRARY_PATH="{{ oracle_environment.LD_LIBRARY_PATH }}"
-    export ORACLE_HOME="{{ oracle_environment.ORACLE_HOME }}"
-    export TNS_ADMIN="{{ oracle_environment.TNS_ADMIN }}"
-    export NLS_LANG="{{ oracle_environment.NLS_LANG }}"
-    
-    # Check if sqlplus is available
-    if ! command -v sqlplus &> /dev/null; then
-      echo "ERROR: sqlplus command not found in PATH"
-      echo "PATH: $PATH"
-      exit 127
-    fi
-    
-    echo "Testing connectivity to {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}..."
-    
-    # Run connectivity test with timeout
-    echo "SELECT 'CONNECTION_OK' FROM DUAL;" | timeout 10 sqlplus -S "{{ oracle_username }}/{{ oracle_password }}@//{{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}" 2>&1
-    
-    exit_code=$?
-    
-    if [ $exit_code -eq 0 ]; then
-      echo "SUCCESS: Database connection verified"
-    elif [ $exit_code -eq 124 ]; then
-      echo "ERROR: Connection timeout after 10 seconds"
-      exit 124
-    else
-      echo "ERROR: Connection failed with exit code $exit_code"
-      exit $exit_code
-    fi
-  args:
-    executable: /bin/bash
-  register: sqlplus_test
-  changed_when: false
-  failed_when: false
-  delegate_to: "{{ inspec_execution_target }}"
-  no_log: true
-
-- name: Fail if database is not reachable
-  fail:
-    msg: |
-      CRITICAL: Cannot connect to Oracle database {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}
-      
-      Exit Code: {{ sqlplus_test.rc | default('undefined') }}
-      
-      Diagnostics:
-      {{ sqlplus_test.stdout | default('') }}
-      
-      This could be due to:
-      - sqlplus not in PATH (exit code 127)
-      - Connection timeout (exit code 124)
-      - Incorrect credentials
-      - Network connectivity issues
-      - Database server not running  
-      - TNS configuration issues
-      - Firewall blocking connection
-      
-      Current PATH: {{ oracle_environment.PATH }}
-      ORACLE_HOME: {{ oracle_environment.ORACLE_HOME }}
-      TNS_ADMIN: {{ oracle_environment.TNS_ADMIN }}
-  when: 
-    - sqlplus_test.rc is defined
-    - sqlplus_test.rc != 0
+# Note: Database connectivity is validated in preflight.yml
+# If we reach here, preflight_passed is true and database is reachable
 
 - name: Execute InSpec controls
   shell: |
@@ -144,13 +79,8 @@
   loop_control:
     label: "{{ item.path | basename }}"
   changed_when: false
-  failed_when: |
-    (oracle_inspec_results.rc != 0 and
-     'Cannot connect' not in oracle_inspec_results.stdout and
-     'Unreachable' not in oracle_inspec_results.stdout)
+  failed_when: oracle_inspec_results.rc not in [0, 100, 101]
   no_log: true
-  async: "{{ inspec_command_timeout | default(1800) }}"
-  poll: 30
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Display sanitized execution summary (debug mode only)

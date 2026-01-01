@@ -1,0 +1,50 @@
+---
+# Execution Environment Definition for Database Compliance Scanning
+# Build with: ansible-builder build --tag acrinspecwzrr.azurecr.io/db-compliance-ee:1.0.0 --container-runtime podman
+
+version: 3
+
+images:
+  base_image:
+    name: registry.access.redhat.com/ubi9/ubi:latest
+
+dependencies:
+  galaxy: requirements.yml
+  python: requirements.txt
+  system: bindep.txt
+
+additional_build_steps:
+  prepend_base:
+    - RUN dnf install -y python3 python3-pip ruby ruby-devel rubygems gcc gcc-c++ make libaio libnsl2
+    - RUN pip3 install ansible-core ansible-runner
+    # Enable EPEL for freetds
+    - RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
+    - RUN dnf install -y freetds freetds-devel || true
+    # Create symlink for libnsl.so.1 compatibility (Oracle requires this)
+    - RUN ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1
+    # Download and install Oracle Instant Client directly with nodeps
+    - RUN curl -LO https://yum.oracle.com/repo/OracleLinux/OL9/oracle/instantclient/x86_64/getPackage/oracle-instantclient19.29-basic-19.29.0.0.0-1.el9.x86_64.rpm
+    - RUN curl -LO https://yum.oracle.com/repo/OracleLinux/OL9/oracle/instantclient/x86_64/getPackage/oracle-instantclient19.29-sqlplus-19.29.0.0.0-1.el9.x86_64.rpm
+    - RUN rpm -ivh --nodeps oracle-instantclient19.29-basic-19.29.0.0.0-1.el9.x86_64.rpm oracle-instantclient19.29-sqlplus-19.29.0.0.0-1.el9.x86_64.rpm
+    - RUN rm -f oracle-instantclient*.rpm
+
+  append_final:
+    - RUN dnf install -y unzip wget tar gzip
+    # Install Microsoft SQL Tools
+    - RUN curl -fsSL https://packages.microsoft.com/config/rhel/9/prod.repo -o /etc/yum.repos.d/mssql-release.repo
+    - RUN ACCEPT_EULA=Y dnf install -y mssql-tools18 unixODBC-devel 2>/dev/null || true
+    - RUN if [ -f /opt/mssql-tools18/bin/sqlcmd ]; then ln -sf /opt/mssql-tools18/bin/sqlcmd /usr/local/bin/sqlcmd; fi
+    # Configure Oracle libraries
+    - RUN echo /usr/lib/oracle/19.29/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf && ldconfig
+    # Link sqlplus to PATH
+    - RUN ln -sf /usr/lib/oracle/19.29/client64/bin/sqlplus /usr/local/bin/sqlplus
+    # Install InSpec
+    - RUN gem install inspec-bin -v 5.22.29 --no-document
+    - RUN inspec --chef-license=accept-silent || true
+    # Set environment
+    - ENV PATH=/opt/mssql-tools18/bin:/usr/lib/oracle/19.29/client64/bin:/usr/local/bin:$PATH
+    - ENV LD_LIBRARY_PATH=/usr/lib/oracle/19.29/client64/lib
+    - ENV ORACLE_HOME=/usr/lib/oracle/19.29/client64
+    - ENV CHEF_LICENSE=accept-silent
+    # Create results directory
+    - RUN mkdir -p /tmp/compliance_scans && chmod 777 /tmp/compliance_scans
