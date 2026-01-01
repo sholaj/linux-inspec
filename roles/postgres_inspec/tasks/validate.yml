@@ -1,0 +1,19 @@
+---
+# Validation tasks for PostgreSQL InSpec role
+
+- name: Validate required connection parameters
+  assert:
+    that:
+      - postgres_server | length > 0
+      - postgres_port | int > 0
+      - postgres_database | length > 0
+      - postgres_username | length > 0
+      - postgres_password | length > 0
+    fail_msg: "Required PostgreSQL connection parameters are missing or empty"
+  no_log: true
+
+- name: Validate PostgreSQL version
+  assert:
+    that:
+      - postgres_version in supported_postgres_versions
+    fail_msg: "Unsupported PostgreSQL version '{{ postgres_version }}'. Supported: {{ supported_postgres_versions | join(', ') }}"

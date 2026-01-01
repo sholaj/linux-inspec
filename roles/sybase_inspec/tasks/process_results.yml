@@ -1,55 +1,54 @@
 ---
 # Sybase result processing tasks
+# Expects: inspec_result (from shell command), profile_name
 
-- name: Set Sybase result file names (matching original script pattern)
+- name: Set Sybase result file names
   set_fact:
-    sybase_control_file_name: "{{ sybase_control_files.files[idx].path | basename | regex_replace('\\.rb$', '') }}"
     sybase_timestamp: "{{ ansible_date_time.epoch }}"
     sybase_process_id: "{{ ansible_process_id | default(ansible_date_time.epoch) }}"
     sybase_platform: "SYBASE"
 
 - name: Set Sybase result file name
   set_fact:
-    sybase_result_file_name: "{{ sybase_platform }}_NIST_{{ sybase_process_id }}_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_{{ sybase_timestamp }}_{{ sybase_control_file_name }}"
+    sybase_result_file_name: "{{ sybase_platform }}_NIST_{{ sybase_process_id }}_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_{{ sybase_timestamp }}_{{ profile_name }}"
 
-- name: Parse Sybase InSpec result status (matching original script logic)
+- name: Parse Sybase InSpec result status
   set_fact:
-    # regex_search returns a list, so we take first element or default to 'unknown'
-    sybase_inspec_status: "{{ (item.stdout | regex_search('\"status\":\"([^\"]+)\"', '\\1') | first) | default('unknown') }}"
-  ignore_errors: true
+    sybase_inspec_status: "{{ 'passed' if (inspec_result.rc | int) == 0 else 'failed' if (inspec_result.rc | int) in [100, 101] else 'error' }}"
 
 - name: Handle successful Sybase InSpec execution
   block:
     - name: Save successful Sybase results to JSON file
       copy:
-        content: "{{ item.stdout }}"
+        content: "{{ inspec_result.stdout if inspec_result.stdout is string else (inspec_result.stdout | to_json) }}"
         dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
-      when: sybase_inspec_status is defined and sybase_inspec_status in ['passed', 'failed', 'skipped']
+      when:
+        - (inspec_result.rc | int) in [0, 100, 101]
+        - inspec_result.stdout is defined
 
     - name: Log successful Sybase execution
       debug:
-        msg: "Sybase control {{ sybase_control_file_name }} completed with status: {{ sybase_inspec_status }} (SSH: {{ sybase_use_ssh | ternary('Yes', 'No') }})"
-      when: inspec_debug_mode | default(false)
+        msg: "Sybase profile {{ profile_name }} completed with status: {{ sybase_inspec_status }} (exit code: {{ inspec_result.rc }})"
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Handle failed Sybase InSpec execution
   block:
-    - name: Create Sybase error report matching original script format
+    - name: Create Sybase error report
       copy:
         content: |
-          {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"Cannot connect to Sybase database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect. SSH connection may have failed.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect to Sybase","statistics":{"duration":0},"version":"N/A"}]}
+          {"controls":[{"timestamp":"{{ ansible_date_time.iso8601 }}","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"InSpec execution failed","profile_id":"{{ profile_name }}","profile_sha256":"N/A","status":"Error","code_desc":"{{ inspec_result.stderr | default('Unknown error') | regex_replace('[\r\n]+', ' ') }}","statistics":{"duration":0},"version":"N/A"}]}
         dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
       when:
-        - item.rc != 0 or (sybase_inspec_status is not defined or sybase_inspec_status not in ['passed', 'failed', 'skipped'])
+        - (inspec_result.rc | int) not in [0, 100, 101]
 
-    - name: Log Sybase connection error
+    - name: Log Sybase execution error
       debug:
         msg: |
-          Sybase control {{ sybase_control_file_name }} failed to execute.
-          SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
-          Error: {{ item.stderr | default('Unknown Sybase error') }}
+          Sybase profile {{ profile_name }} failed to execute.
+          Exit Code: {{ inspec_result.rc }}
+          Error: {{ inspec_result.stderr | default('Unknown error') }}
           Result file: {{ sybase_result_file_name }}.json
       when:
         - inspec_debug_mode | default(false)
-        - (item.rc != 0 or (sybase_inspec_status is not defined or sybase_inspec_status not in ['passed', 'failed', 'skipped']))
+        - (inspec_result.rc | int) not in [0, 100, 101]
   delegate_to: "{{ inspec_execution_target }}"

@@ -1,0 +1,9 @@
+# SAP ASE Server Interfaces File
+# Deployed by sybase_inspec Ansible role
+# Server: {{ sybase_service }}
+# Host: {{ sybase_server }}
+# Port: {{ sybase_port }}
+
+{{ sybase_service }}
+	query tcp ether {{ sybase_server }} {{ sybase_port }}
+	master tcp ether {{ sybase_server }} {{ sybase_port }}

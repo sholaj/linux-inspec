@@ -1,0 +1,21 @@
+#!/bin/bash
+# Sybase query wrapper - password passed via SYBASE_PWD environment variable
+# Usage: sybase_query <user> <server> "<query>"
+#
+# Install: sudo cp sybase_query /usr/local/bin/ && sudo chmod +x /usr/local/bin/sybase_query
+
+USER="$1"
+SERVER="$2"
+shift 2
+QUERY="$*"
+
+if [ -z "$SYBASE_PWD" ]; then
+    echo "ERROR: SYBASE_PWD environment variable not set" >&2
+    exit 1
+fi
+
+isql -U"${USER}" -P"${SYBASE_PWD}" -S"${SERVER}" -w999 << SQLEOF
+${QUERY}
+go
+quit
+SQLEOF

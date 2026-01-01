@@ -1,0 +1,35 @@
+name: oracle-19c-cis
+title: CIS Oracle Database 19c Compliance
+maintainer: InSpec Compliance Team
+copyright: Copyright 2024
+license: Apache-2.0
+summary: InSpec profile for CIS Oracle Database 19c compliance
+version: 1.0.0
+inspec_version: ">= 5.0"
+
+inputs:
+  - name: usernm
+    description: Oracle username for authentication
+    type: string
+    required: true
+
+  - name: passwd
+    description: Oracle password for authentication
+    type: string
+    required: true
+    sensitive: true
+
+  - name: hostnm
+    description: Oracle database server hostname or IP address
+    type: string
+    required: true
+
+  - name: port
+    description: Oracle database listener port
+    type: numeric
+    value: 1521
+
+  - name: servicenm
+    description: Oracle service name or SID
+    type: string
+    required: true

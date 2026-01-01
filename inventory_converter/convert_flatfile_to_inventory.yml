@@ -4,13 +4,13 @@
 
 - name: Convert Flat File to Inventory
   hosts: localhost
-  gather_facts: no
+  gather_facts: true
   vars:
     input_file: "{{ flatfile_input | default('databases.txt') }}"
     output_file: "{{ inventory_output | default('inventory.yml') }}"
 
     # Optional: specify a delegate host for remote InSpec execution
-    # Leave empty for local execution (default)
+    # Leave empty for localhost execution (default)
     delegate_host: "{{ inspec_delegate | default('') }}"
     delegate_address: "{{ inspec_delegate_address | default('') }}"
     delegate_user: "{{ inspec_delegate_user | default('ansible_svc') }}"
@@ -32,12 +32,17 @@
             vars:
               sybase_username: nist_scan_user
               sybase_use_ssh: true
-              sybase_ssh_user: oracle
+              sybase_ssh_user: sybase_admin
+          postgres_databases:
+            hosts: {}
+            vars:
+              postgres_username: nist_scan_user
 
     platform_counts:
       mssql: 0
       oracle: 0
       sybase: 0
+      postgres: 0
 
   tasks:
     - name: Check input file exists
@@ -77,28 +82,37 @@
               'mssql_databases': {
                 'hosts': inventory_data.all.children.mssql_databases.hosts,
                 'vars': inventory_data.all.children.mssql_databases.vars | combine({
-                  'inspec_delegate_host': 'localhost',
-                  'base_results_dir': '/tmp/compliance_scans',
-                  'enable_debug': false,
-                  'inspec_command_timeout': 1800
+                  'inspec_delegate_host': '',
+                  'inspec_results_dir': '/tmp/inspec_mssql_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
                 })
               },
               'oracle_databases': {
                 'hosts': inventory_data.all.children.oracle_databases.hosts,
                 'vars': inventory_data.all.children.oracle_databases.vars | combine({
-                  'inspec_delegate_host': 'localhost',
-                  'base_results_dir': '/tmp/compliance_scans',
-                  'enable_debug': false,
-                  'inspec_command_timeout': 1800
+                  'inspec_delegate_host': '',
+                  'inspec_results_dir': '/tmp/inspec_oracle_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
                 })
               },
               'sybase_databases': {
                 'hosts': inventory_data.all.children.sybase_databases.hosts,
                 'vars': inventory_data.all.children.sybase_databases.vars | combine({
-                  'inspec_delegate_host': 'localhost',
-                  'base_results_dir': '/tmp/compliance_scans',
-                  'enable_debug': false,
-                  'inspec_command_timeout': 1800
+                  'inspec_delegate_host': '',
+                  'inspec_results_dir': '/tmp/inspec_sybase_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
+              },
+              'postgres_databases': {
+                'hosts': inventory_data.all.children.postgres_databases.hosts,
+                'vars': inventory_data.all.children.postgres_databases.vars | combine({
+                  'inspec_delegate_host': '',
+                  'inspec_results_dir': '/tmp/inspec_postgres_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
                 })
               }
             })
@@ -123,27 +137,36 @@
                 'hosts': inventory_data.all.children.mssql_databases.hosts,
                 'vars': inventory_data.all.children.mssql_databases.vars | combine({
                   'inspec_delegate_host': delegate_host,
-                  'base_results_dir': '/tmp/compliance_scans',
-                  'enable_debug': false,
-                  'inspec_command_timeout': 1800
+                  'inspec_results_dir': '/tmp/inspec_mssql_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
                 })
               },
               'oracle_databases': {
                 'hosts': inventory_data.all.children.oracle_databases.hosts,
                 'vars': inventory_data.all.children.oracle_databases.vars | combine({
                   'inspec_delegate_host': delegate_host,
-                  'base_results_dir': '/tmp/compliance_scans',
-                  'enable_debug': false,
-                  'inspec_command_timeout': 1800
+                  'inspec_results_dir': '/tmp/inspec_oracle_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
                 })
               },
               'sybase_databases': {
                 'hosts': inventory_data.all.children.sybase_databases.hosts,
                 'vars': inventory_data.all.children.sybase_databases.vars | combine({
                   'inspec_delegate_host': delegate_host,
-                  'base_results_dir': '/tmp/compliance_scans',
-                  'enable_debug': false,
-                  'inspec_command_timeout': 1800
+                  'inspec_results_dir': '/tmp/inspec_sybase_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
+              },
+              'postgres_databases': {
+                'hosts': inventory_data.all.children.postgres_databases.hosts,
+                'vars': inventory_data.all.children.postgres_databases.vars | combine({
+                  'inspec_delegate_host': delegate_host,
+                  'inspec_results_dir': '/tmp/inspec_postgres_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
                 })
               }
             })
@@ -160,11 +183,11 @@
           # Generated Inventory - Database Compliance Scanning
           # Credentials injected by AAP2 Custom Credential at runtime
           #
-          # Connection modes:
-          #   inspec_delegate_host: "localhost" = Local execution on AAP
-          #   inspec_delegate_host: "<hostname>" = SSH to delegate host
+          # Execution modes:
+          #   inspec_delegate_host: "" = Run on target host
+          #   inspec_delegate_host: "<hostname>" = Delegate to remote host
           #
-          # Generated on: {{ ansible_date_time.iso8601 }}
+          # Generated: {{ ansible_date_time.iso8601 }}
 
           {{ inventory_data | to_nice_yaml(indent=2) }}
         dest: "{{ output_file }}"
@@ -176,9 +199,10 @@
           - MSSQL: {{ platform_counts.mssql }} hosts
           - Oracle: {{ platform_counts.oracle }} hosts
           - Sybase: {{ platform_counts.sybase }} hosts
-          - Total: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase }} hosts
+          - PostgreSQL: {{ platform_counts.postgres }} hosts
+          - Total: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase + platform_counts.postgres }} hosts
           {% if delegate_host | length > 0 %}
           - Delegate Host: {{ delegate_host }} ({{ delegate_address }})
           {% else %}
-          - Execution Mode: Local (on AAP2 execution node)
+          - Execution Mode: Localhost (on target host)
           {% endif %}

@@ -1,0 +1,121 @@
+---
+# InSpec execution tasks for PostgreSQL
+# _delegate_host is always set: to inspec_delegate_host or inventory_hostname
+
+# Build PATH with PostgreSQL tools directories
+- name: Build execution environment
+  set_fact:
+    _postgres_env:
+      PATH: "{{ postgres_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
+      CHEF_LICENSE: "accept"
+      PGPASSWORD: "{{ postgres_password }}"
+
+# Verify psql is available
+- name: Verify psql binary
+  shell: |
+    export PATH="{{ _postgres_env.PATH }}"
+    command -v psql
+  args:
+    executable: /bin/bash
+  register: _psql_check
+  changed_when: false
+  failed_when: _psql_check.rc != 0
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Set psql path
+  set_fact:
+    _psql_bin: "{{ _psql_check.stdout | trim }}"
+
+# Note: Database connectivity is validated in preflight.yml
+# If we reach here, preflight_passed is true and database is reachable
+
+# Verify InSpec is available
+- name: Verify InSpec binary
+  shell: |
+    export PATH="{{ _postgres_env.PATH }}"
+    command -v inspec
+  args:
+    executable: /bin/bash
+  register: _inspec_check
+  changed_when: false
+  failed_when: _inspec_check.rc != 0
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Set InSpec path
+  set_fact:
+    _inspec_bin: "{{ _inspec_check.stdout | trim }}"
+
+# Execute InSpec profile (contains all controls)
+- name: Execute InSpec profile
+  shell: |
+    export PATH="{{ _postgres_env.PATH }}"
+    export CHEF_LICENSE=accept
+    export PGPASSWORD='{{ postgres_password }}'
+
+    "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
+      --input pg_user='{{ postgres_username }}' \
+              pg_password='{{ postgres_password }}' \
+              pg_host='{{ postgres_server }}' \
+              pg_port='{{ postgres_port }}' \
+              pg_database='{{ postgres_database }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  register: _inspec_profile_result
+  changed_when: false
+  failed_when: _inspec_profile_result.rc not in [0, 100, 101]
+  no_log: true
+  delegate_to: "{{ _delegate_host }}"
+
+# Convert single result to list for compatibility with downstream tasks
+- name: Wrap InSpec result for processing
+  set_fact:
+    inspec_results:
+      results:
+        - stdout: "{{ _inspec_profile_result.stdout }}"
+          rc: "{{ _inspec_profile_result.rc }}"
+          item:
+            path: "{{ _remote_controls_path }}"
+
+# Parse and display results
+# Note: stdout may already be parsed as dict by Jinja2, or may be a string
+- name: Parse InSpec results
+  set_fact:
+    _parsed_results: "{{ _parsed_results | default([]) + [item.stdout if item.stdout is mapping else (item.stdout | from_json)] }}"
+  loop: "{{ inspec_results.results | default([]) }}"
+  loop_control:
+    label: "{{ item.item.path | basename }}"
+  when: item.stdout is defined and item.stdout != ''
+  no_log: true
+
+- name: Display scan summary
+  debug:
+    msg: |
+      ═══════════════════════════════════════════════════════════════════
+       PostgreSQL InSpec Compliance Scan Results
+       Database: {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }}
+      ═══════════════════════════════════════════════════════════════════
+      {% set ns = namespace(passed=0, failed=0, total=0) %}
+      {% for result in _parsed_results | default([]) %}
+      {% for control in result.controls | default([]) %}
+      {% set res = control.results | default([]) %}
+      {% set status = res[0].status | default(control.status | default('unknown')) %}
+      {% set ns.total = ns.total + 1 %}
+      {% if status == 'passed' %}{% set ns.passed = ns.passed + 1 %}{% elif status == 'failed' %}{% set ns.failed = ns.failed + 1 %}{% endif %}
+      {{ control.id }}: {{ status | upper }} - {{ control.title | default('N/A') | truncate(60) }}
+      {% endfor %}
+      {% endfor %}
+      ───────────────────────────────────────────────────────────────────
+       Total: {{ ns.total }} | Passed: {{ ns.passed }} | Failed: {{ ns.failed }}
+      ═══════════════════════════════════════════════════════════════════
+  when: _parsed_results is defined and (_parsed_results | length) > 0
+
+# Process results for file output
+- name: Process InSpec results
+  include_tasks: process_results.yml
+  loop: "{{ inspec_results.results | default([]) }}"
+  loop_control:
+    index_var: _result_idx
+    label: "Result {{ _result_idx + 1 }}"
+  when: inspec_results.results is defined

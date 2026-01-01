@@ -1,0 +1,150 @@
+---
+# Pre-flight connectivity checks for PostgreSQL InSpec role
+# =========================================================
+# Validates database connectivity before running InSpec scans.
+# Sets facts to skip execution if database is unreachable or auth fails.
+
+- name: Initialize preflight results
+  set_fact:
+    preflight_passed: false
+    preflight_skip_reason: ""
+    preflight_error_code: ""
+    _preflight_port_open: false
+    _preflight_auth_valid: false
+
+# Step 1: TCP Port Connectivity Check
+- name: Test TCP port connectivity
+  wait_for:
+    host: "{{ postgres_server }}"
+    port: "{{ postgres_port }}"
+    timeout: "{{ preflight_port_timeout | default(5) }}"
+    state: started
+  register: _port_check
+  ignore_errors: true
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Set port connectivity result
+  set_fact:
+    _preflight_port_open: "{{ _port_check is succeeded }}"
+    preflight_skip_reason: "{{ 'Connection timeout - port ' ~ postgres_port ~ ' unreachable on ' ~ postgres_server if _port_check is failed else '' }}"
+    preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
+
+# Step 2: Authentication Check (only if port is open)
+# Uses psql to test PostgreSQL connectivity
+- name: Test database authentication with psql
+  shell: |
+    # Build PATH with common PostgreSQL locations
+    export PATH="{{ postgres_tools_paths | default(['/usr/bin', '/usr/local/bin', '/usr/pgsql-15/bin']) | join(':') }}:/usr/local/bin:/usr/bin:/bin"
+
+    # Find psql binary
+    PSQL=$(command -v psql 2>/dev/null)
+    if [ -z "$PSQL" ]; then
+      echo "PSQL_NOT_FOUND"
+      exit 127
+    fi
+
+    # Set password via environment variable (secure)
+    export PGPASSWORD='{{ postgres_password }}'
+
+    # Test connection with simple query
+    timeout {{ preflight_auth_timeout | default(10) }} "$PSQL" \
+      -h '{{ postgres_server }}' \
+      -p '{{ postgres_port }}' \
+      -U '{{ postgres_username }}' \
+      -d '{{ postgres_database }}' \
+      -c "SELECT 'PREFLIGHT_OK' AS status" -t -q 2>&1
+
+    exit $?
+  args:
+    executable: /bin/bash
+  register: _auth_check
+  ignore_errors: true
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
+  delegate_to: "{{ _delegate_host }}"
+  when: _preflight_port_open
+
+- name: Parse authentication result
+  set_fact:
+    _preflight_auth_valid: "{{ _auth_check.rc == 0 and 'PREFLIGHT_OK' in (_auth_check.stdout | default('')) if _auth_check is defined else false }}"
+    _auth_error_msg: >-
+      {%- if _auth_check is skipped -%}
+      Port check failed - skipped auth test
+      {%- elif _auth_check.rc | default(0) == 127 -%}
+      psql not found on execution host
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      Authentication timeout after {{ preflight_auth_timeout | default(10) }}s
+      {%- elif 'password authentication failed' in (_auth_check.stdout | default('')) or 'password authentication failed' in (_auth_check.stderr | default('')) -%}
+      Invalid username/password
+      {%- elif 'no pg_hba.conf entry' in (_auth_check.stdout | default('')) or 'no pg_hba.conf entry' in (_auth_check.stderr | default('')) -%}
+      Host not allowed (pg_hba.conf)
+      {%- elif 'could not connect to server' in (_auth_check.stdout | default('')) or 'could not connect to server' in (_auth_check.stderr | default('')) -%}
+      Could not connect to server
+      {%- elif 'connection refused' in (_auth_check.stdout | default('') | lower) or 'connection refused' in (_auth_check.stderr | default('') | lower) -%}
+      Connection refused
+      {%- elif 'does not exist' in (_auth_check.stdout | default('')) -%}
+      Database does not exist
+      {%- elif 'role' in (_auth_check.stdout | default('')) and 'does not exist' in (_auth_check.stdout | default('')) -%}
+      Role/user does not exist
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      Database connection failed (exit code: {{ _auth_check.rc | default('unknown') }})
+      {%- else -%}
+      {%- endif -%}
+  when: _preflight_port_open
+
+- name: Set authentication error details
+  set_fact:
+    preflight_skip_reason: "{{ _auth_error_msg }}"
+    preflight_error_code: >-
+      {%- if _auth_check.rc | default(0) == 127 -%}
+      PSQL_NOT_FOUND
+      {%- elif _auth_check.rc | default(0) == 124 -%}
+      AUTH_TIMEOUT
+      {%- elif 'password authentication failed' in (_auth_check.stdout | default('')) or 'password authentication failed' in (_auth_check.stderr | default('')) -%}
+      AUTH_FAILED
+      {%- elif 'no pg_hba.conf entry' in (_auth_check.stdout | default('')) or 'no pg_hba.conf entry' in (_auth_check.stderr | default('')) -%}
+      HOST_NOT_ALLOWED
+      {%- elif 'could not connect to server' in (_auth_check.stdout | default('')) or 'connection refused' in (_auth_check.stdout | default('') | lower) -%}
+      CONNECTION_REFUSED
+      {%- elif 'does not exist' in (_auth_check.stdout | default('')) -%}
+      DB_NOT_FOUND
+      {%- elif _auth_check.rc | default(0) != 0 -%}
+      CONNECTION_ERROR
+      {%- else -%}
+      {%- endif -%}
+  when:
+    - _preflight_port_open
+    - not _preflight_auth_valid
+
+# Step 3: Set final preflight result
+- name: Set final preflight status
+  set_fact:
+    preflight_passed: "{{ _preflight_port_open and _preflight_auth_valid }}"
+
+- name: Log preflight success
+  debug:
+    msg: "Preflight PASSED - {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }} is reachable and authenticated"
+  when:
+    - preflight_passed
+    - inspec_debug_mode | default(false)
+
+- name: Log preflight failure
+  debug:
+    msg: "Preflight FAILED - {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
+  when:
+    - not preflight_passed
+    - inspec_debug_mode | default(false)
+
+# Step 4: Register this database in the scan results tracker
+- name: Register database scan attempt
+  set_fact:
+    _db_scan_record:
+      host: "{{ postgres_server }}"
+      port: "{{ postgres_port }}"
+      database: "{{ postgres_database }}"
+      db_type: "postgresql"
+      version: "{{ postgres_version }}"
+      preflight_passed: "{{ preflight_passed }}"
+      skip_reason: "{{ preflight_skip_reason }}"
+      error_code: "{{ preflight_error_code }}"
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      inventory_host: "{{ inventory_hostname }}"

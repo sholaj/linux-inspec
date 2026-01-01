@@ -25,6 +25,7 @@
         paths: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
         patterns: "*.rb"
         file_type: file
+        recurse: true
       register: oracle_control_files_raw
 
     - name: Cache Oracle control files for execution tasks

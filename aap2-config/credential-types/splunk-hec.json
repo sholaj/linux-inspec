@@ -1,0 +1,43 @@
+{
+  "name": "Splunk HEC Credential",
+  "description": "Splunk HTTP Event Collector credentials for forwarding compliance scan results",
+  "kind": "cloud",
+  "inputs": {
+    "fields": [
+      {
+        "id": "hec_url",
+        "type": "string",
+        "label": "Splunk HEC URL",
+        "help_text": "Full URL including port (e.g., https://splunk.example.com:8088)"
+      },
+      {
+        "id": "hec_token",
+        "type": "string",
+        "label": "HEC Token",
+        "secret": true,
+        "help_text": "Splunk HEC authentication token"
+      },
+      {
+        "id": "index",
+        "type": "string",
+        "label": "Splunk Index",
+        "default": "compliance_scans",
+        "help_text": "Target index for compliance scan results"
+      }
+    ],
+    "required": ["hec_url", "hec_token"]
+  },
+  "injectors": {
+    "env": {
+      "SPLUNK_HEC_URL": "{{ hec_url }}",
+      "SPLUNK_HEC_TOKEN": "{{ hec_token }}",
+      "SPLUNK_INDEX": "{{ index | default('compliance_scans') }}"
+    },
+    "extra_vars": {
+      "splunk_hec_url": "{{ hec_url }}",
+      "splunk_hec_token": "{{ hec_token }}",
+      "splunk_index": "{{ index | default('compliance_scans') }}",
+      "send_to_splunk": true
+    }
+  }
+}

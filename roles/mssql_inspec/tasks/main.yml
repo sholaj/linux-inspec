@@ -1,47 +1,105 @@
 ---
-# Main task file for MSSQL InSpec role
-# Following Ansible best practices with include_tasks
+# MSSQL InSpec Role - Main Task File
+# ===================================
+#
+# EXECUTION MODES:
+# 1. Localhost Mode: inspec_delegate_host is empty, undefined, or "localhost"
+#    - InSpec runs on the Ansible control node
+#    - Control files are used directly from role_path
+#
+# 2. Delegate Mode: inspec_delegate_host is set to a remote hostname
+#    - InSpec runs on the remote delegate host
+#    - Control files are copied to the delegate host
+#    - Results are fetched back to the control node
+#
+# PRE-FLIGHT CHECKS:
+# Before running InSpec, the role validates:
+# 1. TCP port connectivity (configurable timeout)
+# 2. Database authentication (configurable timeout)
+# If either fails, the database is skipped and reported.
 
-- name: Validate MSSQL connection parameters and environment
-  include_tasks: validate.yml
-
-- name: Copy control files to delegate host (when using remote delegate)
-  block:
-    - name: Create temporary directory for control files on delegate host
-      tempfile:
-        state: directory
-        suffix: "_mssql_controls"
-      register: delegate_controls_dir
-      delegate_to: "{{ inspec_delegate_host }}"
-
-    - name: Copy MSSQL control files to delegate host
-      copy:
-        src: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby/"
-        dest: "{{ delegate_controls_dir.path }}/MSSQL{{ mssql_version }}_ruby/"
-        mode: '0755'
-      delegate_to: "{{ inspec_delegate_host }}"
-
-    - name: Set control files location for delegate host
-      set_fact:
-        mssql_controls_path: "{{ delegate_controls_dir.path }}"
-  when:
-    - inspec_delegate_host is defined
-    - inspec_delegate_host | length > 0
-    - inspec_delegate_host != 'localhost'
-
-- name: Set control files location for local execution
+# Step 1: Determine execution mode (set once, use everywhere)
+- name: Determine execution mode
   set_fact:
-    mssql_controls_path: "{{ role_path }}/files"
-  when: >
-    inspec_delegate_host is not defined or
-    inspec_delegate_host | length == 0 or
-    inspec_delegate_host == 'localhost'
+    # Use delegate if a remote host is specified (not empty, not 'localhost', not inventory_hostname)
+    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
+    # Delegate host: remote host if specified, otherwise run on inventory host
+    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] else inventory_hostname }}"
+    _timestamp: "{{ ansible_date_time.epoch }}"
+  tags: always
 
-- name: Setup directories and find control files
+- name: Display execution mode
+  debug:
+    msg: "Execution mode: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate else 'LOCALHOST (target host)' }}"
+  when: inspec_debug_mode | default(false)
+  tags: always
+
+# Step 2: Validate parameters
+- name: Validate MSSQL connection parameters
+  include_tasks: validate.yml
+  tags: always
+
+# Step 3: Pre-flight connectivity checks
+- name: Run pre-flight connectivity checks
+  include_tasks: preflight.yml
+  when: preflight_enabled | default(true)
+  tags: [preflight, always]
+
+# Step 3b: Skip preflight - set passed if disabled
+- name: Skip preflight - assume passed
+  set_fact:
+    preflight_passed: true
+    preflight_skip_reason: ""
+    preflight_error_code: ""
+    _db_scan_record:
+      host: "{{ mssql_server }}"
+      port: "{{ mssql_port }}"
+      database: "{{ mssql_database }}"
+      db_type: "mssql"
+      version: "{{ mssql_version }}"
+      preflight_passed: true
+      skip_reason: ""
+      error_code: ""
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      inventory_host: "{{ inventory_hostname }}"
+  when: not (preflight_enabled | default(true))
+  tags: always
+
+# Step 4: Handle preflight failure
+- name: Handle preflight failure
+  block:
+    - name: Display skip notification
+      debug:
+        msg: |
+          ╔══════════════════════════════════════════════════════════════════╗
+          ║  SKIPPING DATABASE - Pre-flight check failed                     ║
+          ╠══════════════════════════════════════════════════════════════════╣
+          ║  Server:   {{ mssql_server }}:{{ mssql_port }}
+          ║  Database: {{ mssql_database }}
+          ║  Reason:   {{ preflight_skip_reason }}
+          ║  Code:     {{ preflight_error_code }}
+          ╚══════════════════════════════════════════════════════════════════╝
+
+    - name: Fail if continue_on_failure is disabled
+      fail:
+        msg: "Pre-flight check failed for {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}: {{ preflight_skip_reason }}"
+      when: not (preflight_continue_on_failure | default(true))
+  when: not preflight_passed
+  tags: always
+
+# Step 5: Setup - prepare directories and control files (only if preflight passed)
+- name: Setup execution environment
   include_tasks: setup.yml
+  when: preflight_passed
+  tags: setup
 
-- name: Execute InSpec controls and process results
+# Step 6: Execute InSpec scans (only if preflight passed)
+- name: Execute InSpec compliance scans
   include_tasks: execute.yml
+  when: preflight_passed
+  tags: execute
 
+# Step 7: Cleanup and reporting (always runs - reports skipped databases too)
 - name: Generate reports and cleanup
   include_tasks: cleanup.yml
+  tags: cleanup

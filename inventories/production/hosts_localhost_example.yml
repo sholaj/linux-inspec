@@ -1,143 +1,64 @@
-# Production Inventory – Database Compliance Scanning (LOCALHOST EXECUTION MODE)
-# This demonstrates correct inventory structure for local/direct execution
-# InSpec runs directly on AAP2 execution environment (no jump server)
+---
+# Production Inventory - LOCALHOST MODE Example
+# InSpec runs directly on the target host (AAP execution node)
 
 all:
-  ###########################################################################
-  # NO DELEGATE HOST NEEDED FOR LOCAL EXECUTION
-  # Comment out or remove the hosts section if running locally
-  ###########################################################################
-  # hosts:
-  #   inspec-runner:
-  #     ansible_host: jumphost.example.com
-  #     ansible_connection: ssh
-  #     ansible_user: ansible_service
+  # No delegate host needed for localhost mode
 
   children:
-    ###########################################################################
-    # MSSQL Database Servers
-    ###########################################################################
     mssql_databases:
-      vars:
-        # CRITICAL: Set to "localhost" or "" or leave undefined for local execution
-        inspec_delegate_host: "localhost" # Local execution mode
-        inspec_command_timeout: 1800
-        inspec_debug_mode: false
-
       hosts:
-        # MSSQL Server 1 (Non-standard port)
-        MSSQL_DB01_1733:
-          mssql_server: mssqldb01.example.com # Database must be reachable from AAP2
-          mssql_port: 1733
-          mssql_version: "2019"
-          mssql_username: "scan_user" # Injected by AAP2 credential
-          # mssql_password: injected by AAP2 Custom Credential at runtime
-          mssql_service: ""
-
-        # MSSQL Server 2 (Standard port)
-        MSSQL_DB01_1433:
-          mssql_server: mssqldb01.example.com
+        SQLPROD01_1433:
+          mssql_server: sqlprod01.example.com
           mssql_port: 1433
           mssql_version: "2019"
-          mssql_username: "scan_user"
-          mssql_service: ""
 
-        # MSSQL Server 3
-        MSSQL_DB02_1433:
-          mssql_server: mssqldb02.example.com
+        SQLPROD02_1433:
+          mssql_server: sqlprod02.example.com
           mssql_port: 1433
           mssql_version: "2017"
-          mssql_username: "scan_user"
 
-    ###########################################################################
-    # Oracle Database Servers
-    ###########################################################################
-    oracle_databases:
+        SQLTEST01_1500:
+          mssql_server: sqltest01.example.com
+          mssql_port: 1500
+          mssql_version: "2019"
+
       vars:
-        inspec_delegate_host: "localhost" # Local execution mode
-        inspec_command_timeout: 1800
+        # LOCALHOST MODE: Empty or "localhost"
+        inspec_delegate_host: ""
+        mssql_username: nist_scan_user
+        # mssql_password: injected by AAP2 Custom Credential
+        inspec_results_dir: /tmp/inspec_mssql_results
+        inspec_debug_mode: false
+        generate_summary_report: true
 
+    oracle_databases:
       hosts:
-        ORACLE_PROD_1521:
-          oracle_server: oracledb01.example.com
+        ORAPROD01_1521:
+          oracle_server: oraprod01.example.com
           oracle_port: 1521
           oracle_service: ORCL
-          oracle_version: "19c"
-          oracle_username: "scan_user"
+          oracle_version: "19"
 
-        ORACLE_PROD_1522:
-          oracle_server: oracledb01.example.com
-          oracle_port: 1522
-          oracle_service: ORCLPDB
-          oracle_version: "19c"
-          oracle_username: "scan_user"
-
-    ###########################################################################
-    # Sybase Database Servers
-    ###########################################################################
-    sybase_databases:
       vars:
-        inspec_delegate_host: "localhost" # Local execution mode
-        inspec_command_timeout: 1800
-        sybase_use_ssh: false
+        inspec_delegate_host: ""
+        oracle_username: nist_scan_user
 
+    sybase_databases:
       hosts:
-        SYBASE_PROD_5000:
-          sybase_server: sybasedb01.example.com
+        SYBPROD01_5000:
+          sybase_server: sybprod01.example.com
           sybase_port: 5000
-          sybase_version: "16.0"
-          sybase_username: "scan_user"
-          sybase_database: "master"
-###############################################################################
-# KEY CONCEPTS FOR LOCALHOST MODE:
-###############################################################################
-#
-# 1. EXECUTION ENVIRONMENT:
-#    - InSpec runs directly in AAP2 execution environment (EE)
-#    - No SSH connection to delegate host
-#    - Database tools must be available in EE container:
-#      * /opt/mssql-tools/bin/sqlcmd for MSSQL
-#      * /opt/oracle-ic/bin/sqlplus for Oracle
-#      * /opt/sybase/bin/isql for Sybase
-#
-# 2. NETWORK REQUIREMENTS:
-#    - AAP2 execution node must have network access to all databases
-#    - Database ports must be reachable from AAP2
-#    - Firewall rules must allow AAP2 → Database connections
-#
-# 3. HOSTVARS RESOLUTION:
-#    - hostvars['localhost'] ✅ CORRECT (always available)
-#    - inspec_execution_target = 'localhost'
-#    - ansible_env gathered from localhost (EE container)
-#
-# 4. CREDENTIALS:
-#    - Only database credentials needed (mssql_username/mssql_password, etc.)
-#    - No ansible_user/ansible_password needed (no SSH connection)
-#    - All credentials injected by AAP2 Custom Credential at runtime
-#
-# 5. ADVANTAGES:
-#    - Simpler architecture (no jump server needed)
-#    - Faster execution (no SSH overhead)
-#    - Easier troubleshooting (fewer moving parts)
-#
-# 6. DISADVANTAGES:
-#    - Requires network connectivity from AAP2 to all databases
-#    - May require firewall changes
-#    - Less isolation (InSpec runs in AAP2 environment)
-#
-###############################################################################
+          sybase_version: "16"
 
-###############################################################################
-# SWITCHING BETWEEN MODES:
-###############################################################################
-# To switch from LOCALHOST to DELEGATE mode:
-# 1. Uncomment the all.hosts.inspec-runner section at top
-# 2. Change inspec_delegate_host: "localhost" → "inspec-runner"
-# 3. Ensure ansible_user and SSH credentials are configured
-# 4. Verify delegate host has database tools installed
-#
-# To switch from DELEGATE to LOCALHOST mode:
-# 1. Change inspec_delegate_host: "inspec-runner" → "localhost"
-# 2. Verify AAP2 EE has database tools installed
-# 3. Verify network connectivity from AAP2 to databases
-###############################################################################
+      vars:
+        inspec_delegate_host: ""
+        sybase_username: nist_scan_user
+        sybase_use_ssh: true
+        sybase_ssh_user: sybase_admin
+
+# LOCALHOST MODE:
+# - InSpec runs on the inventory target host
+# - Control files are copied from Ansible controller to target
+# - Database must be reachable from target host
+# - Simpler setup, no SSH to delegate needed

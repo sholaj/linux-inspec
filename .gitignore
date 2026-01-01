@@ -1,6 +1,7 @@
 # Project-specific files
 claude.md
 CLAUDE.md
+.claude/
 categories/
 .hidden/
 
@@ -80,3 +81,17 @@ tmp/
 temp/
 *.tmp
 *.temp
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/tfplan
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+
+# Ansible logs
+logs/
+
+# Vault password
+.vaultpass
+test_results/
