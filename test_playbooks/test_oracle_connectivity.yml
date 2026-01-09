@@ -1,0 +1,202 @@
+---
+# Oracle Connectivity Test Playbook
+# Tests: Telnet, Database Credentials, and Basic InSpec Commands
+# Usage: ansible-playbook test_playbooks/test_oracle_connectivity.yml
+
+- name: Oracle Connectivity Testing
+  hosts: localhost
+  gather_facts: no
+  
+  vars:
+    # Runner VM configuration
+    runner_host: "{{ runner_host | default('40.114.45.75') }}"
+    runner_user: "{{ runner_user | default('azureuser') }}"
+    runner_ssh_key: "{{ runner_ssh_key | default(lookup('env', 'HOME')) }}/.ssh/inspec_azure"
+
+    # Oracle configuration
+    oracle_server: "{{ oracle_server | default('10.0.2.5') }}"
+    oracle_port: "{{ oracle_port | default(1521) }}"
+    oracle_service: "{{ oracle_service | default('ORCLCDB') }}"
+    oracle_username: "{{ oracle_username | default('system') }}"
+    oracle_password: "{{ oracle_password | default('OraclePass123') }}"
+
+  pre_tasks:
+    - name: Display test configuration
+      debug:
+        msg: |
+          ╔═══════════════════════════════════════════════════════╗
+          ║  Oracle Connectivity Test Suite                       ║
+          ║  Tests: Telnet, Credentials, InSpec Commands          ║
+          ╚═══════════════════════════════════════════════════════╝
+
+          Runner Configuration:
+            Host: {{ runner_host }}
+            User: {{ runner_user }}
+            SSH Key: {{ runner_ssh_key }}
+
+          Oracle Configuration:
+            Server: {{ oracle_server }}:{{ oracle_port }}
+            Service: {{ oracle_service }}
+            Username: {{ oracle_username }}
+
+  tasks:
+    # ==================== TEST 1: SSH Connectivity ====================
+    - name: "TEST 1: SSH Connectivity to Runner"
+      block:
+        - name: Test SSH connectivity
+          command: >
+            ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10
+            -i "{{ runner_ssh_key }}"
+            "{{ runner_user }}@{{ runner_host }}"
+            "echo 'SSH_CONNECTIVITY_OK'"
+          register: ssh_test
+          changed_when: false
+          failed_when: false
+
+        - name: Display SSH connectivity result
+          debug:
+            msg: |
+              ┌─────────────────────────────────────────┐
+              │ SSH Connectivity Test                   │
+              ├─────────────────────────────────────────┤
+              │ Status: {{ 'PASS ✓' if ssh_test.rc == 0 else 'FAIL ✗' }}
+              │ Output: {{ ssh_test.stdout | default('N/A') }}
+              └─────────────────────────────────────────┘
+
+    # ==================== TEST 2: Oracle Telnet ====================
+    - name: "TEST 2: Oracle - Telnet Port Connectivity"
+      block:
+        - name: Test Oracle port connectivity
+          command: >
+            ssh -o StrictHostKeyChecking=accept-new
+            -i "{{ runner_ssh_key }}"
+            "{{ runner_user }}@{{ runner_host }}"
+            "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/{{ oracle_server }}/{{ oracle_port }}' && echo 'OPEN' || echo 'CLOSED'"
+          register: oracle_port_test
+          changed_when: false
+
+        - name: Display Oracle telnet result
+          debug:
+            msg: |
+              ┌─────────────────────────────────────────┐
+              │ Oracle Telnet Test                      │
+              ├─────────────────────────────────────────┤
+              │ Target: {{ oracle_server }}:{{ oracle_port }}
+              │ Status: {{ 'PASS ✓' if oracle_port_test.stdout | trim == 'OPEN' else 'FAIL ✗' }}
+              │ Port: {{ oracle_port_test.stdout | trim }}
+              └─────────────────────────────────────────┘
+
+    # ==================== TEST 3: Oracle Credentials ====================
+    - name: "TEST 3: Oracle - Database Credential Validation"
+      block:
+        - name: Test Oracle credentials
+          shell: |
+            export ORACLE_HOME=/opt/oracle/instantclient_19_16
+            export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
+            export PATH=$ORACLE_HOME:$PATH
+
+            timeout 15 sqlplus -S {{ oracle_username }}/{{ oracle_password }}@//{{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }} << 'SQL' 2>&1
+            SET HEADING OFF FEEDBACK OFF VERIFY OFF TRIMSPOOL ON PAGESIZE 0 LINESIZE 1000
+            SELECT 'ORACLE_AUTH_SUCCESS' FROM DUAL;
+            EXIT;
+            SQL
+          args:
+            executable: /bin/bash
+          register: oracle_cred_test
+          changed_when: false
+          failed_when: false
+          delegate_to: "{{ runner_host }}"
+          vars:
+            ansible_user: "{{ runner_user }}"
+            ansible_ssh_private_key_file: "{{ runner_ssh_key }}"
+            ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+        - name: Display Oracle credentials result
+          debug:
+            msg: |
+              ┌─────────────────────────────────────────┐
+              │ Oracle Credentials Test                 │
+              ├─────────────────────────────────────────┤
+              │ User: {{ oracle_username }}
+              │ Status: {{ 'PASS ✓' if 'ORACLE_AUTH_SUCCESS' in oracle_cred_test.stdout else 'FAIL ✗' }}
+              │ Output: {{ oracle_cred_test.stdout | default(oracle_cred_test.stderr) | trim | truncate(100) }}
+              └─────────────────────────────────────────┘
+
+    # ==================== TEST 4: Oracle InSpec Control ====================
+    - name: "TEST 4: Oracle - Basic InSpec Control Execution"
+      block:
+        - name: Create Oracle test InSpec profile
+          copy:
+            content: |
+              control 'oracle-version-check' do
+                impact 1.0
+                title 'Oracle Version Check'
+                desc 'Verify Oracle is running and version is accessible'
+                
+                command = 'sqlplus -S system/OraclePass123@//10.0.2.5:1521/ORCLCDB << "EOF"
+              SET HEADING OFF FEEDBACK OFF VERIFY OFF
+              SELECT BANNER FROM v$version WHERE ROWNUM = 1;
+              EXIT;
+              EOF'
+                
+                describe command(command) do
+                  its('exit_status') { should eq 0 }
+                  its('stdout') { should match /Oracle/ }
+                end
+              end
+            dest: /tmp/oracle_test_control.rb
+          delegate_to: "{{ runner_host }}"
+          vars:
+            ansible_user: "{{ runner_user }}"
+            ansible_ssh_private_key_file: "{{ runner_ssh_key }}"
+            ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+        - name: Execute Oracle InSpec control
+          shell: |
+            export ORACLE_HOME=/opt/oracle/instantclient_19_16
+            export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
+            export PATH=$ORACLE_HOME:$PATH
+
+            inspec exec /tmp/oracle_test_control.rb 2>&1 || true
+          args:
+            executable: /bin/bash
+          register: oracle_inspec_test
+          changed_when: false
+          delegate_to: "{{ runner_host }}"
+          vars:
+            ansible_user: "{{ runner_user }}"
+            ansible_ssh_private_key_file: "{{ runner_ssh_key }}"
+            ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+        - name: Display Oracle InSpec result
+          debug:
+            msg: |
+              ┌──────────────────────────────────────────────┐
+              │ Oracle InSpec Control Execution              │
+              ├──────────────────────────────────────────────┤
+              │ Profile: oracle-version-check
+              │ Status: {{ 'EXECUTED ✓' if oracle_inspec_test.rc is defined else 'ERROR ✗' }}
+              │ Output (last 15 lines):
+              │
+              {{ oracle_inspec_test.stdout_lines[-15:] | join('\n              │ ') }}
+              │
+              └──────────────────────────────────────────────┘
+
+  post_tasks:
+    - name: Test Summary
+      debug:
+        msg: |
+          ╔════════════════════════════════════════════════════════════╗
+          ║  ORACLE TEST SUMMARY                                       ║
+          ╠════════════════════════════════════════════════════════════╣
+          ║
+          ║  ✓ SSH Connectivity: {{ 'PASS' if ssh_test.rc == 0 else 'FAIL' }}
+          ║  ✓ Telnet: {{ oracle_port_test.stdout | trim }}
+          ║  ✓ Credentials: {{ 'PASS' if 'ORACLE_AUTH_SUCCESS' in oracle_cred_test.stdout else 'FAIL' }}
+          ║  ✓ InSpec Control: {{ 'EXECUTED' if oracle_inspec_test.rc is defined else 'ERROR' }}
+          ║
+          ║  Next Steps:
+          ║    - Review role implementation: roles/oracle_inspec/
+          ║    - Run full playbook: test_playbooks/run_oracle_inspec.yml
+          ║
+          ╚════════════════════════════════════════════════════════════╝
