@@ -1,0 +1,198 @@
+---
+# Sybase Connectivity Test Playbook
+# Tests: Telnet, Database Credentials, and Basic InSpec Commands
+# Usage: ansible-playbook test_playbooks/test_sybase_connectivity.yml
+
+- name: Sybase Connectivity Testing
+  hosts: localhost
+  gather_facts: no
+  
+  vars:
+    # Runner VM configuration
+    runner_host: "{{ runner_host | default('40.114.45.75') }}"
+    runner_user: "{{ runner_user | default('azureuser') }}"
+    runner_ssh_key: "{{ runner_ssh_key | default(lookup('env', 'HOME')) }}/.ssh/inspec_azure"
+
+    # Sybase configuration
+    sybase_server: "{{ sybase_server | default('10.0.2.6') }}"
+    sybase_port: "{{ sybase_port | default(5000) }}"
+    sybase_username: "{{ sybase_username | default('sa') }}"
+    sybase_password: "{{ sybase_password | default('SybasePass123') }}"
+
+  pre_tasks:
+    - name: Display test configuration
+      debug:
+        msg: |
+          ╔═══════════════════════════════════════════════════════╗
+          ║  Sybase Connectivity Test Suite                       ║
+          ║  Tests: Telnet, Credentials, InSpec Commands          ║
+          ╚═══════════════════════════════════════════════════════╝
+
+          Runner Configuration:
+            Host: {{ runner_host }}
+            User: {{ runner_user }}
+            SSH Key: {{ runner_ssh_key }}
+
+          Sybase Configuration:
+            Server: {{ sybase_server }}:{{ sybase_port }}
+            Username: {{ sybase_username }}
+
+  tasks:
+    # ==================== TEST 1: SSH Connectivity ====================
+    - name: "TEST 1: SSH Connectivity to Runner"
+      block:
+        - name: Test SSH connectivity
+          command: >
+            ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10
+            -i "{{ runner_ssh_key }}"
+            "{{ runner_user }}@{{ runner_host }}"
+            "echo 'SSH_CONNECTIVITY_OK'"
+          register: ssh_test
+          changed_when: false
+          failed_when: false
+
+        - name: Display SSH connectivity result
+          debug:
+            msg: |
+              ┌─────────────────────────────────────────┐
+              │ SSH Connectivity Test                   │
+              ├─────────────────────────────────────────┤
+              │ Status: {{ 'PASS ✓' if ssh_test.rc == 0 else 'FAIL ✗' }}
+              │ Output: {{ ssh_test.stdout | default('N/A') }}
+              └─────────────────────────────────────────┘
+
+    # ==================== TEST 2: Sybase Telnet ====================
+    - name: "TEST 2: Sybase - Telnet Port Connectivity"
+      block:
+        - name: Test Sybase port connectivity
+          command: >
+            ssh -o StrictHostKeyChecking=accept-new
+            -i "{{ runner_ssh_key }}"
+            "{{ runner_user }}@{{ runner_host }}"
+            "timeout 5 bash -c 'cat < /dev/null > /dev/tcp/{{ sybase_server }}/{{ sybase_port }}' && echo 'OPEN' || echo 'CLOSED'"
+          register: sybase_port_test
+          changed_when: false
+
+        - name: Display Sybase telnet result
+          debug:
+            msg: |
+              ┌─────────────────────────────────────────┐
+              │ Sybase Telnet Test                      │
+              ├─────────────────────────────────────────┤
+              │ Target: {{ sybase_server }}:{{ sybase_port }}
+              │ Status: {{ 'PASS ✓' if sybase_port_test.stdout | trim == 'OPEN' else 'FAIL ✗' }}
+              │ Port: {{ sybase_port_test.stdout | trim }}
+              └─────────────────────────────────────────┘
+
+    # ==================== TEST 3: Sybase Credentials ====================
+    - name: "TEST 3: Sybase - Database Credential Validation"
+      block:
+        - name: Test Sybase credentials
+          shell: |
+            source /opt/sap/SYBASE.sh 2>/dev/null || true
+            export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
+
+            timeout 15 tsql -S {{ sybase_server }} -U {{ sybase_username }} -P {{ sybase_password }} << 'SQL' 2>&1
+            SELECT '1' as SYBASE_AUTH_SUCCESS
+            GO
+            quit
+            SQL
+          args:
+            executable: /bin/bash
+          register: sybase_cred_test
+          changed_when: false
+          failed_when: false
+          delegate_to: "{{ runner_host }}"
+          vars:
+            ansible_user: "{{ runner_user }}"
+            ansible_ssh_private_key_file: "{{ runner_ssh_key }}"
+            ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+        - name: Display Sybase credentials result
+          debug:
+            msg: |
+              ┌─────────────────────────────────────────┐
+              │ Sybase Credentials Test                 │
+              ├─────────────────────────────────────────┤
+              │ User: {{ sybase_username }}
+              │ Status: {{ 'PASS ✓' if '1' in sybase_cred_test.stdout else 'FAIL ✗' }}
+              │ Output: {{ sybase_cred_test.stdout | default(sybase_cred_test.stderr) | trim | truncate(100) }}
+              └─────────────────────────────────────────┘
+
+    # ==================== TEST 4: Sybase InSpec Control ====================
+    - name: "TEST 4: Sybase - Basic InSpec Control Execution"
+      block:
+        - name: Create Sybase test InSpec profile
+          copy:
+            content: |
+              control 'sybase-version-check' do
+                impact 1.0
+                title 'Sybase Version Check'
+                desc 'Verify Sybase is running and version is accessible'
+                
+                command = 'tsql -S 10.0.2.6 -U sa -P SybasePass123 << "EOF"
+              SELECT @@version as SYBASE_VERSION
+              GO
+              quit
+              EOF'
+                
+                describe command(command) do
+                  its('exit_status') { should eq 0 }
+                  its('stdout') { should match /Adaptive|Server|Version/ }
+                end
+              end
+            dest: /tmp/sybase_test_control.rb
+          delegate_to: "{{ runner_host }}"
+          vars:
+            ansible_user: "{{ runner_user }}"
+            ansible_ssh_private_key_file: "{{ runner_ssh_key }}"
+            ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+        - name: Execute Sybase InSpec control
+          shell: |
+            source /opt/sap/SYBASE.sh 2>/dev/null || true
+            export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
+
+            inspec exec /tmp/sybase_test_control.rb 2>&1 || true
+          args:
+            executable: /bin/bash
+          register: sybase_inspec_test
+          changed_when: false
+          delegate_to: "{{ runner_host }}"
+          vars:
+            ansible_user: "{{ runner_user }}"
+            ansible_ssh_private_key_file: "{{ runner_ssh_key }}"
+            ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+        - name: Display Sybase InSpec result
+          debug:
+            msg: |
+              ┌──────────────────────────────────────────────┐
+              │ Sybase InSpec Control Execution              │
+              ├──────────────────────────────────────────────┤
+              │ Profile: sybase-version-check
+              │ Status: {{ 'EXECUTED ✓' if sybase_inspec_test.rc is defined else 'ERROR ✗' }}
+              │ Output (last 15 lines):
+              │
+              {{ sybase_inspec_test.stdout_lines[-15:] | join('\n              │ ') }}
+              │
+              └──────────────────────────────────────────────┘
+
+  post_tasks:
+    - name: Test Summary
+      debug:
+        msg: |
+          ╔════════════════════════════════════════════════════════════╗
+          ║  SYBASE TEST SUMMARY                                       ║
+          ╠════════════════════════════════════════════════════════════╣
+          ║
+          ║  ✓ SSH Connectivity: {{ 'PASS' if ssh_test.rc == 0 else 'FAIL' }}
+          ║  ✓ Telnet: {{ sybase_port_test.stdout | trim }}
+          ║  ✓ Credentials: {{ 'PASS' if '1' in sybase_cred_test.stdout else 'FAIL' }}
+          ║  ✓ InSpec Control: {{ 'EXECUTED' if sybase_inspec_test.rc is defined else 'ERROR' }}
+          ║
+          ║  Next Steps:
+          ║    - Review role implementation: roles/sybase_inspec/
+          ║    - Run full playbook: test_playbooks/run_sybase_inspec.yml
+          ║
+          ╚════════════════════════════════════════════════════════════╝
