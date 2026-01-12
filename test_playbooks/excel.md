@@ -56,12 +56,11 @@ function main(
 
 ===============
 /*
- * This script counts how many instances of each version exist.
- * Returns a summary of version counts.
+ * This script counts how many instances of each Version name exist.
  */
 function main(
   workbook: ExcelScript.Workbook,
-  sheetName: string = "Sheet1"
+  sheetName: string = "cmdb_ci_db_mssql_instance"
 ): string {
   // Get the worksheet
   const sheet = workbook.getWorksheet(sheetName);
@@ -69,61 +68,51 @@ function main(
   // Get the entire data range
   const range = sheet.getUsedRange(true);
 
-  // If the used range is empty, end the script
   if (!range) {
-    console.log("No data on this sheet.");
     return "No data found";
   }
 
-  // Get all values in the range
+  // Get all values
   const values = range.getValues();
 
-  // Column C (index 2) contains "Version name"
-  const versionColumnIndex = 2;
+  // Column C (index 2) = "Version name" (2012, 2014, 2005, etc.)
+  const versionNameIndex = 2;
 
-  // Use a Map to count occurrences of each version
+  // Count each version name
   let versionCounts = new Map<string, number>();
 
-  // Start from row 1 to skip header row
+  // Skip header row (start at 1)
   for (let i = 1; i < values.length; i++) {
-    const version = values[i][versionColumnIndex];
+    const versionName = values[i][versionNameIndex];
 
-    // Only count non-empty values
-    if (version !== null && version !== undefined && version.toString().trim() !== "") {
-      const versionStr = version.toString();
-      
-      if (versionCounts.has(versionStr)) {
-        versionCounts.set(versionStr, versionCounts.get(versionStr)! + 1);
-      } else {
-        versionCounts.set(versionStr, 1);
-      }
+    if (versionName !== null && versionName !== undefined && versionName.toString().trim() !== "") {
+      const version = versionName.toString();
+      versionCounts.set(version, (versionCounts.get(version) || 0) + 1);
     }
   }
 
-  // Build summary output
-  let summary = "Version Counts:\n";
-  let totalUniqueVersions = 0;
-
+  // Build summary
+  let summary = "Version Name Counts:\n";
+  summary += "-------------------\n";
+  
   versionCounts.forEach((count, version) => {
     summary += `${version}: ${count} instance(s)\n`;
-    totalUniqueVersions++;
   });
 
-  summary += `\nTotal unique versions: ${totalUniqueVersions}`;
-  summary += `\nTotal instances: ${values.length - 1}`;
+  summary += `-------------------\n`;
+  summary += `Unique versions: ${versionCounts.size}`;
 
   console.log(summary);
   return summary;
 }
 ```
 
-**Output example:**
+**Expected output based on your data:**
 ```
-Version Counts:
+Version Name Counts:
+-------------------
 2012: 4 instance(s)
 2014: 1 instance(s)
 2005: 1 instance(s)
-2008: 1 instance(s)
-
-Total unique versions: 4
-Total instances: 14
+-------------------
+Unique versions: 3
