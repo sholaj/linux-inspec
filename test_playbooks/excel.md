@@ -1,3 +1,19 @@
+/*
+ * This script counts unique values in a specified column, ignoring duplicates.
+ * This script does not affect any pre-existing data in the workbook.
+ */
+function main(
+  workbook: ExcelScript.Workbook,
+  sheetName: string = "Sheet1",
+  columnLetter: string = "C"
+): number {
+  // Get the worksheet named "Sheet1".
+  const sheet = workbook.getWorksheet(sheetName);
+
+  // Get the entire data range.
+  const range = sheet.getUsedRange(true);
+
+  // If the used range is empty, end the script.
   if (!range) {
     console.log("No data on this sheet.");
     return 0;
