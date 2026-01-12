@@ -43,3 +43,87 @@ function main(
   
   return uniqueValues.size;
 }
+
+
+
+
+
+
+
+
+
+
+
+===============
+/*
+ * This script counts how many instances of each version exist.
+ * Returns a summary of version counts.
+ */
+function main(
+  workbook: ExcelScript.Workbook,
+  sheetName: string = "Sheet1"
+): string {
+  // Get the worksheet
+  const sheet = workbook.getWorksheet(sheetName);
+
+  // Get the entire data range
+  const range = sheet.getUsedRange(true);
+
+  // If the used range is empty, end the script
+  if (!range) {
+    console.log("No data on this sheet.");
+    return "No data found";
+  }
+
+  // Get all values in the range
+  const values = range.getValues();
+
+  // Column C (index 2) contains "Version name"
+  const versionColumnIndex = 2;
+
+  // Use a Map to count occurrences of each version
+  let versionCounts = new Map<string, number>();
+
+  // Start from row 1 to skip header row
+  for (let i = 1; i < values.length; i++) {
+    const version = values[i][versionColumnIndex];
+
+    // Only count non-empty values
+    if (version !== null && version !== undefined && version.toString().trim() !== "") {
+      const versionStr = version.toString();
+      
+      if (versionCounts.has(versionStr)) {
+        versionCounts.set(versionStr, versionCounts.get(versionStr)! + 1);
+      } else {
+        versionCounts.set(versionStr, 1);
+      }
+    }
+  }
+
+  // Build summary output
+  let summary = "Version Counts:\n";
+  let totalUniqueVersions = 0;
+
+  versionCounts.forEach((count, version) => {
+    summary += `${version}: ${count} instance(s)\n`;
+    totalUniqueVersions++;
+  });
+
+  summary += `\nTotal unique versions: ${totalUniqueVersions}`;
+  summary += `\nTotal instances: ${values.length - 1}`;
+
+  console.log(summary);
+  return summary;
+}
+```
+
+**Output example:**
+```
+Version Counts:
+2012: 4 instance(s)
+2014: 1 instance(s)
+2005: 1 instance(s)
+2008: 1 instance(s)
+
+Total unique versions: 4
+Total instances: 14
