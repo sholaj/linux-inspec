@@ -231,6 +231,165 @@ oracle_tns_admin: "/path/to/tns"
 sqlplus user/password@TNS_ALIAS
 ```
 
+## Understanding tnsnames.ora (For Junior Engineers)
+
+### What is tnsnames.ora?
+
+`tnsnames.ora` is Oracle's **network configuration file** that maps human-readable database aliases to full connection details. Think of it like a `/etc/hosts` file but for Oracle databases.
+
+**Location:** `$TNS_ADMIN/tnsnames.ora` (typically `$ORACLE_HOME/network/admin/tnsnames.ora`)
+
+### File Structure
+
+```
+# $TNS_ADMIN/tnsnames.ora
+# Each entry is an alias that maps to connection details
+
+ORCLCDB =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 10.0.2.6)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVER = DEDICATED)
+      (SERVICE_NAME = ORCLCDB)
+    )
+  )
+
+# Multiple databases in the same file
+PROD_DB =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = prod-oracle.example.com)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVICE_NAME = PRODDB)
+    )
+  )
+
+# RAC cluster with failover
+CLUSTER_DB =
+  (DESCRIPTION =
+    (ADDRESS_LIST =
+      (ADDRESS = (PROTOCOL = TCP)(HOST = node1.example.com)(PORT = 1521))
+      (ADDRESS = (PROTOCOL = TCP)(HOST = node2.example.com)(PORT = 1521))
+    )
+    (CONNECT_DATA =
+      (SERVICE_NAME = CLUSTERDB)
+    )
+  )
+```
+
+### Key Components Explained
+
+| Component | Description | Example |
+|-----------|-------------|---------|
+| `ALIAS` | Name you use to connect | `ORCLCDB`, `PROD_DB` |
+| `DESCRIPTION` | Container for connection details | - |
+| `ADDRESS` | Protocol, host, and port | `(HOST = 10.0.2.6)(PORT = 1521)` |
+| `CONNECT_DATA` | Database identifier | - |
+| `SERVICE_NAME` | Modern way to identify database | `ORCLCDB` |
+| `SID` | Legacy system identifier | `ORCL` (older databases) |
+
+### Do You Need One for Every Database?
+
+**No!** One file can contain **multiple database entries**. You have two options:
+
+#### Option 1: tnsnames.ora (Traditional Method)
+
+- Single file contains all database connection definitions
+- Required for: RAC clusters, complex configurations, corporate environments
+- Requires TNS_ADMIN environment variable to be set
+
+```bash
+# Set TNS_ADMIN
+export TNS_ADMIN=/opt/oracle/network/admin
+
+# Connect using alias
+sqlplus system/OraclePass123@ORCLCDB
+```
+
+#### Option 2: Easy Connect (Recommended for Simple Cases)
+
+- **No tnsnames.ora file needed**
+- Connection details embedded in connection string
+- Format: `//host:port/service_name`
+
+```bash
+# No tnsnames.ora required
+sqlplus system/OraclePass123@//10.0.2.6:1521/ORCLCDB
+```
+
+### Which Method Does This Project Use?
+
+**This project uses Easy Connect format** by default to avoid managing tnsnames.ora files:
+
+```ruby
+# InSpec connects using Easy Connect format
+sql = oracledb_session(
+  user: 'system',
+  password: 'OraclePass123',
+  host: '10.0.2.6',
+  port: 1521,
+  service: 'ORCLCDB'
+)
+# Translates to: sqlplus system/OraclePass123@//10.0.2.6:1521/ORCLCDB
+```
+
+### When to Use tnsnames.ora
+
+| Scenario | Use tnsnames.ora? | Reason |
+|----------|-------------------|--------|
+| Simple single database | No | Easy Connect is simpler |
+| Multiple databases | Optional | Easy Connect still works |
+| RAC cluster with failover | **Yes** | Need ADDRESS_LIST for multiple nodes |
+| Corporate environment | **Yes** | Central configuration management |
+| Load balancing | **Yes** | Need LOAD_BALANCE parameter |
+| SSL/TLS connections | **Yes** | Need SECURITY parameters |
+
+### Creating a tnsnames.ora File
+
+If you need TNS-based connections:
+
+```bash
+# 1. Create the directory
+sudo mkdir -p /opt/oracle/network/admin
+
+# 2. Create tnsnames.ora
+cat > /opt/oracle/network/admin/tnsnames.ora << 'EOF'
+ORCLCDB =
+  (DESCRIPTION =
+    (ADDRESS = (PROTOCOL = TCP)(HOST = 10.0.2.6)(PORT = 1521))
+    (CONNECT_DATA =
+      (SERVICE_NAME = ORCLCDB)
+    )
+  )
+EOF
+
+# 3. Set environment variable
+export TNS_ADMIN=/opt/oracle/network/admin
+
+# 4. Test the connection
+sqlplus system/OraclePass123@ORCLCDB
+```
+
+### Troubleshooting TNS Issues
+
+```bash
+# Check TNS_ADMIN is set
+echo $TNS_ADMIN
+
+# Verify tnsnames.ora exists
+cat $TNS_ADMIN/tnsnames.ora
+
+# Test TNS resolution (if tnsping available)
+tnsping ORCLCDB
+
+# Common errors:
+# ORA-12154: TNS:could not resolve the connect identifier
+#   → Check spelling of alias, verify tnsnames.ora exists
+# ORA-12541: TNS:no listener
+#   → Oracle listener not running on target server
+# ORA-12170: TNS:Connect timeout
+#   → Network/firewall blocking port 1521
+```
+
 ## Output
 
 Results are saved as JSON files in `base_results_dir`:
