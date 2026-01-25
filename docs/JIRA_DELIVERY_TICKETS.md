@@ -1,10 +1,11 @@
 # Database Compliance Scanning Framework - JIRA Delivery Tickets
 
-**Project:** Database Compliance Scanning Framework  
-**Epic:** Implement Ansible InSpec Roles for NIST Compliance Scanning  
-**Sprint Planning Document**  
-**Created:** 2026-01-09  
-**Target Audience:** Mid-Level DevOps Engineers  
+**Project:** Database Compliance Scanning Framework
+**Epic:** Implement Ansible InSpec Roles for NIST Compliance Scanning
+**Sprint Planning Document**
+**Created:** 2026-01-09
+**Updated:** 2026-01-25
+**Target Audience:** Mid-Level DevOps Engineers
 
 ---
 
@@ -20,7 +21,7 @@ This document contains the JIRA tickets required to deliver the Database Complia
 6. **Integration Testing** - End-to-end testing with sample databases
 7. **Documentation** - Role-specific documentation and examples
 
-**Estimated Story Points per Role:** 21-26 points  
+**Estimated Story Points per Role:** 21-26 points
 **Total Estimated Effort:** 84-104 story points
 
 ---
@@ -172,14 +173,14 @@ control 'mssql-version-check' do
   impact 1.0
   title 'Verify MSSQL Version'
   desc 'Ensure database version is supported'
-  
+
   sql = mssql_session(
     user: input('mssql_username'),
     password: input('mssql_password'),
     host: input('mssql_server'),
     port: input('mssql_port')
   )
-  
+
   describe sql.query("SELECT @@VERSION") do
     its('output') { should include '2019' }
   end
@@ -875,87 +876,1693 @@ Create documentation including architecture guides, troubleshooting runbooks, an
 
 ---
 
-# Summary - Story Point Breakdown
+# Epic: DCS-600 - Database Platform Roles Production Completion
 
-## By Database Type
+**Epic Summary:** Complete all three database platform InSpec roles (MSSQL, Oracle, Sybase) to production-ready status with comprehensive NIST-mapped controls, full testing coverage, and documentation.
 
-| Database | Tickets | Story Points |
-|----------|---------|--------------|
-| **MSSQL** | DBSCAN-100 to 106 | 26 |
-| **Oracle** | DBSCAN-200 to 205 | 23 |
-| **Sybase** | DBSCAN-300 to 305 | 23 |
-| **PostgreSQL** | DBSCAN-400 to 403 | 11 |
-| **Cross-Cutting** | DBSCAN-500 to 503 | 14 |
-| **Total** | 27 tickets | **97 points** |
+**Business Value:**
+- 90% reduction in manual compliance effort
+- Monthly scanning capability (vs. quarterly)
+- 100% database coverage across all platforms
+- Auditable, repeatable NIST compliance process
 
-## Recommended Sprint Planning
+**Epic Acceptance Criteria:**
+- [ ] MSSQL scanning operational with 50+ controls per version
+- [ ] Oracle scanning operational with 65+ controls per version
+- [ ] Sybase scanning operational with 60+ controls per version
+- [ ] All controls have NIST SP 800-53 mappings
+- [ ] Azure-based testing validates all controls
+- [ ] Documentation complete for operations handover
 
-### Sprint 1 (Week 1-2): Foundation
-- DBSCAN-500: Execution Environment Build (5 pts)
-- DBSCAN-100: MSSQL Connectivity Testing (3 pts)
-- DBSCAN-101: MSSQL Role Scaffolding (2 pts)
-- **Sprint Total: 10 points**
-
-### Sprint 2 (Week 3-4): MSSQL Complete
-- DBSCAN-102: MSSQL Pre-flight (5 pts)
-- DBSCAN-103: MSSQL InSpec Profile (5 pts)
-- DBSCAN-104: MSSQL Execute (5 pts)
-- DBSCAN-105: MSSQL Results (3 pts)
-- DBSCAN-106: MSSQL Integration Test (3 pts)
-- **Sprint Total: 21 points**
-
-### Sprint 3 (Week 5-6): Oracle Complete
-- DBSCAN-200: Oracle Connectivity (3 pts)
-- DBSCAN-201: Oracle Scaffolding (2 pts)
-- DBSCAN-202: Oracle Pre-flight (5 pts)
-- DBSCAN-203: Oracle InSpec Profile (5 pts)
-- DBSCAN-204: Oracle Execute (5 pts)
-- DBSCAN-205: Oracle Integration Test (3 pts)
-- **Sprint Total: 23 points**
-
-### Sprint 4 (Week 7-8): Sybase Complete
-- DBSCAN-300: Sybase Connectivity (3 pts)
-- DBSCAN-301: Sybase Scaffolding (2 pts)
-- DBSCAN-302: Sybase Pre-flight (5 pts)
-- DBSCAN-303: Sybase InSpec Profile (5 pts)
-- DBSCAN-304: Sybase Execute (5 pts)
-- DBSCAN-305: Sybase Integration Test (3 pts)
-- **Sprint Total: 23 points**
-
-### Sprint 5 (Week 9-10): PostgreSQL + Finalization
-- DBSCAN-400: PostgreSQL Connectivity (2 pts)
-- DBSCAN-401: PostgreSQL Scaffolding (2 pts)
-- DBSCAN-402: PostgreSQL Implementation (5 pts)
-- DBSCAN-403: PostgreSQL Integration Test (2 pts)
-- DBSCAN-501: Inventory Converter (3 pts)
-- DBSCAN-502: AAP2 Job Templates (3 pts)
-- DBSCAN-503: Documentation (3 pts)
-- **Sprint Total: 20 points**
+**Labels:** `compliance`, `inspec`, `nist`, `production-ready`
+**Components:** `mssql_inspec`, `oracle_inspec`, `sybase_inspec`
 
 ---
+
+## DCS-610: MSSQL InSpec Role - Production Completion
+
+**Type:** Story
+**Epic:** DCS-600
+**Priority:** Must Have
+**Story Points:** 21
+
+### Description
+Complete the MSSQL InSpec role to production-ready status with comprehensive NIST-mapped controls for SQL Server 2016, 2017, 2018, and 2019.
+
+**As a** Security Analyst,
+**I want to** execute automated compliance scans against MSSQL databases,
+**So that** I can generate audit-ready NIST compliance reports efficiently.
+
+### Acceptance Criteria
+- [ ] 50+ controls implemented for MSSQL 2019 (baseline version)
+- [ ] Controls adapted for 2016, 2017, 2018 versions with version-specific handling
+- [ ] Each control has NIST SP 800-53 and CIS mapping in metadata
+- [ ] Pre-flight checks validate connectivity before scan execution
+- [ ] JSON output matches standardized naming convention
+- [ ] Summary report generated for each scan
+- [ ] All controls tested against Azure infrastructure
+- [ ] README updated with complete control inventory
+
+### Technical Notes
+- Role location: `roles/mssql_inspec/`
+- Current status: 85% complete (role structure done, controls partial)
+- InSpec resource: `mssql_session`
+- Client requirement: `sqlcmd` on delegate host
+
+### Dependencies
+- Blocked by: None
+- Blocks: DCS-650 (Multi-platform Playbook)
+
+### Sub-Tasks
+
+#### DCS-611: MSSQL 2019 InSpec Controls - Surface Area Reduction
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `mssql-2019`
+
+Implement controls 2.01-2.17 for Surface Area Reduction:
+- [ ] 2.01: Ad Hoc Distributed Queries disabled
+- [ ] 2.02: CLR Enabled disabled
+- [ ] 2.03: Cross DB Ownership Chaining disabled
+- [ ] 2.04: Database Mail XPs disabled
+- [ ] 2.05: Ole Automation Procedures disabled
+- [ ] 2.06: Remote Access disabled
+- [ ] 2.07: Remote Admin Connections disabled
+- [ ] 2.08: Scan For Startup Procs disabled
+- [ ] 2.09: Trustworthy Database
+- [ ] 2.10: Server Network Packet Size
+- [ ] 2.11: xp_cmdshell disabled
+- [ ] 2.12: Auto Close disabled
+- [ ] 2.13: SA Account Status
+- [ ] 2.14: SA Account Renamed
+- [ ] 2.15: External Scripts Enabled (version check)
+- [ ] 2.16: Polybase Enabled (version check)
+- [ ] 2.17: Hadoop Connectivity
+
+**File:** `roles/mssql_inspec/files/MSSQL2019_ruby/controls/surface_area.rb`
+
+---
+
+#### DCS-612: MSSQL 2019 InSpec Controls - Authentication
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `mssql-2019`
+
+Implement controls 3.01-3.08 for Authentication:
+- [ ] 3.01: Windows Authentication Mode
+- [ ] 3.02: Login Auditing
+- [ ] 3.03: SQL Server Browser Service
+- [ ] 3.04: No Blank Passwords
+- [ ] 3.05: Password Policy Enforced
+- [ ] 3.06: Password Expiration Enforced
+- [ ] 3.07: MUST_CHANGE Option
+- [ ] 3.08: CHECK_POLICY Enabled
+
+**File:** `roles/mssql_inspec/files/MSSQL2019_ruby/controls/authentication.rb`
+
+---
+
+#### DCS-613: MSSQL 2019 InSpec Controls - Authorization
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `mssql-2019`
+
+Implement controls 4.01-4.08 for Authorization:
+- [ ] 4.01: Public Role Permissions
+- [ ] 4.02: Guest User Status
+- [ ] 4.03: Orphaned Users
+- [ ] 4.04: SQL Agent Proxies
+- [ ] 4.05: CONNECT Permission to Guest
+- [ ] 4.06: msdb Permissions
+- [ ] 4.07: EXECUTE on xp_* procedures
+- [ ] 4.08: Sysadmin Role Members
+
+**File:** `roles/mssql_inspec/files/MSSQL2019_ruby/controls/authorization.rb`
+
+---
+
+#### DCS-614: MSSQL 2019 InSpec Controls - Auditing
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `mssql-2019`
+
+Implement controls 5.01-5.07 for Auditing:
+- [ ] 5.01: Server Audit Enabled
+- [ ] 5.02: Successful Logins Audited
+- [ ] 5.03: Failed Logins Audited
+- [ ] 5.04: Audit Specification Active
+- [ ] 5.05: Audit Destination Configured
+- [ ] 5.06: C2 Audit Mode
+- [ ] 5.07: Common Criteria Compliance
+
+**File:** `roles/mssql_inspec/files/MSSQL2019_ruby/controls/auditing.rb`
+
+---
+
+#### DCS-615: MSSQL 2019 InSpec Controls - Encryption
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `mssql-2019`
+
+Implement controls 6.01-6.05 for Encryption:
+- [ ] 6.01: TDE Enabled for Sensitive DBs
+- [ ] 6.02: Backup Encryption
+- [ ] 6.03: SSL/TLS Forced
+- [ ] 6.04: Certificate Validity
+- [ ] 6.05: Symmetric Key Protection
+
+**File:** `roles/mssql_inspec/files/MSSQL2019_ruby/controls/encryption.rb`
+
+---
+
+#### DCS-616: MSSQL Version Adaptation (2016, 2017, 2018)
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `version-specific`
+
+Copy and adapt MSSQL 2019 controls for earlier versions:
+- [ ] Create MSSQL2016 controls with version-specific skips
+- [ ] Create MSSQL2017 controls with version-specific handling
+- [ ] Create MSSQL2018 controls with version-specific handling
+- [ ] Handle feature availability differences:
+  - Polybase (2017+)
+  - External Scripts (2017+)
+  - TDE in Standard Edition (2019+)
+- [ ] Update inspec.yml for each version
+
+**Version Differences Table:**
+| Feature | 2016 | 2017 | 2018 | 2019 |
+|---------|------|------|------|------|
+| Polybase | No | Yes | Yes | Yes |
+| External Scripts | No | Yes | Yes | Yes |
+| TDE in Standard | No | No | No | Yes |
+
+---
+
+#### DCS-617: MSSQL Role Enhancements
+**Story Points:** 2
+**Labels:** `ansible`, `role-enhancement`
+
+Enhance MSSQL role with additional features:
+- [ ] Add version auto-detection (optional)
+- [ ] Add control filtering by tags
+- [ ] Add `skip_controls` variable for exclusion
+- [ ] Add `control_tags` variable for inclusion filtering
+- [ ] Validate enhancement works with existing workflow
+
+**File:** `roles/mssql_inspec/defaults/main.yml`
+
+```yaml
+# Control execution options
+run_all_controls: true
+control_tags: []           # e.g., ['authentication', 'encryption']
+skip_controls: []          # e.g., ['mssql-2019-6.01']
+```
+
+---
+
+#### DCS-618: MSSQL Unit Testing
+**Story Points:** 2
+**Labels:** `testing`, `unit-tests`
+
+Create unit tests for MSSQL controls:
+- [ ] Create `tests/unit/mssql_controls_test.rb`
+- [ ] Validate all control IDs match pattern `mssql-20XX-X.XX`
+- [ ] Validate all controls have NIST tags
+- [ ] Validate all controls have impact scores
+- [ ] Run `inspec check` for all version profiles
+- [ ] Document test execution process
+
+---
+
+#### DCS-619: MSSQL Azure Integration Testing
+**Story Points:** 3
+**Labels:** `testing`, `integration`, `azure`
+
+Create and execute Azure-based integration tests:
+- [ ] Deploy MSSQL container via Terraform
+- [ ] Create `tests/integration/test_mssql_azure.yml`
+- [ ] Test preflight connectivity check
+- [ ] Test full InSpec scan execution
+- [ ] Validate JSON output structure
+- [ ] Validate summary report generation
+- [ ] Test failure scenarios (wrong credentials, unreachable)
+- [ ] Destroy Azure infrastructure after tests
+
+---
+
+## DCS-620: Oracle InSpec Role - Production Completion
+
+**Type:** Story
+**Epic:** DCS-600
+**Priority:** Must Have
+**Story Points:** 23
+
+### Description
+Complete the Oracle InSpec role to production-ready status with comprehensive NIST-mapped controls for Oracle 11g, 12c, 18c, and 19c.
+
+**As a** Security Analyst,
+**I want to** execute automated compliance scans against Oracle databases,
+**So that** I can generate audit-ready NIST compliance reports for Oracle environments.
+
+### Acceptance Criteria
+- [ ] 65+ controls implemented for Oracle 19c (baseline version)
+- [ ] Controls adapted for 11g, 12c, 18c with version-specific handling
+- [ ] Each control has NIST SP 800-53 and CIS mapping in metadata
+- [ ] Both Easy Connect and TNS naming methods supported
+- [ ] CDB/PDB support for 12c+ versions
+- [ ] JSON output matches standardized naming convention
+- [ ] All controls tested against Azure infrastructure
+- [ ] README updated with complete control inventory
+
+### Technical Notes
+- Role location: `roles/oracle_inspec/`
+- Current status: 80% complete (role structure done, controls partial)
+- InSpec resource: `oracledb_session`
+- Client requirement: `sqlplus` on delegate host
+
+### Dependencies
+- Blocked by: None
+- Blocks: DCS-650 (Multi-platform Playbook)
+
+### Sub-Tasks
+
+#### DCS-621: Oracle 19c InSpec Controls - Installation & Configuration
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `oracle-19c`
+
+Implement controls 1.01-1.08 for Installation & Configuration:
+- [ ] 1.01: Latest Critical Patch Applied
+- [ ] 1.02: Default Listener Port Changed
+- [ ] 1.03: Database Version Supported
+- [ ] 1.04: ORACLE_HOME Permissions
+- [ ] 1.05: Audit File Destination Set
+- [ ] 1.06: Control File Protection
+- [ ] 1.07: Redo Log Protection
+- [ ] 1.08: SPFILE in Use
+
+**File:** `roles/oracle_inspec/files/ORACLE19c_ruby/controls/installation.rb`
+
+---
+
+#### DCS-622: Oracle 19c InSpec Controls - User Account Management
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `oracle-19c`
+
+Implement controls 2.01-2.14 for User Account Management:
+- [ ] 2.01: Default Users Locked
+- [ ] 2.02: Default Passwords Changed
+- [ ] 2.03: SYS Password Secure
+- [ ] 2.04: SYSTEM Password Secure
+- [ ] 2.05: DBSNMP Account Locked
+- [ ] 2.06: Sample Schema Users Removed
+- [ ] 2.07: Proxy User Authentication
+- [ ] 2.08: External User Authentication
+- [ ] 2.09: OS Authentication Disabled
+- [ ] 2.10: Password File Protection
+- [ ] 2.11: REMOTE_LOGIN_PASSWORDFILE
+- [ ] 2.12: Failed Login Attempts Tracked
+- [ ] 2.13: Inactive Accounts Locked
+- [ ] 2.14: Service Account Restrictions
+
+**File:** `roles/oracle_inspec/files/ORACLE19c_ruby/controls/user_management.rb`
+
+---
+
+#### DCS-623: Oracle 19c InSpec Controls - Privilege Management
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `oracle-19c`
+
+Implement controls 3.01-3.15 for Privilege Management:
+- [ ] 3.01: PUBLIC Execute on UTL_FILE Revoked
+- [ ] 3.02: PUBLIC Execute on UTL_HTTP Revoked
+- [ ] 3.03: PUBLIC Execute on UTL_TCP Revoked
+- [ ] 3.04: PUBLIC Execute on UTL_SMTP Revoked
+- [ ] 3.05: PUBLIC Execute on DBMS_RANDOM Revoked
+- [ ] 3.06: PUBLIC Execute on DBMS_LOB Revoked
+- [ ] 3.07: PUBLIC Execute on DBMS_SQL Revoked
+- [ ] 3.08: PUBLIC Execute on DBMS_XMLGEN Revoked
+- [ ] 3.09: DBA Role Membership Limited
+- [ ] 3.10: SYSDBA Privilege Restricted
+- [ ] 3.11: SYSOPER Privilege Restricted
+- [ ] 3.12: ANY Privileges Restricted
+- [ ] 3.13: Direct Table Grants Limited
+- [ ] 3.14: WITH ADMIN OPTION Limited
+- [ ] 3.15: WITH GRANT OPTION Limited
+
+**File:** `roles/oracle_inspec/files/ORACLE19c_ruby/controls/privilege_management.rb`
+
+---
+
+#### DCS-624: Oracle 19c InSpec Controls - Auditing
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `oracle-19c`
+
+Implement controls 4.01-4.12 for Auditing:
+- [ ] 4.01: Unified Audit Enabled (12c+)
+- [ ] 4.02: AUDIT_TRAIL Parameter Set
+- [ ] 4.03: Successful Logins Audited
+- [ ] 4.04: Failed Logins Audited
+- [ ] 4.05: DDL Statements Audited
+- [ ] 4.06: DML on Sensitive Tables Audited
+- [ ] 4.07: GRANT/REVOKE Audited
+- [ ] 4.08: Role Changes Audited
+- [ ] 4.09: User Management Audited
+- [ ] 4.10: Audit Trail Protected
+- [ ] 4.11: Audit Policies Applied
+- [ ] 4.12: FGA Policies Configured
+
+**File:** `roles/oracle_inspec/files/ORACLE19c_ruby/controls/auditing.rb`
+
+---
+
+#### DCS-625: Oracle 19c InSpec Controls - Network & Password & Encryption
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `oracle-19c`
+
+Implement controls for Network (5.xx), Password (6.xx), and Encryption (7.xx):
+
+**Network Configuration (5.01-5.06):**
+- [ ] 5.01: Listener Password Set
+- [ ] 5.02: Listener Logging Enabled
+- [ ] 5.03: External Procedure Restricted
+- [ ] 5.04: Valid Node Checking Enabled
+- [ ] 5.05: TCP Valid Nodes Configured
+- [ ] 5.06: Admin Restrictions Enabled
+
+**Password Management (6.01-6.08):**
+- [ ] 6.01: Password Verification Function
+- [ ] 6.02: Password Complexity Enforced
+- [ ] 6.03: Password Minimum Length
+- [ ] 6.04: Password Expiration Set
+- [ ] 6.05: Password Reuse Limited
+- [ ] 6.06: Password Lock Time Set
+- [ ] 6.07: Password Grace Time Set
+- [ ] 6.08: Password Life Time Set
+
+**Encryption (7.01-7.07):**
+- [ ] 7.01: TDE Tablespace Encryption
+- [ ] 7.02: Network Encryption Enabled
+- [ ] 7.03: SQLNET Encryption Server
+- [ ] 7.04: SQLNET Checksum Server
+- [ ] 7.05: Wallet Protection
+- [ ] 7.06: HSM Integration (if applicable)
+- [ ] 7.07: Backup Encryption
+
+**Files:**
+- `roles/oracle_inspec/files/ORACLE19c_ruby/controls/network.rb`
+- `roles/oracle_inspec/files/ORACLE19c_ruby/controls/password.rb`
+- `roles/oracle_inspec/files/ORACLE19c_ruby/controls/encryption.rb`
+
+---
+
+#### DCS-626: Oracle Version Adaptation (11g, 12c, 18c)
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `version-specific`
+
+Copy and adapt Oracle 19c controls for earlier versions:
+- [ ] Create ORACLE11g controls (traditional audit only)
+- [ ] Create ORACLE12c controls (unified audit, CDB/PDB)
+- [ ] Create ORACLE18c controls (enhanced features)
+- [ ] Handle feature availability differences:
+  - Unified Audit (12c+)
+  - Data Redaction (12c+)
+  - Privilege Analysis (12c+)
+  - Container Database (12c+)
+  - Gradual Password Rollover (19c only)
+
+**Version Differences Table:**
+| Feature | 11g | 12c | 18c | 19c |
+|---------|-----|-----|-----|-----|
+| Unified Audit | No | Yes | Yes | Yes |
+| Container DB | No | Yes | Yes | Yes |
+| Data Redaction | No | Yes | Yes | Yes |
+| Gradual Password Rollover | No | No | No | Yes |
+
+---
+
+#### DCS-627: Oracle Role Enhancements - PDB Support
+**Story Points:** 2
+**Labels:** `ansible`, `role-enhancement`
+
+Add Container Database (CDB) and Pluggable Database (PDB) support:
+- [ ] Add `container_type` variable (standalone, cdb, pdb)
+- [ ] Add `pdb_name` variable for PDB-specific scanning
+- [ ] Add `include_pdb_scan` variable for all-PDB scanning
+- [ ] Implement PDB discovery for 12c+ versions
+- [ ] Update preflight to handle CDB/PDB connections
+
+**File:** `roles/oracle_inspec/defaults/main.yml`
+
+```yaml
+# Container database support
+container_type: "standalone"  # standalone, cdb, pdb
+pdb_name: ""                  # For PDB-specific scanning
+include_pdb_scan: false       # Scan all PDBs in CDB
+```
+
+---
+
+#### DCS-628: Oracle Unit Testing
+**Story Points:** 2
+**Labels:** `testing`, `unit-tests`
+
+Create unit tests for Oracle controls:
+- [ ] Create `tests/unit/oracle_controls_test.rb`
+- [ ] Validate all control IDs match pattern `oracle-XXc-X.XX`
+- [ ] Validate all controls have NIST tags
+- [ ] Validate all controls have impact scores
+- [ ] Validate all controls have descriptions
+- [ ] Run `inspec check` for all version profiles
+
+---
+
+#### DCS-629: Oracle Azure Integration Testing
+**Story Points:** 3
+**Labels:** `testing`, `integration`, `azure`
+
+Create and execute Azure-based integration tests:
+- [ ] Deploy Oracle XE container via Terraform
+- [ ] Create `tests/integration/test_oracle_azure.yml`
+- [ ] Test Easy Connect method
+- [ ] Test TNS naming method
+- [ ] Test preflight connectivity check
+- [ ] Test full InSpec scan execution
+- [ ] Test CDB/PDB scanning (if applicable)
+- [ ] Validate JSON output structure
+- [ ] Test failure scenarios (ORA-01017, ORA-12514)
+- [ ] Destroy Azure infrastructure after tests
+
+---
+
+## DCS-630: Sybase InSpec Role - Production Completion
+
+**Type:** Story
+**Epic:** DCS-600
+**Priority:** Must Have
+**Story Points:** 25
+
+### Description
+Complete the Sybase InSpec role to production-ready status with comprehensive NIST-mapped controls for Sybase ASE 15 and 16, leveraging the custom `sybase_session_local` resource.
+
+**As a** Security Analyst,
+**I want to** execute automated compliance scans against Sybase databases,
+**So that** I can generate audit-ready NIST compliance reports for Sybase environments.
+
+### Acceptance Criteria
+- [ ] 60+ controls implemented for Sybase 16 (baseline version)
+- [ ] Controls adapted for ASE 15 with version-specific handling
+- [ ] Each control has NIST SP 800-53 mapping in metadata
+- [ ] Both SAP isql and FreeTDS tsql clients supported
+- [ ] SSH tunnel support functional for network-restricted environments
+- [ ] Interfaces file auto-generation works
+- [ ] JSON output matches standardized naming convention
+- [ ] All controls tested against Azure infrastructure
+
+### Technical Notes
+- Role location: `roles/sybase_inspec/`
+- Current status: 80% complete (role structure done, controls partial)
+- InSpec resource: `sybase_session_local` (custom resource)
+- Client requirement: `isql` (SAP) or `tsql` (FreeTDS) on delegate host
+
+### Dependencies
+- Blocked by: None
+- Blocks: DCS-650 (Multi-platform Playbook)
+
+### Sub-Tasks
+
+#### DCS-631: Sybase 16 InSpec Controls - Server Configuration
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `sybase-16`
+
+Implement controls 1.01-1.12 for Server Configuration:
+- [ ] 1.01: Maximum Failed Logins
+- [ ] 1.02: Password Expiration Interval
+- [ ] 1.03: Minimum Password Length
+- [ ] 1.04: Systemwide Password Expiration
+- [ ] 1.05: Maximum Connection Timeout
+- [ ] 1.06: Allow Remote Access
+- [ ] 1.07: Allow Updates to System Tables
+- [ ] 1.08: CIS Configuration Parameters
+- [ ] 1.09: Print Recovery Info
+- [ ] 1.10: Remote Server Pre-Read Packets
+- [ ] 1.11: Secure Default Login
+- [ ] 1.12: Allow Procedure Grouping
+
+**File:** `roles/sybase_inspec/files/SYBASE16_ruby/controls/server_config.rb`
+
+---
+
+#### DCS-632: Sybase 16 InSpec Controls - Authentication
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `sybase-16`
+
+Implement controls 2.01-2.12 for Authentication:
+- [ ] 2.01: SA Account Password Set
+- [ ] 2.02: SA Account Not Used for Apps
+- [ ] 2.03: Guest User Disabled
+- [ ] 2.04: Probe User Disabled
+- [ ] 2.05: Default Passwords Changed
+- [ ] 2.06: Login Lockout Enabled
+- [ ] 2.07: External Authentication Configured
+- [ ] 2.08: PAM/LDAP Integration Secure
+- [ ] 2.09: SSL/TLS Enabled for Logins
+- [ ] 2.10: Login Trigger Configured
+- [ ] 2.11: Password Complexity Enabled
+- [ ] 2.12: Password History Enforced
+
+**File:** `roles/sybase_inspec/files/SYBASE16_ruby/controls/authentication.rb`
+
+---
+
+#### DCS-633: Sybase 16 InSpec Controls - Authorization
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `sybase-16`
+
+Implement controls 3.01-3.15 for Authorization:
+- [ ] 3.01: Public Role Permissions Limited
+- [ ] 3.02: SA_ROLE Membership Restricted
+- [ ] 3.03: SSO_ROLE Membership Restricted
+- [ ] 3.04: OPER_ROLE Membership Restricted
+- [ ] 3.05: SYBASE_TS_ROLE Limited
+- [ ] 3.06: Database Owner Permissions
+- [ ] 3.07: Object Permissions Reviewed
+- [ ] 3.08: Execute Permissions on Sensitive SPs
+- [ ] 3.09: Model Database Permissions
+- [ ] 3.10: Tempdb Permissions
+- [ ] 3.11: sybsystemprocs Permissions
+- [ ] 3.12: Cross-Database Access Limited
+- [ ] 3.13: Proxy User Configuration
+- [ ] 3.14: Grantor Chain Limited
+- [ ] 3.15: WITH GRANT OPTION Limited
+
+**File:** `roles/sybase_inspec/files/SYBASE16_ruby/controls/authorization.rb`
+
+---
+
+#### DCS-634: Sybase 16 InSpec Controls - Auditing
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `sybase-16`
+
+Implement controls 4.01-4.11 for Auditing:
+- [ ] 4.01: Auditing Enabled
+- [ ] 4.02: Audit Database Created
+- [ ] 4.03: Login Events Audited
+- [ ] 4.04: Logout Events Audited
+- [ ] 4.05: Failed Logins Audited
+- [ ] 4.06: Security Events Audited
+- [ ] 4.07: DDL Events Audited
+- [ ] 4.08: Role Changes Audited
+- [ ] 4.09: Audit Queue Size Configured
+- [ ] 4.10: Audit Trail Protected
+- [ ] 4.11: Suspend Audit on Failure
+
+**File:** `roles/sybase_inspec/files/SYBASE16_ruby/controls/auditing.rb`
+
+---
+
+#### DCS-635: Sybase 16 InSpec Controls - Encryption, Password, Network, Stored Procedures
+**Story Points:** 3
+**Labels:** `inspec`, `controls`, `sybase-16`
+
+Implement remaining control categories:
+
+**Encryption (5.01-5.06):**
+- [ ] 5.01: SSL Enabled for Connections
+- [ ] 5.02: Certificate Validation Enabled
+- [ ] 5.03: Strong Cipher Suites Only
+- [ ] 5.04: Column Encryption Configured
+- [ ] 5.05: Encrypted Columns Protected
+- [ ] 5.06: Master Key Protected
+
+**Password Management (6.01-6.08):**
+- [ ] 6.01: Password Complexity Function
+- [ ] 6.02: Minimum Digits Required
+- [ ] 6.03: Minimum Letters Required
+- [ ] 6.04: Minimum Symbols Required
+- [ ] 6.05: Password Not Username
+- [ ] 6.06: Password Not Server Name
+- [ ] 6.07: Password Expiration Warning
+- [ ] 6.08: Expired Password Grace Logins
+
+**Network Security (7.01-7.06):**
+- [ ] 7.01: Named Pipe Disabled if Unused
+- [ ] 7.02: TCP Keepalive Configured
+- [ ] 7.03: Max Network Packet Size
+- [ ] 7.04: Allow Netbios Disabled
+- [ ] 7.05: Stack Size Configured
+- [ ] 7.06: RPC Security Enabled
+
+**Stored Procedures (8.01-8.08):**
+- [ ] 8.01: xp_cmdshell Disabled
+- [ ] 8.02: xp_freedll Restricted
+- [ ] 8.03: xp_logevent Restricted
+- [ ] 8.04: xp_sendmail Restricted
+- [ ] 8.05: sp_addlogin Audited
+- [ ] 8.06: sp_droplogin Audited
+- [ ] 8.07: sp_modifylogin Audited
+- [ ] 8.08: Dangerous Procedures Restricted
+
+**Files:**
+- `roles/sybase_inspec/files/SYBASE16_ruby/controls/encryption.rb`
+- `roles/sybase_inspec/files/SYBASE16_ruby/controls/password.rb`
+- `roles/sybase_inspec/files/SYBASE16_ruby/controls/network.rb`
+- `roles/sybase_inspec/files/SYBASE16_ruby/controls/stored_procedures.rb`
+
+---
+
+#### DCS-636: Sybase Version Adaptation (ASE 15)
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `version-specific`
+
+Copy and adapt Sybase 16 controls for ASE 15:
+- [ ] Create SYBASE15 controls with version-specific handling
+- [ ] Handle feature availability differences:
+  - Row-level Access Control (16 only)
+  - In-Memory Databases (16 only)
+  - Enhanced Compression (16 only)
+- [ ] Update inspec.yml for ASE 15
+- [ ] Test controls against ASE 15 if available
+
+---
+
+#### DCS-637: Sybase Custom Resource Enhancement
+**Story Points:** 2
+**Labels:** `inspec`, `custom-resource`
+
+Enhance the `sybase_session_local` custom resource:
+- [ ] Add better error detection patterns
+- [ ] Add query timeout handling
+- [ ] Add query result caching for repeated queries
+- [ ] Improve output parsing for both isql and tsql clients
+- [ ] Document custom resource usage
+
+**File:** `roles/sybase_inspec/files/SYBASE16_ruby/libraries/sybase_session_local.rb`
+
+```ruby
+# Add better error detection
+def detect_connection_error(output)
+  error_patterns = [
+    /Login failed/i,
+    /Server .* not found/i,
+    /Cannot connect/i,
+    /Timeout expired/i,
+    /Network error/i
+  ]
+  error_patterns.any? { |pattern| output.match?(pattern) }
+end
+```
+
+---
+
+#### DCS-638: Sybase Role Enhancements - Client Detection
+**Story Points:** 2
+**Labels:** `ansible`, `role-enhancement`
+
+Add client auto-detection and SSH tunnel validation:
+- [ ] Auto-detect available Sybase clients (isql vs tsql)
+- [ ] Add `preferred_client` variable to override auto-detection
+- [ ] Validate SSH tunnel functionality before scan
+- [ ] Add SSH tunnel connectivity test
+- [ ] Update preflight to report client type used
+
+**Files:**
+- `roles/sybase_inspec/tasks/preflight.yml`
+- `roles/sybase_inspec/tasks/ssh_setup.yml`
+
+---
+
+#### DCS-639: Sybase Unit Testing
+**Story Points:** 2
+**Labels:** `testing`, `unit-tests`
+
+Create unit tests for Sybase controls and custom resource:
+- [ ] Create `tests/unit/sybase_session_local_test.rb`
+- [ ] Test client detection (isql/tsql)
+- [ ] Test connection error detection
+- [ ] Create `tests/unit/sybase_controls_test.rb`
+- [ ] Validate all control IDs match pattern `sybase-XX-X.XX`
+- [ ] Validate all controls have NIST tags
+- [ ] Validate custom resource loads correctly
+- [ ] Run `inspec check` for all version profiles
+
+---
+
+#### DCS-640: Sybase Azure Integration Testing
+**Story Points:** 3
+**Labels:** `testing`, `integration`, `azure`
+
+Create and execute Azure-based integration tests:
+- [ ] Deploy Sybase container via Terraform
+- [ ] Create `tests/integration/test_sybase_azure.yml`
+- [ ] Test interfaces file generation
+- [ ] Test preflight connectivity check
+- [ ] Test full InSpec scan execution with isql
+- [ ] Test full InSpec scan execution with tsql
+- [ ] Create `tests/integration/test_sybase_clients.yml`
+- [ ] Validate JSON output structure
+- [ ] Test failure scenarios (wrong credentials, unreachable)
+- [ ] Create `tests/integration/test_sybase_ssh_tunnel.yml` (if SSH jump available)
+- [ ] Destroy Azure infrastructure after tests
+
+---
+
+## DCS-650: Multi-Platform Playbook and Documentation
+
+**Type:** Story
+**Epic:** DCS-600
+**Priority:** Should Have
+**Story Points:** 8
+
+### Description
+Create a unified multi-platform compliance scanning playbook and comprehensive documentation for all three database platform roles.
+
+**As a** DevOps Engineer,
+**I want to** run compliance scans across multiple database platforms in a single execution,
+**So that** I can efficiently scan heterogeneous database environments.
+
+### Acceptance Criteria
+- [ ] Multi-platform playbook `run_compliance_scans.yml` orchestrates all platforms
+- [ ] Platform-specific execution based on inventory groups
+- [ ] Unified output directory structure
+- [ ] Aggregate summary report across all platforms
+- [ ] README files updated for all three roles
+- [ ] Control inventory documented per platform
+- [ ] Troubleshooting guide created
+- [ ] Azure test workflow documented
+
+### Dependencies
+- Blocked by: DCS-610, DCS-620, DCS-630
+- Blocks: None
+
+### Sub-Tasks
+
+#### DCS-651: Multi-Platform Orchestration Playbook
+**Story Points:** 3
+**Labels:** `ansible`, `playbook`
+
+Create unified multi-platform playbook:
+- [ ] Create `playbooks/run_compliance_scans.yml`
+- [ ] Support platform selection via inventory groups
+- [ ] Implement parallel execution where possible
+- [ ] Aggregate results from all platforms
+- [ ] Generate combined summary report
+
+---
+
+#### DCS-652: Documentation Updates
+**Story Points:** 3
+**Labels:** `documentation`
+
+Update all documentation:
+- [ ] Update `roles/mssql_inspec/README.md` with control inventory
+- [ ] Update `roles/oracle_inspec/README.md` with control inventory
+- [ ] Update `roles/sybase_inspec/README.md` with control inventory
+- [ ] Create control mapping table (control ID -> NIST -> CIS)
+- [ ] Document Azure testing workflow
+
+---
+
+#### DCS-653: Troubleshooting Guide
+**Story Points:** 2
+**Labels:** `documentation`
+
+Create troubleshooting documentation:
+- [ ] Document common error codes per platform
+- [ ] Create decision tree for connectivity issues
+- [ ] Document client installation requirements
+- [ ] Create FAQ section
+- [ ] Add debugging tips (verbose mode, log analysis)
+
+**File:** `docs/TROUBLESHOOTING_GUIDE.md`
+
+---
+
+# Summary - Story Point Breakdown
+
+## By Database Type (Original + New Epic)
+
+| Database | Original Tickets | New Epic Tickets | Total Story Points |
+|----------|------------------|------------------|---------------------|
+| **MSSQL** | DBSCAN-100 to 106 (26 pts) | DCS-610 to 619 (21 pts) | 47 |
+| **Oracle** | DBSCAN-200 to 205 (23 pts) | DCS-620 to 629 (23 pts) | 46 |
+| **Sybase** | DBSCAN-300 to 305 (23 pts) | DCS-630 to 640 (25 pts) | 48 |
+| **PostgreSQL** | DBSCAN-400 to 403 (11 pts) | - | 11 |
+| **Cross-Cutting** | DBSCAN-500 to 503 (14 pts) | DCS-650 to 653 (8 pts) | 22 |
+| **Total** | 97 points | 77 points | **174 points** |
+
+## Epic DCS-600 Summary
+
+| Story | Description | Story Points |
+|-------|-------------|--------------|
+| DCS-610 | MSSQL Production Completion | 21 |
+| DCS-620 | Oracle Production Completion | 23 |
+| DCS-630 | Sybase Production Completion | 25 |
+| DCS-650 | Multi-Platform & Documentation | 8 |
+| **Total** | | **77 points** |
+
+## Recommended Sprint Planning for Epic DCS-600
+
+### Sprint 6 (Week 11-12): MSSQL Controls
+- DCS-611: MSSQL Surface Area Controls (3 pts)
+- DCS-612: MSSQL Authentication Controls (2 pts)
+- DCS-613: MSSQL Authorization Controls (2 pts)
+- DCS-614: MSSQL Auditing Controls (2 pts)
+- DCS-615: MSSQL Encryption Controls (2 pts)
+- DCS-616: MSSQL Version Adaptation (3 pts)
+- DCS-617: MSSQL Role Enhancements (2 pts)
+- **Sprint Total: 16 points**
+
+### Sprint 7 (Week 13-14): MSSQL Testing + Oracle Controls Start
+- DCS-618: MSSQL Unit Testing (2 pts)
+- DCS-619: MSSQL Azure Integration Testing (3 pts)
+- DCS-621: Oracle Installation Controls (2 pts)
+- DCS-622: Oracle User Management Controls (3 pts)
+- DCS-623: Oracle Privilege Management Controls (3 pts)
+- **Sprint Total: 13 points**
+
+### Sprint 8 (Week 15-16): Oracle Controls Complete
+- DCS-624: Oracle Auditing Controls (3 pts)
+- DCS-625: Oracle Network/Password/Encryption Controls (3 pts)
+- DCS-626: Oracle Version Adaptation (3 pts)
+- DCS-627: Oracle PDB Support (2 pts)
+- DCS-628: Oracle Unit Testing (2 pts)
+- DCS-629: Oracle Azure Integration Testing (3 pts)
+- **Sprint Total: 16 points**
+
+### Sprint 9 (Week 17-18): Sybase Controls
+- DCS-631: Sybase Server Config Controls (3 pts)
+- DCS-632: Sybase Authentication Controls (3 pts)
+- DCS-633: Sybase Authorization Controls (3 pts)
+- DCS-634: Sybase Auditing Controls (2 pts)
+- DCS-635: Sybase Encryption/Password/Network/SP Controls (3 pts)
+- DCS-636: Sybase Version Adaptation (2 pts)
+- **Sprint Total: 16 points**
+
+### Sprint 10 (Week 19-20): Sybase Testing + Multi-Platform
+- DCS-637: Sybase Custom Resource Enhancement (2 pts)
+- DCS-638: Sybase Client Detection Enhancement (2 pts)
+- DCS-639: Sybase Unit Testing (2 pts)
+- DCS-640: Sybase Azure Integration Testing (3 pts)
+- DCS-651: Multi-Platform Playbook (3 pts)
+- DCS-652: Documentation Updates (3 pts)
+- DCS-653: Troubleshooting Guide (2 pts)
+- **Sprint Total: 17 points**
+
+---
+
+## Dependencies Graph for Epic DCS-600
+
+```
+DCS-610 (MSSQL Production)
+    │
+    ├── DCS-611 ──▶ DCS-612 ──▶ DCS-613 ──▶ DCS-614 ──▶ DCS-615
+    │                                                        │
+    │                            ┌───────────────────────────┘
+    │                            ▼
+    └── DCS-616 ──▶ DCS-617 ──▶ DCS-618 ──▶ DCS-619 ──────────┐
+                                                               │
+DCS-620 (Oracle Production)                                    │
+    │                                                          │
+    ├── DCS-621 ──▶ DCS-622 ──▶ DCS-623 ──▶ DCS-624 ──▶ DCS-625│
+    │                                                        │ │
+    │                            ┌───────────────────────────┘ │
+    │                            ▼                             │
+    └── DCS-626 ──▶ DCS-627 ──▶ DCS-628 ──▶ DCS-629 ──────────┤
+                                                               │
+DCS-630 (Sybase Production)                                    │
+    │                                                          │
+    ├── DCS-631 ──▶ DCS-632 ──▶ DCS-633 ──▶ DCS-634 ──▶ DCS-635│
+    │                                                        │ │
+    │                            ┌───────────────────────────┘ │
+    │                            ▼                             │
+    └── DCS-636 ──▶ DCS-637 ──▶ DCS-638 ──▶ DCS-639 ──▶ DCS-640┤
+                                                               │
+                                                               ▼
+DCS-650 (Multi-Platform & Docs) ◀──────────────────────────────┘
+    │
+    └── DCS-651 ──▶ DCS-652 ──▶ DCS-653
+```
+
+---
+
+## Labels Reference
+
+| Label | Description |
+|-------|-------------|
+| `compliance` | Compliance framework related |
+| `inspec` | InSpec profile or control work |
+| `nist` | NIST SP 800-53 mapping |
+| `production-ready` | Production readiness milestone |
+| `controls` | InSpec control development |
+| `mssql-2019` | MSSQL 2019 specific |
+| `oracle-19c` | Oracle 19c specific |
+| `sybase-16` | Sybase 16 specific |
+| `version-specific` | Version adaptation work |
+| `ansible` | Ansible role development |
+| `role-enhancement` | Role feature enhancement |
+| `testing` | Testing related |
+| `unit-tests` | Unit test development |
+| `integration` | Integration testing |
+| `azure` | Azure infrastructure testing |
+| `custom-resource` | InSpec custom resource |
+| `playbook` | Ansible playbook development |
+| `documentation` | Documentation work |
+
+---
+
+---
+
+# Epic: DBSCAN-600 - MSSQL InSpec Role WinRM Enhancement
+
+**Epic Summary:** Enhance the existing `mssql_inspec` role to support WinRM-based connectivity for Windows SQL Server scanning, with improvements for large-scale batch processing across 100+ servers.
+
+**Business Value:**
+- Enable Windows SQL Server compliance scanning via WinRM transport
+- Support scanning 100+ servers with batch processing and parallelism
+- Maintain backward compatibility with existing direct (sqlcmd) mode
+- Provide comprehensive error handling for enterprise-scale operations
+
+**Epic Acceptance Criteria:**
+- [ ] WinRM mode connects and executes InSpec scans on Windows SQL Server
+- [ ] Direct mode (sqlcmd) unchanged - no regression
+- [ ] Batch processing supports configurable batch sizes and parallelism
+- [ ] Error aggregation provides actionable reports for failed scans
+- [ ] InSpec profiles support dual-mode inputs (legacy and new naming)
+- [ ] Documentation updated with WinRM configuration and troubleshooting
+
+**Labels:** `winrm`, `mssql`, `enhancement`, `large-scale`, `windows`
+**Components:** `mssql_inspec`
+
+**Related PRP:** `docs/prp/PRP_MSSQL_WINRM_ENHANCEMENT.md`
+
+---
+
+## DBSCAN-601: Phase 1 - Core WinRM Integration
+
+**Type:** Story
+**Epic:** DBSCAN-600
+**Priority:** Must Have
+**Story Points:** 13
+
+### Description
+Implement conditional WinRM execution mode in the MSSQL InSpec role, enabling scans against Windows SQL Server instances via WinRM transport while preserving existing direct connection mode.
+
+**As a** DevOps Engineer,
+**I want to** scan Windows SQL Server instances via WinRM transport,
+**So that** I can run compliance scans on Windows servers where direct sqlcmd access is not available.
+
+### Acceptance Criteria
+- [ ] `use_winrm` variable toggles between WinRM and direct modes
+- [ ] WinRM mode uses `train-winrm` gem for InSpec transport
+- [ ] Direct mode behavior unchanged (no regression)
+- [ ] Pre-flight checks validate WinRM connectivity before scan
+- [ ] Execute tasks route to mode-specific implementations
+- [ ] WinRM credentials (username/password) accepted via variables
+- [ ] WinRM SSL option supported (port 5986)
+- [ ] Connection timeout configurable
+
+### Technical Notes
+- Role location: `roles/mssql_inspec/`
+- New variable: `use_winrm: false` (default maintains existing behavior)
+- WinRM variables: `winrm_host`, `winrm_port`, `winrm_username`, `winrm_password`, `winrm_ssl`
+- Pre-flight uses `inspec detect` to validate WinRM connectivity
+
+### Dependencies
+- Blocked by: None
+- Blocks: DBSCAN-602, DBSCAN-603, DBSCAN-604
+
+### Sub-Tasks
+
+#### DBSCAN-601a: Update defaults/main.yml with WinRM Variables
+**Story Points:** 1
+**Labels:** `ansible`, `configuration`
+
+Add WinRM and batch processing variables to role defaults:
+- [ ] Add `use_winrm: false` connection mode toggle
+- [ ] Add WinRM connection variables (`winrm_host`, `winrm_port`, `winrm_username`, `winrm_password`)
+- [ ] Add WinRM SSL variables (`winrm_ssl`, `winrm_ssl_verify`, `winrm_timeout`)
+- [ ] Add batch processing variables (`batch_size`, `batch_delay`, `scan_timeout`)
+- [ ] Add error handling variables (`continue_on_winrm_failure`, `max_retry_attempts`, `retry_delay`)
+
+**File:** `roles/mssql_inspec/defaults/main.yml`
+
+---
+
+#### DBSCAN-601b: Create WinRM Preflight Task
+**Story Points:** 3
+**Labels:** `ansible`, `winrm`, `preflight`
+
+Create WinRM-specific preflight connectivity checks:
+- [ ] Create `tasks/preflight_winrm.yml`
+- [ ] Verify `train-winrm` gem installed on delegate host
+- [ ] Test WinRM connectivity using `inspec detect`
+- [ ] Set preflight facts: `preflight_passed`, `preflight_skip_reason`, `preflight_error_code`
+- [ ] Support both HTTP (5985) and HTTPS (5986) ports
+- [ ] Handle SSL verification options
+- [ ] Timeout handling for unresponsive Windows hosts
+
+**File:** `roles/mssql_inspec/tasks/preflight_winrm.yml`
+
+---
+
+#### DBSCAN-601c: Update preflight.yml with Mode Routing
+**Story Points:** 2
+**Labels:** `ansible`, `refactor`
+
+Refactor preflight.yml to support both connection modes:
+- [ ] Add mode detection logic based on `use_winrm` variable
+- [ ] Route to `preflight_winrm.yml` when `use_winrm: true`
+- [ ] Route to `preflight_direct.yml` when `use_winrm: false`
+- [ ] Rename existing preflight logic to `preflight_direct.yml`
+- [ ] Display connection mode in debug output
+- [ ] Ensure consistent fact names across both modes
+
+**Files:**
+- `roles/mssql_inspec/tasks/preflight.yml` (modify)
+- `roles/mssql_inspec/tasks/preflight_direct.yml` (rename from existing logic)
+
+---
+
+#### DBSCAN-601d: Create WinRM Execute Task
+**Story Points:** 3
+**Labels:** `ansible`, `winrm`, `execution`
+
+Create WinRM-specific InSpec execution task:
+- [ ] Create `tasks/execute_winrm.yml`
+- [ ] Verify InSpec binary available on delegate host
+- [ ] Build InSpec command with WinRM transport (`-t winrm://...`)
+- [ ] Pass SQL credentials as InSpec inputs (not environment variables)
+- [ ] Handle SSL options in InSpec command
+- [ ] Capture JSON output for result processing
+- [ ] Implement scan timeout handling
+- [ ] Set consistent result structure for downstream processing
+
+**File:** `roles/mssql_inspec/tasks/execute_winrm.yml`
+
+---
+
+#### DBSCAN-601e: Update execute.yml with Mode Routing
+**Story Points:** 2
+**Labels:** `ansible`, `refactor`
+
+Refactor execute.yml to support both connection modes:
+- [ ] Add mode detection logic based on `use_winrm` variable
+- [ ] Route to `execute_winrm.yml` when `use_winrm: true`
+- [ ] Route to `execute_direct.yml` when `use_winrm: false`
+- [ ] Rename existing execute logic to `execute_direct.yml`
+- [ ] Add connection mode to scan summary display
+- [ ] Ensure JSON result parsing works for both modes
+
+**Files:**
+- `roles/mssql_inspec/tasks/execute.yml` (modify)
+- `roles/mssql_inspec/tasks/execute_direct.yml` (rename from existing logic)
+
+---
+
+#### DBSCAN-601f: Unit Testing - Mode Detection
+**Story Points:** 2
+**Labels:** `testing`, `unit-tests`
+
+Create unit tests for connection mode detection:
+- [ ] Test mode detection with `use_winrm: false` returns `direct`
+- [ ] Test mode detection with `use_winrm: true` returns `winrm`
+- [ ] Test WinRM preflight with valid credentials passes
+- [ ] Test WinRM preflight with invalid credentials fails with correct error code
+- [ ] Test direct preflight unchanged (regression test)
+- [ ] Test port check with unreachable host fails appropriately
+
+---
+
+## DBSCAN-602: Phase 1B - InSpec Profile Dual-Mode Support
+
+**Type:** Story
+**Epic:** DBSCAN-600
+**Priority:** Must Have
+**Story Points:** 10
+
+### Description
+Update InSpec profiles to support both direct and WinRM connection modes with unified input handling, ensuring backward compatibility with legacy input names while supporting new naming conventions.
+
+**As a** DevOps Engineer,
+**I want** InSpec profiles to work seamlessly in both connection modes,
+**So that** I can use the same compliance controls regardless of transport method.
+
+### Acceptance Criteria
+- [ ] Legacy inputs (`usernm`, `passwd`, `hostnm`) work for direct mode (backward compatible)
+- [ ] New inputs (`mssql_user`, `mssql_password`, `mssql_host`) work for WinRM mode
+- [ ] Environment variable fallback works (`MSSQL_USER`, `MSSQL_PASS`, etc.)
+- [ ] Input helper library resolves inputs with priority: new > legacy > env var
+- [ ] `inspec check` passes for all modified profiles
+- [ ] Controls execute correctly on Windows target via WinRM
+- [ ] Controls execute correctly on Linux delegate via direct mode
+- [ ] All MSSQL version profiles updated (2016, 2017, 2018, 2019)
+
+### Technical Notes
+- Input mismatch identified in PRP Section 2.3
+- WinRM mode: `hostnm` should be `localhost` (SQL runs on same Windows host)
+- Direct mode: `hostnm` is remote SQL Server IP
+- Helper library provides unified resolution logic
+
+### Dependencies
+- Blocked by: DBSCAN-601
+- Blocks: DBSCAN-603
+
+### Sub-Tasks
+
+#### DBSCAN-602a: Create Input Helper Library
+**Story Points:** 3
+**Labels:** `inspec`, `ruby`, `library`
+
+Create Ruby helper library for unified input resolution:
+- [ ] Create `libraries/input_helper.rb` in MSSQL2019_ruby profile
+- [ ] Implement `resolve_user` with fallback: `mssql_user` > `usernm` > `ENV['MSSQL_USER']`
+- [ ] Implement `resolve_password` with same fallback pattern
+- [ ] Implement `resolve_host` with fallback to `localhost` for WinRM
+- [ ] Implement `resolve_port` with default 1433
+- [ ] Implement `resolve_instance` for named instances
+- [ ] Document helper usage in code comments
+
+**File:** `roles/mssql_inspec/files/MSSQL2019_ruby/libraries/input_helper.rb`
+
+---
+
+#### DBSCAN-602b: Update inspec.yml with Dual-Mode Inputs
+**Story Points:** 2
+**Labels:** `inspec`, `configuration`
+
+Update profile metadata with dual-mode input definitions:
+- [ ] Add new input names (`mssql_user`, `mssql_password`, `mssql_host`, `mssql_port`, `mssql_instance`)
+- [ ] Keep legacy input names (`usernm`, `passwd`, `hostnm`, `port`, `servicenm`) for backward compatibility
+- [ ] Add `connection_mode` input (direct/winrm) for controls to detect context
+- [ ] Mark password inputs as sensitive
+- [ ] Update profile version to reflect changes
+
+**File:** `roles/mssql_inspec/files/MSSQL2019_ruby/inspec.yml`
+
+---
+
+#### DBSCAN-602c: Update Controls to Use Input Helper
+**Story Points:** 2
+**Labels:** `inspec`, `controls`, `refactor`
+
+Refactor control files to use the input helper library:
+- [ ] Update `controls/trusted.rb` to use `MSSQLInputHelper.resolve_*` methods
+- [ ] Update all other control files in MSSQL2019_ruby profile
+- [ ] Ensure `mssql_session` resource receives resolved inputs
+- [ ] Add require statement for helper library
+- [ ] Test controls work with legacy inputs (regression)
+- [ ] Test controls work with new inputs
+
+**Files:** `roles/mssql_inspec/files/MSSQL2019_ruby/controls/*.rb`
+
+---
+
+#### DBSCAN-602d: Replicate Changes to Other MSSQL Versions
+**Story Points:** 2
+**Labels:** `inspec`, `version-specific`
+
+Apply dual-mode support to all MSSQL version profiles:
+- [ ] Copy `libraries/input_helper.rb` to MSSQL2018_ruby, MSSQL2017_ruby, MSSQL2016_ruby
+- [ ] Update `inspec.yml` in each version profile
+- [ ] Update control files in each version profile
+- [ ] Run `inspec check` on all profiles
+- [ ] Verify no syntax errors or missing dependencies
+
+**Files:**
+- `roles/mssql_inspec/files/MSSQL2018_ruby/`
+- `roles/mssql_inspec/files/MSSQL2017_ruby/`
+- `roles/mssql_inspec/files/MSSQL2016_ruby/`
+
+---
+
+#### DBSCAN-602e: Update setup.yml Profile Selection
+**Story Points:** 1
+**Labels:** `ansible`, `role-enhancement`
+
+Update setup task to select correct profile based on mode (if using separate WinRM profiles):
+- [ ] Add profile suffix logic based on `use_winrm` variable
+- [ ] Update `_controls_source` path construction
+- [ ] Validate selected profile exists before copy
+- [ ] Document profile selection in debug output
+
+**File:** `roles/mssql_inspec/tasks/setup.yml`
+
+---
+
+## DBSCAN-603: Phase 2 - Batch Processing and Parallelism
+
+**Type:** Story
+**Epic:** DBSCAN-600
+**Priority:** Should Have
+**Story Points:** 5
+
+### Description
+Implement batch processing capabilities to efficiently scan 100+ SQL Server instances with configurable concurrency and serial execution control.
+
+**As a** DevOps Engineer,
+**I want to** scan large numbers of SQL Servers efficiently,
+**So that** I can complete enterprise-wide compliance scans within reasonable timeframes.
+
+### Acceptance Criteria
+- [ ] Batch processing playbook executes hosts in configurable batches
+- [ ] Serial execution limits concurrent hosts per batch
+- [ ] Parallel execution respects Ansible `forks` setting
+- [ ] Batch delay configurable between batches
+- [ ] Per-host scan timeout prevents hanging scans
+- [ ] Batch of 10 hosts completes in < 15 minutes (parallel)
+- [ ] Single WinRM scan completes in < 5 minutes
+
+### Technical Notes
+- Uses Ansible `serial` directive for batch sizing
+- Uses `strategy: free` for parallel execution within batch
+- Default: `batch_size: 10`, `parallel_scans: 5`, `scan_timeout: 300`
+- Memory target: < 500MB per concurrent scan
+
+### Dependencies
+- Blocked by: DBSCAN-601, DBSCAN-602
+- Blocks: DBSCAN-604
+
+### Sub-Tasks
+
+#### DBSCAN-603a: Create Batch Processing Playbook
+**Story Points:** 3
+**Labels:** `ansible`, `playbook`, `batch`
+
+Create dedicated batch processing playbook:
+- [ ] Create `test_playbooks/run_mssql_inspec_batch.yml`
+- [ ] Implement `serial` directive for batch sizing
+- [ ] Implement `strategy: free` for parallel execution
+- [ ] Include mssql_inspec role with `preflight_continue_on_failure: true`
+- [ ] Aggregate results to controller in post_tasks
+- [ ] Add batch progress display between batches
+- [ ] Implement `batch_delay` between batches
+
+**File:** `test_playbooks/run_mssql_inspec_batch.yml`
+
+---
+
+#### DBSCAN-603b: Ansible Configuration for Parallelism
+**Story Points:** 1
+**Labels:** `ansible`, `configuration`
+
+Create/update Ansible configuration for optimal parallelism:
+- [ ] Create/update `ansible.cfg` in project root
+- [ ] Set `forks = 10` for concurrent execution
+- [ ] Set `strategy = free` as default
+- [ ] Set `timeout = 300` for scan timeout
+- [ ] Enable SSH pipelining for performance
+- [ ] Configure fact caching for memory efficiency
+
+**File:** `ansible.cfg`
+
+---
+
+#### DBSCAN-603c: Performance Testing
+**Story Points:** 1
+**Labels:** `testing`, `performance`
+
+Validate performance targets are met:
+- [ ] Test single WinRM scan completes < 5 minutes
+- [ ] Test batch of 10 hosts completes < 15 minutes
+- [ ] Monitor memory usage during parallel scans
+- [ ] Document observed performance metrics
+- [ ] Identify and document any bottlenecks
+
+---
+
+## DBSCAN-604: Phase 3 - Error Handling and Aggregation
+
+**Type:** Story
+**Epic:** DBSCAN-600
+**Priority:** Must Have
+**Story Points:** 5
+
+### Description
+Implement comprehensive error handling with aggregation and reporting for large-scale scanning operations, enabling actionable troubleshooting.
+
+**As a** DevOps Engineer,
+**I want** comprehensive error reports from batch scans,
+**So that** I can quickly identify and remediate connectivity or configuration issues across many servers.
+
+### Acceptance Criteria
+- [ ] Error aggregation collects all failures across batch execution
+- [ ] Error summary report generated with all failed hosts
+- [ ] Error codes standardized for WinRM failures
+- [ ] Recommended actions included in error report
+- [ ] Error report saved to results directory
+- [ ] Individual host errors don't stop batch execution
+- [ ] Retry logic attempts failed connections configurable times
+
+### Technical Notes
+- Error codes: `WINRM_CONNECTION_FAILED`, `PORT_UNREACHABLE`, `AUTH_FAILED`, `TIMEOUT`
+- Report format: Text file with structured sections
+- Retry: Default 2 attempts with 10-second delay
+
+### Dependencies
+- Blocked by: DBSCAN-601
+- Blocks: DBSCAN-605
+
+### Sub-Tasks
+
+#### DBSCAN-604a: Create Error Handling Task
+**Story Points:** 2
+**Labels:** `ansible`, `error-handling`
+
+Create error aggregation task file:
+- [ ] Create `tasks/error_handling.yml`
+- [ ] Initialize error tracking fact list
+- [ ] Record scan failures with timestamp, host, error code, message
+- [ ] Include connection mode and WinRM host in error record
+- [ ] Delegate error collection to localhost
+- [ ] Handle retry logic for transient failures
+
+**File:** `roles/mssql_inspec/tasks/error_handling.yml`
+
+---
+
+#### DBSCAN-604b: Create Error Summary Template
+**Story Points:** 2
+**Labels:** `ansible`, `templates`
+
+Create Jinja2 template for error summary report:
+- [ ] Create `templates/error_summary.j2`
+- [ ] Include header with generation timestamp
+- [ ] List total error count
+- [ ] Detail each error with full context
+- [ ] Group recommended actions by error code
+- [ ] Include remediation commands for common issues
+- [ ] Format for readability
+
+**File:** `roles/mssql_inspec/templates/error_summary.j2`
+
+---
+
+#### DBSCAN-604c: Integrate Error Handling into Cleanup
+**Story Points:** 1
+**Labels:** `ansible`, `integration`
+
+Integrate error aggregation into cleanup phase:
+- [ ] Call error_handling.yml from cleanup.yml
+- [ ] Generate error summary when errors exist
+- [ ] Save error report to results directory
+- [ ] Display error count in final summary
+- [ ] Set playbook exit status based on errors (configurable)
+
+**File:** `roles/mssql_inspec/tasks/cleanup.yml`
+
+---
+
+## DBSCAN-605: Phase 4 - Documentation Updates
+
+**Type:** Story
+**Epic:** DBSCAN-600
+**Priority:** Must Have
+**Story Points:** 3
+
+### Description
+Update all relevant documentation to cover WinRM mode configuration, batch processing usage, and troubleshooting guidance.
+
+**As a** DevOps Engineer,
+**I want** comprehensive documentation for WinRM scanning,
+**So that** I can configure, execute, and troubleshoot WinRM-based compliance scans.
+
+### Acceptance Criteria
+- [ ] Role README updated with WinRM configuration section
+- [ ] All new variables documented with descriptions and defaults
+- [ ] Batch processing usage documented
+- [ ] Troubleshooting guide for WinRM issues created
+- [ ] Example inventory for mixed mode (direct + WinRM) provided
+- [ ] Input naming conventions documented (legacy vs new)
+- [ ] Prerequisites (train-winrm, pywinrm) documented
+
+### Dependencies
+- Blocked by: DBSCAN-601, DBSCAN-602, DBSCAN-603, DBSCAN-604
+- Blocks: None
+
+### Sub-Tasks
+
+#### DBSCAN-605a: Update Role README
+**Story Points:** 1
+**Labels:** `documentation`
+
+Update mssql_inspec role README with WinRM documentation:
+- [ ] Add WinRM Mode Configuration section
+- [ ] Document all WinRM variables with examples
+- [ ] Document batch processing variables
+- [ ] Add example playbook invocations
+- [ ] Add mixed inventory example
+- [ ] Update variable reference table
+
+**File:** `roles/mssql_inspec/README.md`
+
+---
+
+#### DBSCAN-605b: Update WINRM_PREREQUISITES.md
+**Story Points:** 1
+**Labels:** `documentation`
+
+Update WinRM prerequisites documentation:
+- [ ] Add section for role-based WinRM usage (not standalone playbook)
+- [ ] Update inventory configuration examples
+- [ ] Add large-scale deployment considerations
+- [ ] Document train-winrm gem installation
+- [ ] Document Windows host preparation steps
+- [ ] Add network requirements (ports 5985/5986)
+
+**File:** `docs/WINRM_PREREQUISITES.md`
+
+---
+
+#### DBSCAN-605c: Create WinRM Troubleshooting Section
+**Story Points:** 1
+**Labels:** `documentation`
+
+Create troubleshooting content for WinRM issues:
+- [ ] Document common WinRM error codes and causes
+- [ ] Add decision tree for WinRM connectivity issues
+- [ ] Document debugging steps (`inspec detect` usage)
+- [ ] Add Windows host configuration verification steps
+- [ ] Document firewall and network troubleshooting
+- [ ] Add FAQ for WinRM-specific questions
+
+**File:** `docs/WINRM_PREREQUISITES.md` (troubleshooting section)
+
+---
+
+## DBSCAN-606: Azure Integration Testing - WinRM Mode
+
+**Type:** Story
+**Epic:** DBSCAN-600
+**Priority:** Must Have
+**Story Points:** 5
+
+### Description
+Create and execute Azure-based integration tests for WinRM mode, validating the complete workflow against Windows SQL Server infrastructure.
+
+**As a** DevOps Engineer,
+**I want** validated integration tests for WinRM scanning,
+**So that** I have confidence the solution works in real Windows environments.
+
+### Acceptance Criteria
+- [ ] Windows SQL Server VM deployed via Terraform
+- [ ] WinRM enabled and accessible on test VM
+- [ ] Direct mode test passes against Linux container
+- [ ] WinRM mode test passes against Windows VM
+- [ ] Batch processing test executes multiple hosts
+- [ ] Error handling test validates failure scenarios
+- [ ] All test results documented
+
+### Technical Notes
+- Use existing Terraform infrastructure in `terraform/` directory
+- Windows VM: `windows-mssql-vm.tf`
+- Linux container: `mssql-container.tf`
+- Test both HTTP (5985) and HTTPS (5986) WinRM ports
+
+### Dependencies
+- Blocked by: DBSCAN-601, DBSCAN-602, DBSCAN-603, DBSCAN-604
+- Blocks: None
+
+### Sub-Tasks
+
+#### DBSCAN-606a: Deploy Azure Test Infrastructure
+**Story Points:** 1
+**Labels:** `testing`, `azure`, `terraform`
+
+Deploy test infrastructure for WinRM testing:
+- [ ] Verify `terraform/windows-mssql-vm.tf` provisions correctly
+- [ ] Enable WinRM on Windows VM during provisioning
+- [ ] Configure SQL Server with test database
+- [ ] Document WinRM connectivity from delegate host
+- [ ] Capture infrastructure outputs for test playbooks
+
+---
+
+#### DBSCAN-606b: Create WinRM Integration Test Playbook
+**Story Points:** 2
+**Labels:** `testing`, `integration`
+
+Create integration test playbook for WinRM mode:
+- [ ] Create `tests/integration/test_mssql_winrm.yml`
+- [ ] Test WinRM preflight passes with valid credentials
+- [ ] Test WinRM preflight fails with invalid credentials
+- [ ] Test full InSpec scan execution via WinRM
+- [ ] Validate JSON output structure
+- [ ] Test error aggregation for failures
+
+**File:** `tests/integration/test_mssql_winrm.yml`
+
+---
+
+#### DBSCAN-606c: Create Regression Test Playbook
+**Story Points:** 1
+**Labels:** `testing`, `regression`
+
+Create regression test playbook for direct mode:
+- [ ] Create `tests/integration/test_mssql_direct_regression.yml`
+- [ ] Test direct mode unchanged after WinRM enhancement
+- [ ] Validate all preflight scenarios work as before
+- [ ] Validate JSON output identical to pre-enhancement
+- [ ] Validate cleanup tasks work
+
+**File:** `tests/integration/test_mssql_direct_regression.yml`
+
+---
+
+#### DBSCAN-606d: Create Batch Processing Test Playbook
+**Story Points:** 1
+**Labels:** `testing`, `batch`
+
+Create test playbook for batch processing:
+- [ ] Create `tests/integration/test_mssql_batch.yml`
+- [ ] Test batch execution with multiple hosts
+- [ ] Verify serial execution respects batch_size
+- [ ] Verify parallel execution within batch
+- [ ] Test error aggregation across batch
+- [ ] Validate performance targets
+
+**File:** `tests/integration/test_mssql_batch.yml`
+
+---
+
+# Summary - DBSCAN-600 Epic Story Point Breakdown
+
+## By Phase
+
+| Phase | Tickets | Story Points |
+|-------|---------|--------------|
+| **Phase 1: Core WinRM Integration** | DBSCAN-601 (a-f) | 13 |
+| **Phase 1B: InSpec Profile Dual-Mode** | DBSCAN-602 (a-e) | 10 |
+| **Phase 2: Batch Processing** | DBSCAN-603 (a-c) | 5 |
+| **Phase 3: Error Handling** | DBSCAN-604 (a-c) | 5 |
+| **Phase 4: Documentation** | DBSCAN-605 (a-c) | 3 |
+| **Integration Testing** | DBSCAN-606 (a-d) | 5 |
+| **Total** | | **41 points** |
+
+## Sprint Planning Recommendation
+
+### Sprint X (Week 1-2): Core WinRM Integration
+- DBSCAN-601a: Update defaults/main.yml (1 pt)
+- DBSCAN-601b: Create WinRM Preflight Task (3 pts)
+- DBSCAN-601c: Update preflight.yml Mode Routing (2 pts)
+- DBSCAN-601d: Create WinRM Execute Task (3 pts)
+- DBSCAN-601e: Update execute.yml Mode Routing (2 pts)
+- DBSCAN-601f: Unit Testing - Mode Detection (2 pts)
+- **Sprint Total: 13 points**
+
+### Sprint X+1 (Week 3-4): InSpec Profile + Batch Processing
+- DBSCAN-602a: Create Input Helper Library (3 pts)
+- DBSCAN-602b: Update inspec.yml Dual-Mode Inputs (2 pts)
+- DBSCAN-602c: Update Controls to Use Input Helper (2 pts)
+- DBSCAN-602d: Replicate to Other MSSQL Versions (2 pts)
+- DBSCAN-602e: Update setup.yml Profile Selection (1 pt)
+- DBSCAN-603a: Create Batch Processing Playbook (3 pts)
+- DBSCAN-603b: Ansible Configuration (1 pt)
+- DBSCAN-603c: Performance Testing (1 pt)
+- **Sprint Total: 15 points**
+
+### Sprint X+2 (Week 5): Error Handling + Documentation + Testing
+- DBSCAN-604a: Create Error Handling Task (2 pts)
+- DBSCAN-604b: Create Error Summary Template (2 pts)
+- DBSCAN-604c: Integrate Error Handling into Cleanup (1 pt)
+- DBSCAN-605a: Update Role README (1 pt)
+- DBSCAN-605b: Update WINRM_PREREQUISITES.md (1 pt)
+- DBSCAN-605c: Create Troubleshooting Section (1 pt)
+- DBSCAN-606a: Deploy Azure Test Infrastructure (1 pt)
+- DBSCAN-606b: Create WinRM Integration Test (2 pts)
+- DBSCAN-606c: Create Regression Test (1 pt)
+- DBSCAN-606d: Create Batch Processing Test (1 pt)
+- **Sprint Total: 13 points**
 
 ## Dependencies Graph
 
 ```
-DBSCAN-500 (Execution Environment)
+DBSCAN-601 (Core WinRM Integration)
     │
-    ├──▶ DBSCAN-100 (MSSQL Connectivity)
-    │        └──▶ DBSCAN-101 ──▶ DBSCAN-102 ──▶ DBSCAN-103 ──▶ DBSCAN-104 ──▶ DBSCAN-105 ──▶ DBSCAN-106
+    ├── DBSCAN-601a (defaults) ─────────────┐
+    │                                        │
+    ├── DBSCAN-601b (preflight_winrm) ──────┤
+    │                                        │
+    ├── DBSCAN-601c (preflight routing) ────┤
+    │                                        │
+    ├── DBSCAN-601d (execute_winrm) ────────┤
+    │                                        │
+    ├── DBSCAN-601e (execute routing) ──────┤
+    │                                        │
+    └── DBSCAN-601f (unit tests) ───────────┘
+                    │
+                    ▼
+DBSCAN-602 (InSpec Dual-Mode)
     │
-    ├──▶ DBSCAN-200 (Oracle Connectivity)
-    │        └──▶ DBSCAN-201 ──▶ DBSCAN-202 ──▶ DBSCAN-203 ──▶ DBSCAN-204 ──▶ DBSCAN-205
-    │
-    ├──▶ DBSCAN-300 (Sybase Connectivity)
-    │        └──▶ DBSCAN-301 ──▶ DBSCAN-302 ──▶ DBSCAN-303 ──▶ DBSCAN-304 ──▶ DBSCAN-305
-    │
-    └──▶ DBSCAN-400 (PostgreSQL Connectivity)
-             └──▶ DBSCAN-401 ──▶ DBSCAN-402 ──▶ DBSCAN-403
-
-DBSCAN-501 (Inventory Converter) ──▶ No dependencies
-DBSCAN-502 (AAP2 Job Templates) ──▶ All role integration tests complete
-DBSCAN-503 (Documentation) ──▶ All roles complete
+    ├── DBSCAN-602a (input_helper.rb) ──────┐
+    │                                        │
+    ├── DBSCAN-602b (inspec.yml) ───────────┤
+    │                                        │
+    ├── DBSCAN-602c (controls update) ──────┤
+    │                                        │
+    ├── DBSCAN-602d (version replication) ──┤
+    │                                        │
+    └── DBSCAN-602e (setup.yml) ────────────┘
+                    │
+        ┌───────────┴───────────┐
+        ▼                       ▼
+DBSCAN-603 (Batch)      DBSCAN-604 (Error Handling)
+    │                           │
+    └───────────┬───────────────┘
+                │
+                ▼
+        DBSCAN-605 (Documentation)
+                │
+                ▼
+        DBSCAN-606 (Integration Testing)
 ```
+
+## Files Created/Modified Summary
+
+### New Files
+| File | Ticket | Purpose |
+|------|--------|---------|
+| `tasks/preflight_winrm.yml` | DBSCAN-601b | WinRM preflight checks |
+| `tasks/preflight_direct.yml` | DBSCAN-601c | Renamed from existing preflight logic |
+| `tasks/execute_winrm.yml` | DBSCAN-601d | WinRM InSpec execution |
+| `tasks/execute_direct.yml` | DBSCAN-601e | Renamed from existing execute logic |
+| `tasks/error_handling.yml` | DBSCAN-604a | Error aggregation |
+| `templates/error_summary.j2` | DBSCAN-604b | Error report template |
+| `files/MSSQL2019_ruby/libraries/input_helper.rb` | DBSCAN-602a | Input resolution helper |
+| `test_playbooks/run_mssql_inspec_batch.yml` | DBSCAN-603a | Batch processing playbook |
+| `tests/integration/test_mssql_winrm.yml` | DBSCAN-606b | WinRM integration test |
+| `tests/integration/test_mssql_direct_regression.yml` | DBSCAN-606c | Direct mode regression test |
+| `tests/integration/test_mssql_batch.yml` | DBSCAN-606d | Batch processing test |
+
+### Modified Files
+| File | Ticket | Changes |
+|------|--------|---------|
+| `defaults/main.yml` | DBSCAN-601a | Add WinRM/batch variables |
+| `tasks/preflight.yml` | DBSCAN-601c | Add mode routing |
+| `tasks/execute.yml` | DBSCAN-601e | Add mode routing |
+| `tasks/setup.yml` | DBSCAN-602e | Add profile selection logic |
+| `tasks/cleanup.yml` | DBSCAN-604c | Integrate error handling |
+| `files/MSSQL2019_ruby/inspec.yml` | DBSCAN-602b | Add dual-mode inputs |
+| `files/MSSQL2019_ruby/controls/*.rb` | DBSCAN-602c | Use input helper |
+| `README.md` | DBSCAN-605a | Add WinRM documentation |
+| `docs/WINRM_PREREQUISITES.md` | DBSCAN-605b/c | Role-based usage, troubleshooting |
+| `ansible.cfg` | DBSCAN-603b | Parallelism configuration |
 
 ---
 
 *Document generated for project planning purposes. Ticket IDs are placeholders - update with actual JIRA ticket numbers upon creation.*
+*Last Updated: 2026-01-25*
