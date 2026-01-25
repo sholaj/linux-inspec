@@ -1,0 +1,238 @@
+---
+# WinRM-based MSSQL InSpec Compliance Scanning Playbook
+# =====================================================
+# Executes InSpec against Windows SQL Server via WinRM transport.
+# This playbook uses the delegate host pattern - InSpec runs on the
+# Linux delegate host (inspec-runner) and connects via WinRM to Windows.
+#
+# Architecture:
+#   Control Node --> [SSH] --> Linux Runner (delegate) --> [WinRM 5985] --> Windows VM --> SQL Server
+#
+# Prerequisites:
+#   - train-winrm gem installed on delegate host (inspec-runner)
+#   - WinRM enabled on Windows (port 5985)
+#   - SQL Server Express with Mixed Mode Auth
+#   - TCP/IP enabled on SQL Server (port 1433)
+#
+# Usage:
+#   export WINDOWS_ADMIN_PASSWORD='ComplexP@ss123!'
+#   export MSSQL_PASSWORD='SqlP@ssw0rd123!'
+#   ansible-playbook -i inventories/hosts.yml test_playbooks/run_mssql_inspec_winrm.yml
+
+- name: Execute InSpec MSSQL Compliance Scans via WinRM
+  hosts: mssql_databases
+  gather_facts: false
+  connection: local
+
+  vars:
+    # Timestamp for results
+    scan_timestamp: "{{ lookup('pipe', 'date +%s') }}"
+    enable_debug: true
+    # InSpec timeout settings
+    inspec_timeout: 1800
+    # InSpec profile path on the delegate host
+    delegate_profile_path: /home/azureuser/linux-inspec/roles/mssql_inspec/files/inspec_profile
+    delegate_results_dir: /tmp/compliance_scans/mssql/winrm
+
+  pre_tasks:
+    - name: Skip non-WinRM hosts
+      meta: end_host
+      when: not (use_winrm | default(false) | bool)
+
+    - name: Display delegate host info
+      debug:
+        msg: "Will delegate InSpec execution to: {{ inspec_delegate_host }}"
+
+    - name: Verify InSpec is installed on delegate
+      command: inspec version
+      register: inspec_version_check
+      changed_when: false
+      failed_when: inspec_version_check.rc != 0
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display InSpec version
+      debug:
+        msg: "InSpec version on {{ inspec_delegate_host }}: {{ inspec_version_check.stdout }}"
+      when: enable_debug
+
+    - name: Ensure results directory exists on delegate
+      file:
+        path: "{{ delegate_results_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Verify InSpec profile exists on delegate
+      stat:
+        path: "{{ delegate_profile_path }}/inspec.yml"
+      register: profile_check
+      delegate_to: "{{ inspec_delegate_host }}"
+      failed_when: not profile_check.stat.exists
+
+    - name: Display scan configuration
+      debug:
+        msg: |
+          =====================================
+          Starting WinRM MSSQL Compliance Scan
+          =====================================
+          Inventory Host: {{ inventory_hostname }}
+          Delegate Host: {{ inspec_delegate_host }}
+          WinRM Target: {{ winrm_host }}:{{ winrm_port }}
+          WinRM User: {{ winrm_username }}
+          SQL Server: {{ mssql_server }}:{{ mssql_port }} (on Windows target)
+          SQL User: {{ mssql_username }}
+          Profile Path: {{ delegate_profile_path }}
+          Results Dir: {{ delegate_results_dir }}
+          Timestamp: {{ scan_timestamp }}
+          =====================================
+      when: enable_debug
+
+  tasks:
+    - name: Test WinRM connectivity from delegate host
+      command: >
+        inspec detect
+        -t winrm://{{ winrm_username }}@{{ winrm_host }}:{{ winrm_port }}
+        --password '{{ winrm_password }}'
+        --ssl={{ winrm_ssl | default(false) | lower }}
+      register: winrm_detect
+      changed_when: false
+      failed_when: winrm_detect.rc != 0
+      delegate_to: "{{ inspec_delegate_host }}"
+      no_log: true
+
+    - name: Display WinRM detection results
+      debug:
+        msg: |
+          WinRM Detection from {{ inspec_delegate_host }}:
+          {{ winrm_detect.stdout }}
+      when: enable_debug
+
+    - name: Set result file paths
+      set_fact:
+        json_results_file: "{{ delegate_results_dir }}/{{ inventory_hostname }}_{{ scan_timestamp }}.json"
+        html_results_file: "{{ delegate_results_dir }}/{{ inventory_hostname }}_{{ scan_timestamp }}.html"
+        cli_results_file: "{{ delegate_results_dir }}/{{ inventory_hostname }}_{{ scan_timestamp }}.txt"
+
+    - name: Execute InSpec MSSQL compliance scan via WinRM from delegate
+      shell: |
+        export CHEF_LICENSE=accept
+
+        # Set MSSQL connection environment variables for InSpec
+        # Note: mssql_server is 'localhost' because SQL Server runs on Windows target
+        export MSSQL_HOST="{{ mssql_server }}"
+        export MSSQL_PORT="{{ mssql_port }}"
+        export MSSQL_USER="{{ mssql_username }}"
+        export MSSQL_PASS="{{ mssql_password }}"
+        export MSSQL_DB="{{ mssql_database | default('master') }}"
+
+        # Execute InSpec via WinRM transport from this delegate host
+        inspec exec "{{ delegate_profile_path }}" \
+          -t winrm://{{ winrm_username }}@{{ winrm_host }}:{{ winrm_port }} \
+          --password '{{ winrm_password }}' \
+          --ssl={{ winrm_ssl | default(false) | lower }} \
+          --reporter json:{{ json_results_file }} html:{{ html_results_file }} cli \
+          --chef-license=accept \
+          2>&1 | tee {{ cli_results_file }}
+
+        # Capture exit code (InSpec uses 100 for failures, 101 for skipped)
+        exit_code=$?
+        echo "InSpec exit code: $exit_code"
+
+        # Exit code 0 = pass, 100 = failures exist, 101 = all skipped
+        # We consider 0, 100, and 101 as successful execution
+        if [ $exit_code -eq 0 ] || [ $exit_code -eq 100 ] || [ $exit_code -eq 101 ]; then
+          exit 0
+        else
+          exit $exit_code
+        fi
+      args:
+        executable: /bin/bash
+      register: inspec_result
+      delegate_to: "{{ inspec_delegate_host }}"
+      timeout: "{{ inspec_timeout }}"
+      no_log: false
+
+    - name: Display InSpec execution results
+      debug:
+        msg: |
+          InSpec Execution Results (from {{ inspec_delegate_host }}):
+          {{ inspec_result.stdout_lines | default([]) | join('\n') }}
+      when: enable_debug
+
+  post_tasks:
+    - name: Check if JSON results file exists
+      stat:
+        path: "{{ json_results_file }}"
+      register: json_file_check
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Parse InSpec results
+      block:
+        - name: Read JSON results
+          slurp:
+            src: "{{ json_results_file }}"
+          register: json_content
+          delegate_to: "{{ inspec_delegate_host }}"
+
+        - name: Parse JSON content
+          set_fact:
+            inspec_results: "{{ json_content.content | b64decode | from_json }}"
+
+        - name: Display scan summary
+          debug:
+            msg: |
+              =====================================
+              WinRM MSSQL Compliance Scan Complete
+              =====================================
+              Host: {{ inventory_hostname }}
+              Delegate: {{ inspec_delegate_host }}
+              WinRM Target: {{ winrm_host }}
+              Platform: {{ inspec_results.platform.name | default('unknown') }} {{ inspec_results.platform.release | default('') }}
+
+              Statistics:
+              - Duration: {{ inspec_results.statistics.duration | default(0) | round(2) }} seconds
+              - Total Controls: {{ inspec_results.statistics.controls.total.total | default(0) }}
+              - Passed: {{ inspec_results.statistics.controls.total.passed.total | default(0) }}
+              - Failed: {{ inspec_results.statistics.controls.total.failed.total | default(0) }}
+              - Skipped: {{ inspec_results.statistics.controls.total.skipped.total | default(0) }}
+
+              Results Files (on {{ inspec_delegate_host }}):
+              - JSON: {{ json_results_file }}
+              - HTML: {{ html_results_file }}
+              - CLI: {{ cli_results_file }}
+              =====================================
+      when: json_file_check.stat.exists
+
+    - name: List all result files on delegate
+      find:
+        paths: "{{ delegate_results_dir }}"
+        patterns: "*{{ scan_timestamp }}*"
+      register: result_files
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display result files
+      debug:
+        msg: |
+          Generated result files on {{ inspec_delegate_host }}:
+          {% for f in result_files.files %}
+          - {{ f.path }} ({{ f.size }} bytes)
+          {% endfor %}
+
+# Example usage:
+# -------------
+# 1. Set environment variables:
+#    export WINDOWS_ADMIN_PASSWORD='ComplexP@ss123!'
+#    export MSSQL_PASSWORD='SqlP@ssw0rd123!'
+#    export WINDOWS_MSSQL_IP='10.0.1.5'  # Optional, defaults to 10.0.1.5
+#
+# 2. Run the playbook (auto-skips non-WinRM hosts):
+#    ansible-playbook -i inventories/hosts.yml test_playbooks/run_mssql_inspec_winrm.yml
+#
+# 3. To target specific WinRM host:
+#    ansible-playbook -i inventories/hosts.yml test_playbooks/run_mssql_inspec_winrm.yml --limit mssql_windows_01
+#
+# 4. View results (SSH to delegate host first):
+#    ssh -i ~/.ssh/inspec_azure azureuser@<runner_ip>
+#    cat /tmp/compliance_scans/mssql/winrm/*.json | jq '.statistics'
+#    # Or copy results locally:
+#    scp -i ~/.ssh/inspec_azure azureuser@<runner_ip>:/tmp/compliance_scans/mssql/winrm/*.json ./

@@ -132,3 +132,29 @@ variable "aap2_admin_password" {
   sensitive   = true
   default     = ""
 }
+
+# Windows MSSQL VM Variables
+variable "deploy_windows_mssql" {
+  description = "Whether to deploy Windows VM with SQL Server Express"
+  type        = bool
+  default     = false
+}
+
+variable "windows_admin_username" {
+  description = "Admin username for Windows VM"
+  type        = string
+  default     = "azureadmin"
+}
+
+variable "windows_admin_password" {
+  description = "Admin password for Windows VM (must meet complexity requirements: 12+ chars, upper, lower, number, special)"
+  type        = string
+  sensitive   = true
+  default     = ""
+}
+
+variable "windows_vm_size" {
+  description = "VM size for Windows MSSQL VM"
+  type        = string
+  default     = "Standard_B2s"
+}

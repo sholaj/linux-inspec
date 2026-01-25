@@ -75,7 +75,7 @@ output "acr_login_server" {
 
 output "estimated_monthly_cost" {
   description = "Estimated monthly cost in USD"
-  value       = "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo${var.deploy_oracle ? " + Oracle ACI: ~$15/mo" : ""}${var.deploy_sybase ? " + Sybase ACI: ~$10/mo" : ""}${var.deploy_postgres ? " + PostgreSQL ACI: ~$8/mo" : ""}${var.deploy_aap2 ? " + AAP2 VM D4s_v3: ~$140/mo" : ""} + Storage: ~$2/mo = ~$${42 + (var.deploy_oracle ? 15 : 0) + (var.deploy_sybase ? 10 : 0) + (var.deploy_postgres ? 8 : 0) + (var.deploy_aap2 ? 140 : 0)}/mo total"
+  value       = "VM B2s: ~$30/mo + MSSQL ACI: ~$10/mo${var.deploy_oracle ? " + Oracle ACI: ~$15/mo" : ""}${var.deploy_sybase ? " + Sybase ACI: ~$10/mo" : ""}${var.deploy_postgres ? " + PostgreSQL ACI: ~$8/mo" : ""}${var.deploy_aap2 ? " + AAP2 VM D4s_v3: ~$140/mo" : ""}${var.deploy_windows_mssql ? " + Windows MSSQL VM B2s: ~$42/mo" : ""} + Storage: ~$2/mo = ~$${42 + (var.deploy_oracle ? 15 : 0) + (var.deploy_sybase ? 10 : 0) + (var.deploy_postgres ? 8 : 0) + (var.deploy_aap2 ? 140 : 0) + (var.deploy_windows_mssql ? 42 : 0)}/mo total"
 }
 
 # AAP2 Outputs
@@ -97,4 +97,25 @@ output "aap2_web_url" {
 output "aap2_ssh_command" {
   description = "SSH command to connect to the AAP2 VM"
   value       = var.deploy_aap2 ? "ssh -i ~/.ssh/inspec_azure ${var.admin_username}@${azurerm_public_ip.aap2[0].ip_address}" : "Not deployed"
+}
+
+# Windows MSSQL VM Outputs
+output "windows_mssql_public_ip" {
+  description = "Public IP address of the Windows MSSQL VM (for RDP access)"
+  value       = var.deploy_windows_mssql ? azurerm_public_ip.windows_mssql[0].ip_address : "Not deployed"
+}
+
+output "windows_mssql_private_ip" {
+  description = "Private IP address of the Windows MSSQL VM (for WinRM from runner)"
+  value       = var.deploy_windows_mssql ? azurerm_network_interface.windows_mssql[0].private_ip_address : "Not deployed"
+}
+
+output "winrm_test_command" {
+  description = "Command to test WinRM connectivity from the runner VM"
+  value       = var.deploy_windows_mssql ? "inspec detect -t winrm://${var.windows_admin_username}@${azurerm_network_interface.windows_mssql[0].private_ip_address}:5985 --ssl=false --password '<password>'" : "Not deployed"
+}
+
+output "rdp_command" {
+  description = "RDP connection info for Windows MSSQL VM"
+  value       = var.deploy_windows_mssql ? "xfreerdp /u:${var.windows_admin_username} /v:${azurerm_public_ip.windows_mssql[0].ip_address}" : "Not deployed"
 }
