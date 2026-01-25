@@ -171,7 +171,7 @@ dnf module enable ruby:3.1 -y
 dnf module install ruby:3.1 -y
 dnf install -y ruby-devel redhat-rpm-config
 
-# Install InSpec 5.22.29 via gem
+# Install InSpec 5.22.29 via gem (includes train-winrm for WinRM transport)
 gem install inspec-bin -v 5.22.29 --no-document
 
 # Accept InSpec license and verify
