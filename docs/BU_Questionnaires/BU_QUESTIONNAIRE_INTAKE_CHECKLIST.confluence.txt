@@ -1,0 +1,96 @@
+h1. Business Unit Questionnaire Intake Checklist
+*Pre-discovery validation before sending questionnaire*
+
+*Expected time:* ~30 minutes (call + follow-up)
+
+----
+
+h2. Step 1: Initial Contact & Discovery
+
+h3. 1.1 Primary Stakeholders
+- Primary Tech Owner: Name / Title / Email / Phone / Availability
+- Primary DBA: Name / Title / Email / Platforms owned
+- Security/Compliance Sponsor: Name / Title / Email
+
+h3. 1.2 Intake Call (15–20 min)
+- Schedule call; attendees: Tech owner, DBA, Security sponsor
+- Agenda:
+  1) Intro/purpose
+  2) Regulatory drivers
+  3) Current state scanning (if any)
+  4) Timeline preferences & blackout periods
+  5) Known blockers
+
+----
+
+h2. Step 2: Regulatory & Audit Context
+- Regulations: SOX / GDPR / PCI / HIPAA / FCA / MiFID II / NIST / CIS / Internal / Other
+- Audit bodies & cadence (internal, external, regulators)
+- Compliance windows/blackouts (SOX period, month-end, quarter-end, year-end)
+- Impact on engagement (recommended POC window; blackout handling)
+
+----
+
+h2. Step 3: Infrastructure Maturity (Quick)
+- Environment counts (Prod/DR/UAT/QA/Dev estimates)
+- Complexity rating by instance count (Small <10, Medium 10–50, Large 50–200, Very large >200)
+- Platform count (Oracle/MSSQL/Sybase/PG/MySQL/Snowflake/Databricks/Other)
+  - Platform diversity rating: Single (Low), 2–3 (Med), 4+ or legacy (High)
+- Current scanning status: None / Manual / Partial automated / Automated
+
+----
+
+h2. Step 4: Known Blockers & Dependencies
+|| Blocker || Status || Owner || Target ||
+| Scanning host not provisioned | Yes/No/In progress | | |
+| Service accounts not created | Yes/No/In progress | | |
+| Firewall rules not approved | Yes/No/In progress | | |
+| Network segmentation issues | Yes/No | | |
+| Vault/credential mgmt missing | Yes/No/In progress | | |
+| Client libraries missing (Oracle/Sybase) | Yes/No | | |
+| CMDB/inventory quality issues | Yes/No | | |
+
+*Critical blockers:* list with owner + target date.
+
+Org blockers: team capacity, approvals (CAB/InfoSec), budget, change freezes.
+
+----
+
+h2. Step 5: Engagement Timeline & Assumptions
+- Preferred POC start window; avoid dates/blackouts
+- Estimated phases:
+  - Questionnaire completion: 1–2 weeks
+  - Blocker removal (parallel): variable
+  - POC planning: 1–2 weeks
+  - POC execution: 4–6 weeks
+  - Findings & rec: 1 week
+  - MVP: 4–8 weeks
+- Engagement lead assessment: Optimistic / Realistic / Conservative start window
+
+----
+
+h2. Step 6: Questionnaire Distribution & Logistics
+- Primary responder + secondary (DBA) + email
+- Expected completion date (1–2 weeks)
+- Preferred format: Markdown / Confluence / Google Doc / Excel
+- Template version: NORTHSTAR_BU_DISCOVERY_QUESTIONNAIRE_TEMPLATE v1.0
+- Attachments: BU_RESPONSE_GUIDE; optional example
+- Cover email drafted? Yes/No
+
+----
+
+h2. Step 7: Success Criteria & Quick Wins
+- POC success metrics (e.g., % instances scanned, errors, false positives, time-to-report)
+- Quick wins: inventory cleanup, expand coverage, low-risk envs to add
+
+----
+
+h2. Step 8: Completion & Next Actions
+- Checklist done; contacts confirmed; blockers owned; timeline set; customization noted
+- Next actions (owner/date/status): blocker follow-up, schedule discovery call, prep POC scope, pick pilot platforms, draft BU engagement plan
+
+----
+
+h2. Document Control
+|| Version || Date || Author || Changes ||
+| 1.0 | 2026-01-26 | Northstar Engagement Team | Initial checklist |
