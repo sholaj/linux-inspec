@@ -33,3 +33,8 @@ inputs:
     description: Oracle service name or SID
     type: string
     required: true
+
+  - name: tns_alias
+    description: TNS alias for connection (optional, used when oracle_use_tns is enabled)
+    type: string
+    required: false

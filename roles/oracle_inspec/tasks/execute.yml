@@ -48,13 +48,51 @@
       PATH: "{{ oracle_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ oracle_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
       ORACLE_HOME: "{{ oracle_environment_base.ORACLE_HOME }}"
-      TNS_ADMIN: "{{ oracle_environment_base.TNS_ADMIN }}"
+      TNS_ADMIN: "{{ oracle_tns_admin | default(oracle_environment_base.TNS_ADMIN) }}"
       NLS_LANG: "{{ oracle_environment_base.NLS_LANG }}"
+
+- name: Set connection parameters based on TNS mode
+  set_fact:
+    oracle_connection_host: "{{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper if oracle_use_tns | default(false) | bool else oracle_server }}"
+    oracle_connection_service: "{{ '' if oracle_use_tns | default(false) | bool else oracle_service | default('') }}"
+    oracle_connection_port: "{{ '' if oracle_use_tns | default(false) | bool else oracle_port }}"
 
 # Note: Database connectivity is validated in preflight.yml
 # If we reach here, preflight_passed is true and database is reachable
 
-- name: Execute InSpec controls
+- name: Execute InSpec controls (TNS mode)
+  shell: |
+    export PATH="{{ oracle_environment.PATH }}"
+    export LD_LIBRARY_PATH="{{ oracle_environment.LD_LIBRARY_PATH }}"
+    export ORACLE_HOME="{{ oracle_environment.ORACLE_HOME }}"
+    export TNS_ADMIN="{{ oracle_environment.TNS_ADMIN }}"
+    export NLS_LANG="{{ oracle_environment.NLS_LANG }}"
+    export INSPEC_DB_SERVICE="{{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper }}"
+    export INSPEC_DB_PORT="{{ oracle_port }}"
+
+    # TNS mode: Use TNS alias for connection
+    inspec exec {{ item.path }} \
+      --input usernm='{{ oracle_username }}' \
+              passwd='{{ oracle_password }}' \
+              hostnm='{{ oracle_server }}' \
+              servicenm='{{ oracle_service | default("") }}' \
+              port='{{ oracle_port }}' \
+              tns_alias='{{ oracle_tns_alias | default(oracle_service | default("ORCL")) | upper }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  register: oracle_inspec_results
+  loop: "{{ oracle_control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  changed_when: false
+  failed_when: oracle_inspec_results.rc not in [0, 100, 101]
+  no_log: true
+  delegate_to: "{{ inspec_execution_target }}"
+  when: oracle_use_tns | default(false) | bool
+
+- name: Execute InSpec controls (Direct mode)
   shell: |
     export PATH="{{ oracle_environment.PATH }}"
     export LD_LIBRARY_PATH="{{ oracle_environment.LD_LIBRARY_PATH }}"
@@ -63,7 +101,7 @@
     export NLS_LANG="{{ oracle_environment.NLS_LANG }}"
     export INSPEC_DB_SERVICE="{{ oracle_service | default('') }}"
     export INSPEC_DB_PORT="{{ oracle_port }}"
-    
+
     inspec exec {{ item.path }} \
       --input usernm='{{ oracle_username }}' \
               passwd='{{ oracle_password }}' \
@@ -82,6 +120,7 @@
   failed_when: oracle_inspec_results.rc not in [0, 100, 101]
   no_log: true
   delegate_to: "{{ inspec_execution_target }}"
+  when: not (oracle_use_tns | default(false) | bool)
 
 - name: Display sanitized execution summary (debug mode only)
   debug:
