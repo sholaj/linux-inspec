@@ -1,35 +1,40 @@
-name: oracle11g-compliance
-title: Oracle 11g NIST Compliance
-maintainer: DevOps Team
-copyright: Internal
-license: Proprietary
-summary: Oracle 11g NIST compliance controls
+name: oracle-11g-cis
+title: CIS Oracle Database 11g Compliance
+maintainer: InSpec Compliance Team
+copyright: Copyright 2024
+license: Apache-2.0
+summary: InSpec profile for CIS Oracle Database 11g compliance
 version: 1.0.0
 inspec_version: ">= 5.0"
 
 inputs:
-  - name: oracle_host
-    description: Oracle database server hostname or IP address
-    type: String
-    required: true
-
-  - name: oracle_port
-    description: Oracle database listener port
-    type: Numeric
-    value: 1521
-
-  - name: oracle_user
+  - name: usernm
     description: Oracle username for authentication
-    type: String
+    type: string
     required: true
 
-  - name: oracle_pass
+  - name: passwd
     description: Oracle password for authentication
-    type: String
+    type: string
     required: true
     sensitive: true
 
-  - name: oracle_service
-    description: Oracle service name or SID
-    type: String
+  - name: hostnm
+    description: Oracle database server hostname or IP address
+    type: string
     required: true
+
+  - name: port
+    description: Oracle database listener port
+    type: numeric
+    value: 1521
+
+  - name: servicenm
+    description: Oracle service name or SID
+    type: string
+    required: true
+
+  - name: tns_alias
+    description: TNS alias for connection (optional, used when oracle_use_tns is enabled)
+    type: string
+    required: false
