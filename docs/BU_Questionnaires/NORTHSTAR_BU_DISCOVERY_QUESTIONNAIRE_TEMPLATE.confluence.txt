@@ -1,0 +1,284 @@
+h1. Business Unit Infrastructure & Database Discovery Questionnaire
+
+*Purpose:* Capture current-state infra & database estate for visibility, risk assessment, planning, and compliance.
+
+*Expected completion:* 45–60 minutes  
+*Who completes:* Tech Owner / Infra Lead (+ DBA, Security as needed)
+
+----
+
+h2. Document Metadata
+|| Field || Value ||
+| Business Unit Name | [INSERT_BU_NAME] |
+| Completed by | [NAME / ROLE] |
+| Date Completed | [YYYY-MM-DD] |
+| Contact Email | [email@example.internal] |
+| Questionnaire Version | Northstar BU Discovery v1.0 |
+| Template Purpose | First-engagement infra & DB discovery |
+
+----
+
+h2. A. Business Unit Context
+
+h3. A.1 Business Unit Identity
+|| Field || Response ||
+| Business Unit Name | |
+| Business Unit Description | 2–3 sentences on purpose/systems/criticality |
+| Primary Business Functions | 3–5 functions (e.g., Trade Execution, Reporting) |
+| Business Criticality | Mission-Critical / Business-Critical / Important / Standard |
+
+h3. A.2 Organizational Contacts
+|| Field || Response ||
+| Primary Technology Owner (Name / Title / Email) | |
+| Primary DBA Contact (Name / Title / Email) | |
+| Secondary / Escalation (Name / Title / Email) | |
+| Security/Compliance Sponsor (Name / Title / Email) | |
+
+h3. A.3 Regulatory & Audit Sensitivity
+|| Field || Response ||
+| Applicable Regulations | SOX / GDPR / PCI / HIPAA / FCA / MiFID II / NIST / CIS / Internal / Other |
+| Audit/Compliance Bodies | (e.g., Internal Audit quarterly, External auditor annual) |
+| Key Compliance Windows | (e.g., SOX audit Jan–Mar; Month-end freeze last 3 biz days; Year-end Dec 15–Jan 5) |
+| Compliance Scanning Requirements | (e.g., monthly Oracle/MSSQL scans for SOX) |
+
+----
+
+h2. B. Environment Landscape
+
+h3. B.1 Environment Inventory
+|| Environment || Exists? || Hosting || Network Isolated? || Notes / Details ||
+| Production | Yes/No | On-Prem / Cloud / Hybrid | Yes/No/Partial | DC/region, tier, maintenance window |
+| Disaster Recovery | Yes/No | On-Prem / Cloud / Hybrid | Yes/No/Partial | RPO/RTO, failover test cadence |
+| UAT | Yes/No | On-Prem / Cloud / Hybrid | Yes/No/Partial | Data refresh, masking |
+| QA / Testing | Yes/No | On-Prem / Cloud / Hybrid | Yes/No/Partial | Synthetic vs prod-derived data |
+| Development | Yes/No | On-Prem / Cloud / Hybrid | Yes/No/Partial | Self-service? isolation? |
+| Other (specify) | Yes/No | On-Prem / Cloud / Hybrid | Yes/No/Partial | Performance test, staging, legacy |
+
+h3. B.2 Environment Details
+* Production: DC/regions, Tier-1 count, change mgmt (CAB?), maintenance window
+* DR: Location, failover automation, last test date, RPO, RTO
+* Non-Prod: Shared/dedicated, data refresh cadence, access controls
+
+----
+
+h2. C. Hosting Platforms
+
+h3. C.1 Coverage
+|| Platform || In Use? || Scope / Details ||
+| On-Premises | Yes/No | DCs; % workload |
+| AWS | Yes/No | Regions; % workload |
+| Azure | Yes/No | Regions; % workload; Subs |
+| GCP | Yes/No | Regions; % workload |
+| OCI | Yes/No | Regions; % workload |
+| Databricks | Yes/No | Workspaces; % workload |
+| Snowflake | Yes/No | Accounts; % workload |
+| Other (specify) | Yes/No | Details |
+
+h3. C.2 Strategy
+* Primary platform, strategic cloud partner, rationale, migration status/timeline
+
+----
+
+h2. D. Database Estate
+
+h3. D.1 Inventory
+|| Database Type || Versions in Use || Hosting || HA / DR Strategy || Approx. Instance Count || Notes ||
+| Oracle | | On-Prem / Cloud / Hybrid | Data Guard / RAC / Other | Prod: __ DR: __ Dev: __ | EOL? |
+| MSSQL | | On-Prem / Cloud / Hybrid | AAG / Failover / Mirror | Prod: __ DR: __ Dev: __ | Azure SQL MI? |
+| Sybase | | On-Prem / Cloud / Hybrid | Replication / Manual | Prod: __ DR: __ Dev: __ | Legacy risk? |
+| PostgreSQL | | On-Prem / Cloud / Hybrid | Streaming / HA cluster | Prod: __ DR: __ Dev: __ | Managed? |
+| MySQL | | | | Prod: __ DR: __ Dev: __ | |
+| MongoDB/NoSQL | | | | Prod: __ Dev: __ | |
+| Snowflake | | Cloud (SaaS) | Cloud-managed | Prod: __ Dev: __ | |
+| Databricks | | Cloud (SaaS) | Cloud-managed | Prod: __ Dev: __ | |
+| Elasticsearch/Search | | | | Prod: __ Dev: __ | |
+| Redis/Memcached | | | | Prod: __ Dev: __ | |
+| Other (specify) | | | | | |
+
+*Totals:* All instances: __ ; Production: __
+
+h3. D.2 Risks & Constraints
+* EOL/legacy platforms, version fragmentation, uncommon DBs (Teradata, Netezza, etc.)
+
+----
+
+h2. E. Inventory & CMDB
+
+h3. E.1 Source of Truth
+|| Field || Response ||
+| Primary inventory source | (CMDB, Excel, Terraform, etc.; update frequency) |
+| CMDB used? | Yes / Partial / No |
+| CMDB reliability | High / Medium / Low |
+| Who maintains inventory | |
+| Update frequency | Real-time / Daily / Weekly / Monthly / Ad-hoc |
+
+h3. E.2 Quality
+|| Item || Yes || No || Partial || Details ||
+| Known stale records | | | | Count, cleanup plan |
+| Known duplicates | | | | Count, where |
+| Known missing records | | | | Count, cause |
+| Instance-level inventory captured | | | | |
+| Version info captured per instance | | | | |
+
+h3. E.3 Reconciliation
+|| Field || Response ||
+| Formal reconciliation? | Yes / No / Partial |
+| Frequency | Quarterly / Semi-annual / Annual / Ad-hoc |
+| Last reconciliation date | |
+| Owner | |
+
+h3. E.4 Comments
+*Free text*
+
+----
+
+h2. F. Access & Connectivity
+
+h3. F.1 Authentication & Accounts
+|| Aspect || Response ||
+| Service/non-human accounts used? | Yes/No |
+| # Service accounts per platform | Oracle: __ MSSQL: __ Sybase: __ PG: __ Other: __ |
+| Naming convention | svc_[platform]_scan |
+| Credential management | Vault / Secrets Manager / Ansible / Manual / Other |
+| Password rotation | Every __ days |
+| Individual user accounts used? | Yes/No |
+| Should scanning use individual accounts? | Yes/No/Not recommended |
+
+h3. F.2 Network
+|| Aspect || Response ||
+| Jump server required? | Yes/No/Partial |
+| Jump server names/IPs (Prod/Non-Prod) | |
+| Direct DB connectivity from corp network? | Yes/Restricted/No |
+| If restricted, allowed sources | |
+| Network segmentation (VLAN/SG)? | Yes/No/Partial |
+| Firewall rules pre-approved? | Yes/No/Need approval |
+
+h3. F.3 Firewall Process
+|| Aspect || Response ||
+| Approval process | CAB / Network / Self-service / None |
+| Lead time | __ business days |
+| Expedited process? | Yes/No; lead time __ |
+| Owner | |
+
+h3. F.4 DB-Specific Notes
+* Oracle: TNS? Instant Client? Port?
+* MSSQL: Windows or SQL Auth? Kerberos? Port?
+* Sybase: Interfaces/LDAP? Open Client? Port?
+* PostgreSQL: Standard/custom port? PgBouncer/pgpool?
+* Other: __
+
+----
+
+h2. G. Security & Compliance Scanning
+
+h3. G.1 Current Status
+|| Aspect || Response ||
+| Scanning performed? | Yes/No/Partial |
+| Platforms covered | Oracle / MSSQL / Sybase / PG / MySQL / Other |
+| Tools used | InSpec / Custom scripts / Vendor / Other |
+| Frequency (Prod) | Weekly / Monthly / Quarterly / Annually / Ad-hoc / Never |
+| Frequency (Non-Prod) | Weekly / Monthly / Quarterly / Annually / Ad-hoc / Never |
+| Environments covered | Prod / DR / UAT / QA / Dev |
+| Scanning owner | |
+| Results stored | Splunk / JSON / SharePoint / ServiceNow / Other |
+
+h3. G.2 Compliance & Benchmarking
+|| Aspect || Response ||
+| CIS benchmarks used | CIS Oracle / CIS MSSQL / CIS PG / CIS Sybase / Custom / None |
+| If custom, describe | |
+| NIST CSF / 800-53 required? | Yes/No |
+| SOX/GDPR/PCI controls? | Yes/No (list) |
+| Scanning driver | Compliance / Risk / Audit / Not defined |
+
+h3. G.3 Desired Future State
+|| Aspect || Response ||
+| Desired tool | InSpec via Ansible / Vendor / Custom / Undecided |
+| Desired frequency (Prod) | Weekly / Monthly / Quarterly / Annually / Real-time |
+| Desired coverage | Prod only / Prod+DR / All envs |
+| Desired platforms | Oracle / MSSQL / Sybase / PG / MySQL / Snowflake / Databricks / Other |
+| Central reporting desired | Yes/No (platform) |
+
+h3. G.4 Constraints & Risks
+|| Aspect || Response ||
+| Service account perms sufficient? | Yes/No/Unknown |
+| Connectivity constraints? | |
+| Licensing/cost constraints? | |
+| Org constraints (approvals/windows)? | |
+
+----
+
+h2. H. Constraints, Risks & Dependencies
+
+h3. H.1 Technical Constraints
+* Legacy client libs, version fragmentation, network segmentation, missing secrets mgmt, etc.
+
+h3. H.2 Organizational / Process
+* Change freezes, audit windows, team capacity, approvals
+
+h3. H.3 Cross-Team Dependencies (Criticality: Crit/High/Med/Low)
+|| Dependency || Criticality || Owner || Notes ||
+| IAM / Credentials | | | |
+| Network | | | |
+| Cloud Platform | | | |
+| Infrastructure / Unix | | | |
+| Windows / DBA | | | |
+| Information Security | | | |
+| Change Management / CAB | | | |
+| Other | | | |
+
+----
+
+h2. I. Readiness & Engagement
+
+h3. I.1 Pilot / POC
+|| Aspect || Response ||
+| Willing to engage? | Yes / No / Conditional |
+| Primary motivation | Compliance / Reduce audit risk / Automation / Cost / Performance / Other |
+| Success criteria | (e.g., scan X instances, zero errors, results to Splunk) |
+
+h3. I.2 Key Blockers (with Criticality)
+|| Blocker || Criticality || Mitigation / Owner || Target Date ||
+| | Crit/High/Med/Low | | |
+
+h3. I.3 Timeline & Sequencing
+|| Aspect || Response ||
+| Preferred POC start | |
+| Preferred duration | |
+| Platform sequencing | |
+| MVP target date | |
+| Full rollout target | |
+| Hard constraints | |
+
+h3. I.4 Team Capacity & Model
+|| Aspect || Response ||
+| DBA/Tech availability | Full-time / %FTE / Limited |
+| Engagement model | Hands-on / Observational / Guided / Self-service |
+| Training preference | Workshop / Written / Video / Pairing / None |
+| Key stakeholders | Names/roles |
+
+h3. I.5 Success Metrics & Reporting
+|| Aspect || Response ||
+| Success measurement | |
+| Reporting frequency | Weekly / Bi-weekly / Monthly |
+| Reporting format | Dashboard / Email / Confluence / SNOW / Slack |
+| Key metrics | # scanned, duration, false positives, pass/fail, time to remediate |
+
+----
+
+h2. J. Additional Context (Optional)
+* Tier-1 systems table
+* Maintenance windows table
+* Planned infra changes (next 12–24 months)
+* Tools & integrations (CMDB, vault, monitoring, change mgmt, CI/CD)
+
+----
+
+h2. Completion Checklist
+* Contacts filled (A.2)
+* Environment landscape (B)
+* DB inventory + counts (D)
+* Inventory quality (E)
+* Access & connectivity (F)
+* Current scanning (G.1)
+* Blockers with criticality (I.2)
+* Timeline (I.3)
