@@ -32,25 +32,16 @@
 # Step 2: Authentication Check (only if port is open)
 - name: Test database authentication
   shell: |
-    # Set Oracle environment - match working manual test order
-    export ORACLE_HOME="{{ ORACLE_HOME }}"
-    export PATH="{{ oracle_extra_path }}:{{ ORACLE_HOME }}/bin${PATH:+:$PATH}"
-    export LD_LIBRARY_PATH="{{ ORACLE_HOME }}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-    export TNS_ADMIN="{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
-    export NLS_LANG="{{ NLS_LANG }}"
-
-    # Find sqlplus
-    SQLPLUS=$(command -v sqlplus 2>/dev/null)
-    if [ -z "$SQLPLUS" ]; then
-      echo "SQLPLUS_NOT_FOUND"
-      exit 127
-    fi
-
-    # Test connection with simple query
-    echo "SELECT 'PREFLIGHT_OK' FROM DUAL;" | timeout {{ preflight_auth_timeout | default(10) }} "$SQLPLUS" -S \
+    # Test connection with sqlplus using full path
+    echo "SELECT 'PREFLIGHT_OK' FROM DUAL;" | \
+    timeout {{ preflight_auth_timeout | default(10) }} \
+    {{ ORACLE_HOME }}/bin/sqlplus -S \
       "{{ oracle_username }}/{{ oracle_password }}@//{{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}" 2>&1
-
-    exit $?
+  environment:
+    ORACLE_HOME: "{{ ORACLE_HOME }}"
+    LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib"
+    TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
+    NLS_LANG: "{{ NLS_LANG }}"
   args:
     executable: /bin/bash
   register: _auth_check
