@@ -22,8 +22,8 @@ result_format: "json-min"
 # NOTE: ORACLE_HOME, oracle_extra_path, NLS_LANG are defined in defaults/main.yml
 #       and can be overridden via inventory or extra_vars
 oracle_environment_base:
-  PATH: "{{ oracle_extra_path }}"
-  LD_LIBRARY_PATH: ""
+  PATH: "{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}"
+  LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib"
   ORACLE_HOME: "{{ ORACLE_HOME }}"
   TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
   NLS_LANG: "{{ NLS_LANG }}"
