@@ -34,7 +34,7 @@
   shell: |
     export ORACLE_HOME="{{ oracle_environment_base.ORACLE_HOME | default('') }}"
     export PATH="{{ oracle_environment_base.PATH | default('/usr/local/bin:/usr/bin') }}:${ORACLE_HOME:+$ORACLE_HOME/bin:}$PATH"
-    export LD_LIBRARY_PATH="{{ oracle_environment_base.LD_LIBRARY_PATH | default('') }}"
+    export LD_LIBRARY_PATH="${ORACLE_HOME:+$ORACLE_HOME/lib:}{{ oracle_environment_base.LD_LIBRARY_PATH | default('') }}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     export TNS_ADMIN="{{ oracle_environment_base.TNS_ADMIN | default('') }}"
     export NLS_LANG="{{ oracle_environment_base.NLS_LANG | default('AMERICAN_AMERICA.AL32UTF8') }}"
 
