@@ -32,9 +32,9 @@
 # Step 2: Authentication Check (only if port is open)
 - name: Test database authentication
   shell: |
-    # Set Oracle environment - simple and direct
+    # Set Oracle environment - match working manual test order
     export ORACLE_HOME="{{ ORACLE_HOME }}"
-    export PATH="{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}${PATH:+:$PATH}"
+    export PATH="{{ oracle_extra_path }}:{{ ORACLE_HOME }}/bin${PATH:+:$PATH}"
     export LD_LIBRARY_PATH="{{ ORACLE_HOME }}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
     export TNS_ADMIN="{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
     export NLS_LANG="{{ NLS_LANG }}"
