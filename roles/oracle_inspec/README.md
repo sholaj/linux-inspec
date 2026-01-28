@@ -50,8 +50,8 @@ oracle_version: "19c"       # Oracle version (11g, 12c, 18c, 19c)
 
 ```yaml
 # Oracle Client Environment (override per environment)
-ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"  # Path to Oracle Instant Client
-oracle_extra_path: ""                    # Additional paths to prepend to PATH
+ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"  # Path to Oracle Instant Client
+oracle_extra_path: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"  # Additional paths
 NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"    # NLS_LANG setting
 
 # TNS Configuration (enables auto-generated tnsnames.ora)
@@ -81,8 +81,8 @@ The role automatically configures Oracle environment variables based on `ORACLE_
 
 | Variable | Description | Default/Value |
 |----------|-------------|---------------|
-| `ORACLE_HOME` | Oracle client installation path | `/tools/ver/oracle-19.16.0.0-64` |
-| `PATH` | Prepends `$ORACLE_HOME/bin` (and `oracle_extra_path` if set) | `$ORACLE_HOME/bin:$PATH` |
+| `ORACLE_HOME` | Oracle client installation path | `/tools/ver/oracle-client-21.3.0.0-32` |
+| `PATH` | Prepends `$ORACLE_HOME/bin` and `oracle_extra_path` | `$ORACLE_HOME/bin:oracle_extra_path:$PATH` |
 | `LD_LIBRARY_PATH` | Prepends `$ORACLE_HOME/lib` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
 | `TNS_ADMIN` | TNS configuration directory | `oracle_tns_admin` or `$ORACLE_HOME/network/admin` |
 | `NLS_LANG` | Oracle NLS language setting | `AMERICAN_AMERICA.AL32UTF8` |
@@ -96,14 +96,14 @@ ORACLE_HOME: "/opt/oracle/instantclient_21_3"
 
 ## Configuration Guide
 
-### Configurable ORACLE_HOME
+### Configurable Environment
 
-The `ORACLE_HOME` path is now configurable via `defaults/main.yml`. The default remains the production path for backward compatibility:
+The Oracle environment paths are configurable via `defaults/main.yml`:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `ORACLE_HOME` | `/tools/ver/oracle-19.16.0.0-64` | Path to Oracle client installation |
-| `oracle_extra_path` | `""` (empty) | Additional paths to prepend to PATH |
+| `ORACLE_HOME` | `/tools/ver/oracle-client-21.3.0.0-32` | Path to Oracle client installation |
+| `oracle_extra_path` | `/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin` | Additional paths to prepend to PATH |
 | `NLS_LANG` | `AMERICAN_AMERICA.AL32UTF8` | Oracle NLS language setting |
 
 ### Customizing for Your Environment
@@ -114,10 +114,10 @@ The `ORACLE_HOME` path is now configurable via `defaults/main.yml`. The default 
    ORACLE_HOME: "/opt/oracle/instantclient_21_3"
    ```
 
-2. **If your environment needs additional tools on PATH** (e.g., shared delegate host), set `oracle_extra_path`:
+2. **If your delegate host doesn't need extra paths**, set `oracle_extra_path` to empty:
    ```yaml
    # group_vars/all.yml
-   oracle_extra_path: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+   oracle_extra_path: ""
    ```
 
 3. **Verify your Oracle client installation** before running scans:
