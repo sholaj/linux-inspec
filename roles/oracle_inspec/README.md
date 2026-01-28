@@ -50,7 +50,7 @@ oracle_version: "19c"       # Oracle version (11g, 12c, 18c, 19c)
 
 ```yaml
 # Oracle Client Environment (override per environment)
-ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"  # Path to Oracle Instant Client
+ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"  # Path to Oracle Instant Client
 oracle_extra_path: ""                    # Additional paths to prepend to PATH
 NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"    # NLS_LANG setting
 
@@ -81,7 +81,7 @@ The role automatically configures Oracle environment variables based on `ORACLE_
 
 | Variable | Description | Default/Value |
 |----------|-------------|---------------|
-| `ORACLE_HOME` | Oracle client installation path | `/tools/ver/oracle-client-21.3.0.0-32` |
+| `ORACLE_HOME` | Oracle client installation path | `/tools/ver/oracle-19.16.0.0-64` |
 | `PATH` | Prepends `$ORACLE_HOME/bin` (and `oracle_extra_path` if set) | `$ORACLE_HOME/bin:$PATH` |
 | `LD_LIBRARY_PATH` | Prepends `$ORACLE_HOME/lib` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
 | `TNS_ADMIN` | TNS configuration directory | `oracle_tns_admin` or `$ORACLE_HOME/network/admin` |
@@ -94,26 +94,27 @@ Override `ORACLE_HOME` in your inventory or group_vars to match your Oracle clie
 ORACLE_HOME: "/opt/oracle/instantclient_21_3"
 ```
 
-## Breaking Changes / Migration Guide
+## Configuration Guide
 
-### Version with configurable ORACLE_HOME (current)
+### Configurable ORACLE_HOME
 
-**Breaking Change:** The default `ORACLE_HOME` path has changed:
+The `ORACLE_HOME` path is now configurable via `defaults/main.yml`. The default remains the production path for backward compatibility:
 
-| Setting | Old Default | New Default |
-|---------|-------------|-------------|
-| `ORACLE_HOME` | `/tools/ver/oracle-19.16.0.0-64` | `/tools/ver/oracle-client-21.3.0.0-32` |
-| Extra PATH entries | Included `mssql-tools/bin`, `sybase/OCS` | Empty (use `oracle_extra_path` to add) |
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `ORACLE_HOME` | `/tools/ver/oracle-19.16.0.0-64` | Path to Oracle client installation |
+| `oracle_extra_path` | `""` (empty) | Additional paths to prepend to PATH |
+| `NLS_LANG` | `AMERICAN_AMERICA.AL32UTF8` | Oracle NLS language setting |
 
-**Migration Steps:**
+### Customizing for Your Environment
 
-1. **If using the old Oracle 19.16 client**, explicitly set `ORACLE_HOME` in your inventory:
+1. **If using a different Oracle client version**, set `ORACLE_HOME` in your inventory:
    ```yaml
-   # group_vars/all.yml
-   ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
+   # group_vars/all.yml or host_vars/delegate-host.yml
+   ORACLE_HOME: "/opt/oracle/instantclient_21_3"
    ```
 
-2. **If your environment needs MSSQL or Sybase tools on PATH** (e.g., shared delegate host), set `oracle_extra_path`:
+2. **If your environment needs additional tools on PATH** (e.g., shared delegate host), set `oracle_extra_path`:
    ```yaml
    # group_vars/all.yml
    oracle_extra_path: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
@@ -564,7 +565,7 @@ ls -la /opt/oracle/instantclient_* /tools/ver/oracle-*
 ls -la $ORACLE_HOME/bin/sqlplus
 
 # Set environment manually for testing
-export ORACLE_HOME=/tools/ver/oracle-client-21.3.0.0-32
+export ORACLE_HOME=/tools/ver/oracle-19.16.0.0-64
 export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME/bin:$PATH
 ```
@@ -572,7 +573,7 @@ export PATH=$ORACLE_HOME/bin:$PATH
 **Fix:** Set `ORACLE_HOME` in your inventory to match your installation:
 
 ```yaml
-ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"
+ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
 ```
 
 ### TNS Resolution Failed
