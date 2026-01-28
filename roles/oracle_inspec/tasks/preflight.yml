@@ -32,12 +32,12 @@
 # Step 2: Authentication Check (only if port is open)
 - name: Test database authentication
   shell: |
-    export ORACLE_HOME="{{ oracle_environment_base.ORACLE_HOME | default('') }}"
-    # Use oracle_environment_base PATH and LD_LIBRARY_PATH directly (already includes ORACLE_HOME/bin and /lib)
-    export PATH="{{ oracle_environment_base.PATH }}${PATH:+:$PATH}"
-    export LD_LIBRARY_PATH="{{ oracle_environment_base.LD_LIBRARY_PATH }}${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-    export TNS_ADMIN="{{ oracle_environment_base.TNS_ADMIN | default('') }}"
-    export NLS_LANG="{{ oracle_environment_base.NLS_LANG | default('AMERICAN_AMERICA.AL32UTF8') }}"
+    # Set Oracle environment - simple and direct
+    export ORACLE_HOME="{{ ORACLE_HOME }}"
+    export PATH="{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}${PATH:+:$PATH}"
+    export LD_LIBRARY_PATH="{{ ORACLE_HOME }}/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+    export TNS_ADMIN="{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
+    export NLS_LANG="{{ NLS_LANG }}"
 
     # Find sqlplus
     SQLPLUS=$(command -v sqlplus 2>/dev/null)

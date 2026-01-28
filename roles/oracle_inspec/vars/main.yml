@@ -21,12 +21,10 @@ result_format: "json-min"
 # Oracle-specific environment setup
 # NOTE: ORACLE_HOME, oracle_extra_path, NLS_LANG are defined in defaults/main.yml
 #       and can be overridden via inventory or extra_vars
-oracle_environment_base:
-  PATH: "{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}"
-  LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib"
-  ORACLE_HOME: "{{ ORACLE_HOME }}"
-  TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
-  NLS_LANG: "{{ NLS_LANG }}"
+# 
+# Environment variables are built directly in:
+# - preflight.yml: export PATH="{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}:$PATH"
+# - execute.yml: set_fact oracle_environment.PATH = "{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}:..."
 
 # Timestamp formats matching original script exactly
 timestamp_format: "%Y_%m%d_%H%M%S"
