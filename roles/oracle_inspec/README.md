@@ -49,6 +49,11 @@ oracle_version: "19c"       # Oracle version (11g, 12c, 18c, 19c)
 ### Optional Variables
 
 ```yaml
+# Oracle Client Environment (override per environment)
+oracle_home: "/tools/ver/oracle-client-21.3.0.0-32"  # Path to Oracle Instant Client
+oracle_extra_path: ""                    # Additional paths to prepend to PATH
+oracle_nls_lang: "AMERICAN_AMERICA.AL32UTF8"  # NLS_LANG setting
+
 # TNS Configuration (enables auto-generated tnsnames.ora)
 oracle_use_tns: false                    # Use TNS names for connection
 oracle_tns_alias: ""                     # TNS alias name (defaults to oracle_service)
@@ -70,20 +75,24 @@ splunk_hec_token: ""                     # Splunk HEC token
 splunk_index: "compliance_scans"         # Splunk index name
 ```
 
-### Environment Variables (vars/main.yml)
+### Environment Variables
 
-These are internal variables used by the role:
+The role automatically configures Oracle environment variables based on `oracle_home`:
+
+| Variable | Value |
+|----------|-------|
+| `ORACLE_HOME` | `{{ oracle_home }}` |
+| `PATH` | `$ORACLE_HOME/bin:{{ oracle_extra_path }}:$PATH` |
+| `LD_LIBRARY_PATH` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
+| `TNS_ADMIN` | `{{ oracle_tns_admin }}` or `$ORACLE_HOME/network/admin` |
+| `NLS_LANG` | `{{ oracle_nls_lang }}` |
+
+Override `oracle_home` in your inventory or group_vars to match your Oracle client installation:
 
 ```yaml
-oracle_environment_base:
-  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
-  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
-  ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
-  TNS_ADMIN: "{{ oracle_tns_admin | default('/tools/ver/oracle-19.16.0.0-64/network/admin') }}"
-  NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
+# group_vars/all.yml or host_vars/delegate-host.yml
+oracle_home: "/opt/oracle/instantclient_21_3"
 ```
-
-Override these in your inventory or playbook if Oracle is installed in a different location.
 
 ## Supported Oracle Versions
 
@@ -518,12 +527,21 @@ The role handles:
 
 ```bash
 # Check Oracle Instant Client installation
-ls -la /opt/oracle/instantclient_*
+ls -la /opt/oracle/instantclient_* /tools/ver/oracle-*
 
-# Set environment
-export ORACLE_HOME=/opt/oracle/instantclient_19_16
-export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
-export PATH=$ORACLE_HOME:$PATH
+# Verify sqlplus is in ORACLE_HOME/bin
+ls -la $ORACLE_HOME/bin/sqlplus
+
+# Set environment manually for testing
+export ORACLE_HOME=/tools/ver/oracle-client-21.3.0.0-32
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+export PATH=$ORACLE_HOME/bin:$PATH
+```
+
+**Fix:** Set `oracle_home` in your inventory to match your installation:
+
+```yaml
+oracle_home: "/tools/ver/oracle-client-21.3.0.0-32"
 ```
 
 ### TNS Resolution Failed
