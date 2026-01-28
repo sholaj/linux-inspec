@@ -73,13 +73,10 @@
       --reporter=json-min \
       --no-color
   environment:
-    PATH: "{{ oracle_environment.PATH }}"
     LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
     ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
     TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
     NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
-    INSPEC_DB_SERVICE: "{{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper }}"
-    INSPEC_DB_PORT: "{{ oracle_port }}"
   args:
     executable: /bin/bash
   register: oracle_inspec_results
@@ -103,13 +100,10 @@
       --reporter=json-min \
       --no-color
   environment:
-    PATH: "{{ oracle_environment.PATH }}"
     LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
     ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
     TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
     NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
-    INSPEC_DB_SERVICE: "{{ oracle_service | default('') }}"
-    INSPEC_DB_PORT: "{{ oracle_port }}"
   args:
     executable: /bin/bash
   register: oracle_inspec_results
