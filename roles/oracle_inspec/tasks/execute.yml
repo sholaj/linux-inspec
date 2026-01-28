@@ -62,14 +62,6 @@
 
 - name: Execute InSpec controls (TNS mode)
   shell: |
-    export PATH="{{ oracle_environment.PATH }}"
-    export LD_LIBRARY_PATH="{{ oracle_environment.LD_LIBRARY_PATH }}"
-    export ORACLE_HOME="{{ oracle_environment.ORACLE_HOME }}"
-    export TNS_ADMIN="{{ oracle_environment.TNS_ADMIN }}"
-    export NLS_LANG="{{ oracle_environment.NLS_LANG }}"
-    export INSPEC_DB_SERVICE="{{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper }}"
-    export INSPEC_DB_PORT="{{ oracle_port }}"
-
     # TNS mode: Use TNS alias for connection
     inspec exec {{ item.path }} \
       --input usernm='{{ oracle_username }}' \
@@ -80,6 +72,14 @@
               tns_alias='{{ oracle_tns_alias | default(oracle_service | default("ORCL")) | upper }}' \
       --reporter=json-min \
       --no-color
+  environment:
+    PATH: "{{ oracle_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
+    ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
+    TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
+    NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
+    INSPEC_DB_SERVICE: "{{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper }}"
+    INSPEC_DB_PORT: "{{ oracle_port }}"
   args:
     executable: /bin/bash
   register: oracle_inspec_results
@@ -94,14 +94,6 @@
 
 - name: Execute InSpec controls (Direct mode)
   shell: |
-    export PATH="{{ oracle_environment.PATH }}"
-    export LD_LIBRARY_PATH="{{ oracle_environment.LD_LIBRARY_PATH }}"
-    export ORACLE_HOME="{{ oracle_environment.ORACLE_HOME }}"
-    export TNS_ADMIN="{{ oracle_environment.TNS_ADMIN }}"
-    export NLS_LANG="{{ oracle_environment.NLS_LANG }}"
-    export INSPEC_DB_SERVICE="{{ oracle_service | default('') }}"
-    export INSPEC_DB_PORT="{{ oracle_port }}"
-
     inspec exec {{ item.path }} \
       --input usernm='{{ oracle_username }}' \
               passwd='{{ oracle_password }}' \
@@ -110,6 +102,14 @@
               port='{{ oracle_port }}' \
       --reporter=json-min \
       --no-color
+  environment:
+    PATH: "{{ oracle_environment.PATH }}"
+    LD_LIBRARY_PATH: "{{ oracle_environment.LD_LIBRARY_PATH }}"
+    ORACLE_HOME: "{{ oracle_environment.ORACLE_HOME }}"
+    TNS_ADMIN: "{{ oracle_environment.TNS_ADMIN }}"
+    NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
+    INSPEC_DB_SERVICE: "{{ oracle_service | default('') }}"
+    INSPEC_DB_PORT: "{{ oracle_port }}"
   args:
     executable: /bin/bash
   register: oracle_inspec_results
