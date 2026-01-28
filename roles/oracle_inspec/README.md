@@ -50,9 +50,9 @@ oracle_version: "19c"       # Oracle version (11g, 12c, 18c, 19c)
 
 ```yaml
 # Oracle Client Environment (override per environment)
-oracle_home: "/tools/ver/oracle-client-21.3.0.0-32"  # Path to Oracle Instant Client
+ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"  # Path to Oracle Instant Client
 oracle_extra_path: ""                    # Additional paths to prepend to PATH
-oracle_nls_lang: "AMERICAN_AMERICA.AL32UTF8"  # NLS_LANG setting
+NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"    # NLS_LANG setting
 
 # TNS Configuration (enables auto-generated tnsnames.ora)
 oracle_use_tns: false                    # Use TNS names for connection
@@ -77,21 +77,21 @@ splunk_index: "compliance_scans"         # Splunk index name
 
 ### Environment Variables
 
-The role automatically configures Oracle environment variables based on `oracle_home`:
+The role automatically configures Oracle environment variables based on `ORACLE_HOME`:
 
 | Variable | Value |
 |----------|-------|
-| `ORACLE_HOME` | `{{ oracle_home }}` |
+| `ORACLE_HOME` | `{{ ORACLE_HOME }}` |
 | `PATH` | `$ORACLE_HOME/bin:{{ oracle_extra_path }}:$PATH` |
 | `LD_LIBRARY_PATH` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
 | `TNS_ADMIN` | `{{ oracle_tns_admin }}` or `$ORACLE_HOME/network/admin` |
-| `NLS_LANG` | `{{ oracle_nls_lang }}` |
+| `NLS_LANG` | `{{ NLS_LANG }}` |
 
-Override `oracle_home` in your inventory or group_vars to match your Oracle client installation:
+Override `ORACLE_HOME` in your inventory or group_vars to match your Oracle client installation:
 
 ```yaml
 # group_vars/all.yml or host_vars/delegate-host.yml
-oracle_home: "/opt/oracle/instantclient_21_3"
+ORACLE_HOME: "/opt/oracle/instantclient_21_3"
 ```
 
 ## Supported Oracle Versions
@@ -538,10 +538,10 @@ export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME/bin:$PATH
 ```
 
-**Fix:** Set `oracle_home` in your inventory to match your installation:
+**Fix:** Set `ORACLE_HOME` in your inventory to match your installation:
 
 ```yaml
-oracle_home: "/tools/ver/oracle-client-21.3.0.0-32"
+ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"
 ```
 
 ### TNS Resolution Failed

@@ -19,14 +19,14 @@ result_format: "json-min"
 
 # Environment variables matching original NIST.ksh script
 # Oracle-specific environment setup
-# NOTE: oracle_home, oracle_extra_path, oracle_nls_lang are defined in defaults/main.yml
+# NOTE: ORACLE_HOME, oracle_extra_path, NLS_LANG are defined in defaults/main.yml
 #       and can be overridden via inventory or extra_vars
 oracle_environment_base:
   PATH: "{{ oracle_extra_path }}"
   LD_LIBRARY_PATH: ""
-  ORACLE_HOME: "{{ oracle_home }}"
-  TNS_ADMIN: "{{ oracle_tns_admin | default(oracle_home + '/network/admin') }}"
-  NLS_LANG: "{{ oracle_nls_lang }}"
+  ORACLE_HOME: "{{ ORACLE_HOME }}"
+  TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
+  NLS_LANG: "{{ NLS_LANG }}"
 
 # Timestamp formats matching original script exactly
 timestamp_format: "%Y_%m%d_%H%M%S"
