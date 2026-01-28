@@ -19,13 +19,14 @@ result_format: "json-min"
 
 # Environment variables matching original NIST.ksh script
 # Oracle-specific environment setup
-# NOTE: These will be combined with delegate host's environment at runtime
+# NOTE: ORACLE_HOME, oracle_extra_path, NLS_LANG are defined in defaults/main.yml
+#       and can be overridden via inventory or extra_vars
 oracle_environment_base:
-  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
-  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
-  ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
-  TNS_ADMIN: "{{ oracle_tns_admin | default('/tools/ver/oracle-19.16.0.0-64/network/admin') }}"
-  NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
+  PATH: "{{ oracle_extra_path }}"
+  LD_LIBRARY_PATH: ""
+  ORACLE_HOME: "{{ ORACLE_HOME }}"
+  TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
+  NLS_LANG: "{{ NLS_LANG }}"
 
 # Timestamp formats matching original script exactly
 timestamp_format: "%Y_%m%d_%H%M%S"

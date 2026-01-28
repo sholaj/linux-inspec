@@ -22,6 +22,11 @@ oracle_use_tns: false
 oracle_tns_admin: ""
 oracle_service_type: "service_name"  # or "sid"
 
+# Oracle client environment paths (override these per environment)
+ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"
+oracle_extra_path: ""  # Additional paths to prepend (e.g., "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin")
+NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
+
 # Error handling
 create_error_reports: true
 continue_on_errors: true

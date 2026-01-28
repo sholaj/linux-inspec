@@ -49,6 +49,11 @@ oracle_version: "19c"       # Oracle version (11g, 12c, 18c, 19c)
 ### Optional Variables
 
 ```yaml
+# Oracle Client Environment (override per environment)
+ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"  # Path to Oracle Instant Client
+oracle_extra_path: ""                    # Additional paths to prepend to PATH
+NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"    # NLS_LANG setting
+
 # TNS Configuration (enables auto-generated tnsnames.ora)
 oracle_use_tns: false                    # Use TNS names for connection
 oracle_tns_alias: ""                     # TNS alias name (defaults to oracle_service)
@@ -70,20 +75,55 @@ splunk_hec_token: ""                     # Splunk HEC token
 splunk_index: "compliance_scans"         # Splunk index name
 ```
 
-### Environment Variables (vars/main.yml)
+### Environment Variables
 
-These are internal variables used by the role:
+The role automatically configures Oracle environment variables based on `ORACLE_HOME`:
+
+| Variable | Description | Default/Value |
+|----------|-------------|---------------|
+| `ORACLE_HOME` | Oracle client installation path | `/tools/ver/oracle-client-21.3.0.0-32` |
+| `PATH` | Prepends `$ORACLE_HOME/bin` (and `oracle_extra_path` if set) | `$ORACLE_HOME/bin:$PATH` |
+| `LD_LIBRARY_PATH` | Prepends `$ORACLE_HOME/lib` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
+| `TNS_ADMIN` | TNS configuration directory | `oracle_tns_admin` or `$ORACLE_HOME/network/admin` |
+| `NLS_LANG` | Oracle NLS language setting | `AMERICAN_AMERICA.AL32UTF8` |
+
+Override `ORACLE_HOME` in your inventory or group_vars to match your Oracle client installation:
 
 ```yaml
-oracle_environment_base:
-  PATH: "/usr/local/oracle/NIST_FILES/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
-  LD_LIBRARY_PATH: "/tools/ver/oracle-19.16.0.0-64"
-  ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
-  TNS_ADMIN: "{{ oracle_tns_admin | default('/tools/ver/oracle-19.16.0.0-64/network/admin') }}"
-  NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
+# group_vars/all.yml or host_vars/delegate-host.yml
+ORACLE_HOME: "/opt/oracle/instantclient_21_3"
 ```
 
-Override these in your inventory or playbook if Oracle is installed in a different location.
+## Breaking Changes / Migration Guide
+
+### Version with configurable ORACLE_HOME (current)
+
+**Breaking Change:** The default `ORACLE_HOME` path has changed:
+
+| Setting | Old Default | New Default |
+|---------|-------------|-------------|
+| `ORACLE_HOME` | `/tools/ver/oracle-19.16.0.0-64` | `/tools/ver/oracle-client-21.3.0.0-32` |
+| Extra PATH entries | Included `mssql-tools/bin`, `sybase/OCS` | Empty (use `oracle_extra_path` to add) |
+
+**Migration Steps:**
+
+1. **If using the old Oracle 19.16 client**, explicitly set `ORACLE_HOME` in your inventory:
+   ```yaml
+   # group_vars/all.yml
+   ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
+   ```
+
+2. **If your environment needs MSSQL or Sybase tools on PATH** (e.g., shared delegate host), set `oracle_extra_path`:
+   ```yaml
+   # group_vars/all.yml
+   oracle_extra_path: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+   ```
+
+3. **Verify your Oracle client installation** before running scans:
+   ```bash
+   ls -la $ORACLE_HOME/bin/sqlplus
+   ls -la $ORACLE_HOME/lib/libclntsh.so*
+   ```
 
 ## Supported Oracle Versions
 
@@ -518,12 +558,21 @@ The role handles:
 
 ```bash
 # Check Oracle Instant Client installation
-ls -la /opt/oracle/instantclient_*
+ls -la /opt/oracle/instantclient_* /tools/ver/oracle-*
 
-# Set environment
-export ORACLE_HOME=/opt/oracle/instantclient_19_16
-export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
-export PATH=$ORACLE_HOME:$PATH
+# Verify sqlplus is in ORACLE_HOME/bin
+ls -la $ORACLE_HOME/bin/sqlplus
+
+# Set environment manually for testing
+export ORACLE_HOME=/tools/ver/oracle-client-21.3.0.0-32
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
+export PATH=$ORACLE_HOME/bin:$PATH
+```
+
+**Fix:** Set `ORACLE_HOME` in your inventory to match your installation:
+
+```yaml
+ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"
 ```
 
 ### TNS Resolution Failed
