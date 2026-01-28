@@ -32,9 +32,15 @@
 # Step 2: Authentication Check (only if port is open)
 - name: Test database authentication
   shell: |
-    export PATH="{{ oracle_environment_base.PATH | default('/usr/local/bin:/usr/bin') }}:$PATH"
-    export LD_LIBRARY_PATH="{{ oracle_environment_base.LD_LIBRARY_PATH | default('') }}"
     export ORACLE_HOME="{{ oracle_environment_base.ORACLE_HOME | default('') }}"
+    # Build PATH: ORACLE_HOME/bin first, then extra paths, then system PATH (matches execute.yml ordering)
+    NEW_PATH="${ORACLE_HOME:+$ORACLE_HOME/bin}"
+    {% if oracle_environment_base.PATH %}NEW_PATH="${NEW_PATH:+$NEW_PATH:}{{ oracle_environment_base.PATH }}"{% endif %}
+    export PATH="${NEW_PATH:+$NEW_PATH:}$PATH"
+    # Build LD_LIBRARY_PATH: ORACLE_HOME/lib first, then extra paths, then system LD_LIBRARY_PATH
+    NEW_LD="${ORACLE_HOME:+$ORACLE_HOME/lib}"
+    {% if oracle_environment_base.LD_LIBRARY_PATH %}NEW_LD="${NEW_LD:+$NEW_LD:}{{ oracle_environment_base.LD_LIBRARY_PATH }}"{% endif %}
+    export LD_LIBRARY_PATH="${NEW_LD:+$NEW_LD:}${LD_LIBRARY_PATH:-}"
     export TNS_ADMIN="{{ oracle_environment_base.TNS_ADMIN | default('') }}"
     export NLS_LANG="{{ oracle_environment_base.NLS_LANG | default('AMERICAN_AMERICA.AL32UTF8') }}"
 
