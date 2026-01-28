@@ -79,13 +79,13 @@ splunk_index: "compliance_scans"         # Splunk index name
 
 The role automatically configures Oracle environment variables based on `ORACLE_HOME`:
 
-| Variable | Value |
-|----------|-------|
-| `ORACLE_HOME` | `{{ ORACLE_HOME }}` |
-| `PATH` | `$ORACLE_HOME/bin:{{ oracle_extra_path }}:$PATH` |
-| `LD_LIBRARY_PATH` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
-| `TNS_ADMIN` | `{{ oracle_tns_admin }}` or `$ORACLE_HOME/network/admin` |
-| `NLS_LANG` | `{{ NLS_LANG }}` |
+| Variable | Description | Default/Value |
+|----------|-------------|---------------|
+| `ORACLE_HOME` | Oracle client installation path | `/tools/ver/oracle-client-21.3.0.0-32` |
+| `PATH` | Prepends `$ORACLE_HOME/bin` (and `oracle_extra_path` if set) | `$ORACLE_HOME/bin:$PATH` |
+| `LD_LIBRARY_PATH` | Prepends `$ORACLE_HOME/lib` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
+| `TNS_ADMIN` | TNS configuration directory | `oracle_tns_admin` or `$ORACLE_HOME/network/admin` |
+| `NLS_LANG` | Oracle NLS language setting | `AMERICAN_AMERICA.AL32UTF8` |
 
 Override `ORACLE_HOME` in your inventory or group_vars to match your Oracle client installation:
 
@@ -93,6 +93,37 @@ Override `ORACLE_HOME` in your inventory or group_vars to match your Oracle clie
 # group_vars/all.yml or host_vars/delegate-host.yml
 ORACLE_HOME: "/opt/oracle/instantclient_21_3"
 ```
+
+## Breaking Changes / Migration Guide
+
+### Version with configurable ORACLE_HOME (current)
+
+**Breaking Change:** The default `ORACLE_HOME` path has changed:
+
+| Setting | Old Default | New Default |
+|---------|-------------|-------------|
+| `ORACLE_HOME` | `/tools/ver/oracle-19.16.0.0-64` | `/tools/ver/oracle-client-21.3.0.0-32` |
+| Extra PATH entries | Included `mssql-tools/bin`, `sybase/OCS` | Empty (use `oracle_extra_path` to add) |
+
+**Migration Steps:**
+
+1. **If using the old Oracle 19.16 client**, explicitly set `ORACLE_HOME` in your inventory:
+   ```yaml
+   # group_vars/all.yml
+   ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
+   ```
+
+2. **If your environment needs MSSQL or Sybase tools on PATH** (e.g., shared delegate host), set `oracle_extra_path`:
+   ```yaml
+   # group_vars/all.yml
+   oracle_extra_path: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+   ```
+
+3. **Verify your Oracle client installation** before running scans:
+   ```bash
+   ls -la $ORACLE_HOME/bin/sqlplus
+   ls -la $ORACLE_HOME/lib/libclntsh.so*
+   ```
 
 ## Supported Oracle Versions
 
