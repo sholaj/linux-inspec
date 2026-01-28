@@ -38,7 +38,6 @@
     {{ ORACLE_HOME }}/bin/sqlplus -S \
       "{{ oracle_username }}/{{ oracle_password }}@//{{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}" 2>&1
   environment:
-    ORACLE_HOME: "{{ ORACLE_HOME }}"
     LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib"
     TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
     NLS_LANG: "{{ NLS_LANG }}"
