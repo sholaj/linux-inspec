@@ -11,7 +11,7 @@
     path: "{{ inspec_results_dir }}"
     state: directory
     mode: "0755"
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
 
 # Handle skipped databases (preflight failed)
 - name: Generate skip report for failed preflight
@@ -21,7 +21,7 @@
         src: skip_report.j2
         dest: "{{ inspec_results_dir }}/SKIPPED_{{ oracle_server | replace('.', '_') }}_{{ oracle_database }}_{{ ansible_date_time.epoch }}.json"
         mode: "0644"
-      delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+      delegate_to: "{{ _delegate_host }}"
 
     - name: Display skip summary
       debug:
@@ -59,7 +59,7 @@
     - generate_summary_report | default(true)
     - oracle_inspec_results is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
 
 # Splunk integration - send scan results (only for successful scans)
 - name: Send Oracle results to Splunk (if enabled)
@@ -107,7 +107,7 @@
     - send_to_splunk | default(false) | bool
     - splunk_hec_url | default('') | length > 0
     - splunk_hec_token | default('') | length > 0
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
 
 # Clean up temporary files (only for successful scans)
 - name: Clean up Oracle temporary files
@@ -118,7 +118,7 @@
     - preflight_passed | default(true)
     - oracle_temp_dir is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Clean up Oracle control files directory (remote delegate only)
   file:
@@ -129,7 +129,7 @@
     - delegate_controls_dir is defined
     - delegate_controls_dir.path is defined
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
 
 # Display completion summary (only for successful scans)
 - name: Display Oracle scan completion summary

@@ -13,28 +13,22 @@
 #
 # These are DIFFERENT execution paths based on infrastructure setup
 
-- name: Determine execution mode and target host
-  set_fact:
-    use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
-    inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
-    cacheable: yes
-
 - name: Gather environment facts from execution target
   setup:
     gather_subset:
       - env
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
   delegate_facts: true
 
 - name: Set target environment from execution host
   set_fact:
-    _target_env: "{{ hostvars[inspec_execution_target].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
+    _target_env: "{{ hostvars[_delegate_host].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
 
 - name: Get system PATH from delegate host if not available in facts
   shell: echo "$PATH"
   register: delegate_system_path
   changed_when: false
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
   when: not _target_env.PATH or _target_env.PATH == ''
 
 - name: Update target environment with system PATH
@@ -86,7 +80,7 @@
   changed_when: false
   failed_when: oracle_inspec_results.rc not in [0, 100, 101]
   no_log: true
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
   when: oracle_use_tns | default(false) | bool
 
 - name: Execute InSpec controls (Direct mode)
@@ -113,7 +107,7 @@
   changed_when: false
   failed_when: oracle_inspec_results.rc not in [0, 100, 101]
   no_log: true
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
   when: not (oracle_use_tns | default(false) | bool)
 
 - name: Display sanitized execution summary (debug mode only)
@@ -133,7 +127,7 @@
     label: "{{ item.item.path | basename }}"
   when:
     - inspec_debug_mode | default(false)
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Process Oracle InSpec results
   include_tasks: process_results.yml
