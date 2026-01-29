@@ -57,7 +57,7 @@
 - name: Execute InSpec controls (TNS mode)
   shell: |
     # TNS mode: Use TNS alias for connection
-    inspec exec {{ item.path }} \
+    inspec exec {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby/{{ item.path | basename }} \
       --input usernm='{{ oracle_username }}' \
               passwd='{{ oracle_password }}' \
               hostnm='{{ oracle_server }}' \
@@ -85,7 +85,7 @@
 
 - name: Execute InSpec controls (Direct mode)
   shell: |
-    inspec exec {{ item.path }} \
+    inspec exec {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby/{{ item.path | basename }} \
       --input usernm='{{ oracle_username }}' \
               passwd='{{ oracle_password }}' \
               hostnm='{{ oracle_server }}' \
