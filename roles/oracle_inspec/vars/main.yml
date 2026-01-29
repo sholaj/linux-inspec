@@ -21,7 +21,7 @@ result_format: "json-min"
 # Oracle-specific environment setup
 # NOTE: ORACLE_HOME, oracle_extra_path, NLS_LANG are defined in defaults/main.yml
 #       and can be overridden via inventory or extra_vars
-# 
+#
 # Environment variables are built directly in:
 # - preflight.yml: export PATH="{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}:$PATH"
 # - execute.yml: set_fact oracle_environment.PATH = "{{ ORACLE_HOME }}/bin:{{ oracle_extra_path }}:..."
@@ -75,7 +75,7 @@ inspec_settings:
   no_color: true
   backend: "oracle"
   timeout: 300
-  
+
 # Oracle-specific settings
 oracle_settings:
   connect_timeout: 30
