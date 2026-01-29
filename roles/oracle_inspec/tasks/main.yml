@@ -7,6 +7,11 @@
 # 2. If preflight fails → generate skip report, skip scan
 # 3. If preflight passes → execute InSpec controls
 
+- name: Set delegation variables
+  set_fact:
+    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
+    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] else inventory_hostname }}"
+
 - name: Oracle InSpec Compliance Scan Starting
   debug:
     msg: |
@@ -17,6 +22,7 @@
       Service: {{ oracle_service }}
       Version: {{ oracle_version }}
       Username: {{ oracle_username }}
+      Execution: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate else 'LOCALHOST (target host)' }}
 
       Starting Oracle InSpec compliance scan...
 
