@@ -14,25 +14,10 @@
 #
 # Note: Sybase ALWAYS uses SSH transport for InSpec, regardless of execution mode
 
-- name: Get current hostname for delegation check
-  command: hostname -s
-  register: _current_hostname
-  changed_when: false
-  delegate_to: localhost
-
 - name: Determine execution mode and target host
   set_fact:
     use_delegate_host: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
-    # Check if we're already on the delegate host (skip SSH hop if so)
-    _already_on_delegate: "{{ (inspec_delegate_host | default('')) != '' and (_current_hostname.stdout in inspec_delegate_host or inspec_delegate_host in _current_hostname.stdout) }}"
-    inspec_execution_target: >-
-      {%- if (inspec_delegate_host | default('')) in ['', 'localhost'] -%}
-        localhost
-      {%- elif _current_hostname.stdout in inspec_delegate_host or inspec_delegate_host in _current_hostname.stdout -%}
-        localhost
-      {%- else -%}
-        {{ inspec_delegate_host }}
-      {%- endif -%}
+    inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
     cacheable: yes
 
 - name: Gather environment facts from execution target
