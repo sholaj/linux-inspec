@@ -19,12 +19,28 @@
 # If either fails, the database is skipped and reported.
 
 # Step 1: Determine execution mode (set once, use everywhere)
+- name: Get current hostname for delegation check
+  command: hostname -s
+  register: _current_hostname
+  changed_when: false
+  delegate_to: localhost
+  tags: always
+
 - name: Determine execution mode
   set_fact:
-    # Use delegate if a remote host is specified (not empty, not 'localhost', not inventory_hostname)
-    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
-    # Delegate host: remote host if specified, otherwise run on inventory host
-    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] else inventory_hostname }}"
+    # Check if we're already on the delegate host (skip SSH hop if so)
+    _already_on_delegate: "{{ (inspec_delegate_host | default('')) != '' and (_current_hostname.stdout in inspec_delegate_host or inspec_delegate_host in _current_hostname.stdout) }}"
+    # Use delegate if a remote host is specified (not empty, not 'localhost', not inventory_hostname, not current host)
+    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] and not (_current_hostname.stdout in inspec_delegate_host or inspec_delegate_host in _current_hostname.stdout) }}"
+    # Delegate host: remote host if specified (and not current host), otherwise run on inventory host
+    _delegate_host: >-
+      {%- if (inspec_delegate_host | default('')) in ['', 'localhost', inventory_hostname] -%}
+        {{ inventory_hostname }}
+      {%- elif _current_hostname.stdout in inspec_delegate_host or inspec_delegate_host in _current_hostname.stdout -%}
+        localhost
+      {%- else -%}
+        {{ inspec_delegate_host }}
+      {%- endif -%}
     _timestamp: "{{ ansible_date_time.epoch }}"
   tags: always
 
