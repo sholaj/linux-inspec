@@ -36,7 +36,7 @@
   register: delegate_system_path
   changed_when: false
   delegate_to: "{{ inspec_execution_target }}"
-  when: not _target_env.PATH or _target_env.PATH == ''
+  when: not (_target_env.PATH | default('')) or (_target_env.PATH | default('')) == ''
 
 - name: Update target environment with system PATH
   set_fact:
@@ -46,8 +46,8 @@
 - name: Build environment variables
   set_fact:
     sybase_environment:
-      PATH: "{{ sybase_environment_base.PATH }}{% if _target_env.PATH %}:{{ _target_env.PATH }}{% endif %}"
-      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
+      PATH: "{{ sybase_environment_base.PATH }}{% if _target_env.PATH | default('') %}:{{ _target_env.PATH }}{% endif %}"
+      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH | default('') %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
       SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
