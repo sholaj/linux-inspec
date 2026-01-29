@@ -1,86 +1,112 @@
 ---
 # Setup tasks for Oracle InSpec execution
+# Control files are always copied to the execution host (_delegate_host)
 
-- name: Determine execution mode for setup
+- name: Create Oracle results directory
+  file:
+    path: "{{ inspec_results_dir }}"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ _delegate_host }}"
+
+# Find control files on Ansible controller
+- name: Set local controls path
   set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
-    inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+    _local_controls_path: "{{ role_path }}/files/ORACLE{{ oracle_version }}_ruby"
 
-- name: Setup Oracle InSpec environment
+- name: Find control files for Oracle version
+  find:
+    paths: "{{ _local_controls_path }}"
+    patterns: "*.rb"
+    recurse: true
+  register: oracle_control_files
+  delegate_to: localhost
+
+- name: Validate control files exist
+  fail:
+    msg: "No control files found in {{ _local_controls_path }}"
+  when: oracle_control_files.files | length == 0
+
+- name: Display control files count
+  debug:
+    msg: "Found {{ oracle_control_files.files | length }} control file(s) for Oracle {{ oracle_version }}"
+  when: inspec_debug_mode | default(false)
+
+# Copy control files to execution host
+- name: Create temp directory on execution host
+  tempfile:
+    state: directory
+    prefix: inspec_oracle_
+    suffix: _controls
+  register: oracle_temp_dir
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Create Oracle subdirectory for control structure
+  file:
+    path: "{{ oracle_temp_dir.path }}/ORACLE{{ oracle_version }}_ruby"
+    state: directory
+    mode: "0755"
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Copy Oracle control files to execution host
+  copy:
+    src: "{{ item.path }}"
+    dest: "{{ oracle_temp_dir.path }}/ORACLE{{ oracle_version }}_ruby/"
+    mode: "0644"
+  loop: "{{ oracle_control_files.files }}"
+  loop_control:
+    label: "{{ item.path | basename }}"
+  delegate_to: "{{ _delegate_host }}"
+
+- name: Set oracle_controls_base_dir for execution
+  set_fact:
+    oracle_controls_base_dir: "{{ oracle_temp_dir.path }}"
+    cacheable: yes
+
+- name: Display Oracle control files to be executed
+  debug:
+    msg: |
+      Oracle {{ oracle_version }} controls to execute:
+      {% for file in oracle_control_files.files %}
+      - {{ file.path | basename }}
+      {% endfor %}
+      Total controls: {{ oracle_control_files.files | length }}
+      Location: {{ oracle_controls_base_dir }}
+  when: inspec_debug_mode | default(false)
+
+# TNS Configuration Support
+- name: Setup TNS configuration (when oracle_use_tns is enabled)
+  when: oracle_use_tns | default(false) | bool
   block:
-    - name: Create Oracle results directory
+    - name: Set TNS_ADMIN directory path
+      set_fact:
+        oracle_tns_admin_dir: "{{ oracle_tns_admin | default(oracle_temp_dir.path + '/tns_admin') }}"
+
+    - name: Create TNS_ADMIN directory
       file:
-        path: "{{ inspec_results_dir }}"
+        path: "{{ oracle_tns_admin_dir }}"
         state: directory
         mode: "0755"
+      delegate_to: "{{ _delegate_host }}"
 
-    - name: Create Oracle temporary working directory
-      tempfile:
-        state: directory
-        suffix: "_oracle_inspec"
-      register: oracle_temp_dir
+    - name: Deploy tnsnames.ora from template
+      template:
+        src: tnsnames.ora.j2
+        dest: "{{ oracle_tns_admin_dir }}/tnsnames.ora"
+        mode: "0644"
+      register: tnsnames_deployed
+      delegate_to: "{{ _delegate_host }}"
 
-    - name: Find all Ruby control files for specified Oracle version
-      find:
-        paths: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
-        patterns: "*.rb"
-        file_type: file
-        recurse: true
-      register: oracle_control_files_raw
-
-    - name: Cache Oracle control files for execution tasks
-      set_fact:
-        oracle_control_files: "{{ oracle_control_files_raw }}"
-        cacheable: yes
-
-    - name: Display Oracle control files to be executed
+    - name: Display TNS configuration (debug mode)
       debug:
         msg: |
-          Oracle {{ oracle_version }} controls to execute:
-          {% for file in oracle_control_files.files %}
-          - {{ file.path | basename }}
-          {% endfor %}
-          Total controls: {{ oracle_control_files.files | length }}
+          TNS Configuration deployed:
+          - TNS_ADMIN: {{ oracle_tns_admin_dir }}
+          - tnsnames.ora: {{ oracle_tns_admin_dir }}/tnsnames.ora
+          - TNS Alias: {{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper }}
       when: inspec_debug_mode | default(false)
 
-    - name: Fail if no Oracle control files found
-      fail:
-        msg: "No Oracle control files found in {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
-      when: oracle_control_files.files | length == 0
-
-    # TNS Configuration Support
-    - name: Setup TNS configuration (when oracle_use_tns is enabled)
-      when: oracle_use_tns | default(false) | bool
-      block:
-        - name: Set TNS_ADMIN directory path
-          set_fact:
-            oracle_tns_admin_dir: "{{ oracle_tns_admin | default(oracle_temp_dir.path + '/tns_admin') }}"
-
-        - name: Create TNS_ADMIN directory
-          file:
-            path: "{{ oracle_tns_admin_dir }}"
-            state: directory
-            mode: "0755"
-
-        - name: Deploy tnsnames.ora from template
-          template:
-            src: tnsnames.ora.j2
-            dest: "{{ oracle_tns_admin_dir }}/tnsnames.ora"
-            mode: "0644"
-          register: tnsnames_deployed
-
-        - name: Display TNS configuration (debug mode)
-          debug:
-            msg: |
-              TNS Configuration deployed:
-              - TNS_ADMIN: {{ oracle_tns_admin_dir }}
-              - tnsnames.ora: {{ oracle_tns_admin_dir }}/tnsnames.ora
-              - TNS Alias: {{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper }}
-          when: inspec_debug_mode | default(false)
-
-        - name: Update oracle_tns_admin fact for execute tasks
-          set_fact:
-            oracle_tns_admin: "{{ oracle_tns_admin_dir }}"
-            cacheable: yes
-
-  delegate_to: "{{ inspec_execution_target }}"
+    - name: Update oracle_tns_admin fact for execute tasks
+      set_fact:
+        oracle_tns_admin: "{{ oracle_tns_admin_dir }}"
+        cacheable: yes

@@ -35,7 +35,7 @@
       debug:
         msg: "Oracle control {{ oracle_control_file_name }} completed with status: {{ oracle_inspec_status }}"
       when: inspec_debug_mode | default(false)
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Handle failed Oracle InSpec execution
   block:
@@ -58,4 +58,4 @@
       when:
         - inspec_debug_mode | default(false)
         - (item.rc | int) not in [0, 100, 101]
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
