@@ -1,0 +1,37 @@
+{
+  "phase": "complete",
+  "started_at": "2026-01-28T10:00:00Z",
+  "completed_at": "2026-01-28T16:10:00Z",
+  "task": "Oracle InSpec Regression Testing",
+  "infra": {
+    "status": "deployed",
+    "resource_group": "rg-inspec-dev-aqpw",
+    "runner_ip": "20.106.154.159",
+    "runner_private_ip": "10.0.1.4",
+    "mssql_ip": "10.0.2.4",
+    "oracle_ip": "10.0.2.5"
+  },
+  "validation": {
+    "status": "passed",
+    "checks": {
+      "ssh": true,
+      "inspec": true,
+      "sqlplus": true,
+      "oracle_port": true
+    }
+  },
+  "tests": {
+    "status": "passed",
+    "oracle_connectivity": "passed",
+    "oracle_inspec": {
+      "status": "passed",
+      "controls_executed": 91,
+      "controls_passed": 40,
+      "controls_failed": 51,
+      "pass_rate": "44.0%",
+      "notes": "All controls executed successfully. Failures are compliance findings on default Oracle XE installation."
+    }
+  },
+  "regression_test_result": "NO REGRESSIONS DETECTED",
+  "path_ld_library_path_fixes": "VERIFIED WORKING"
+}
