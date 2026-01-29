@@ -10,7 +10,9 @@
 
   vars:
     # Global settings - can be overridden by AAP extra vars
-    inspec_delegate_host: "{{ controller_delegate_host | default('localhost') }}"
+    # NOTE: inspec_delegate_host comes from inventory group_vars (e.g., "inspec-runner")
+    # Do NOT override here - it breaks delegate host connection settings lookup
+    # inspec_delegate_host: "{{ controller_delegate_host | default('localhost') }}"
     scan_timestamp: "{{ controller_time.epoch | default(ansible_date_time.epoch) }}"
     enable_debug: false
     # Timeout settings for lengthy scans
