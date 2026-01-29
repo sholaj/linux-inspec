@@ -21,7 +21,7 @@
     state: started
   register: _port_check
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Set port connectivity result
   set_fact:
@@ -34,8 +34,7 @@
 - name: Debug - Verify execution host and environment
   set_fact:
     _debug_info:
-      "Execution target": "{{ inspec_execution_target }}"
-      "Delegate host var": "{{ inspec_delegate_host | default('NOT SET') }}"
+      "Delegate host setting": "{{ inspec_delegate_host | default('NOT SET') }}"
       "Inventory hostname": "{{ inventory_hostname }}"
       "Ansible host": "{{ ansible_host | default('NOT SET') }}"
       "ORACLE_HOME value": "{{ ORACLE_HOME }}"
@@ -60,7 +59,7 @@
     id
   register: _oracle_debug
   ignore_errors: true
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
   when: _preflight_port_open
 
 - name: Display debug info
@@ -86,7 +85,7 @@
   register: _auth_check
   ignore_errors: true
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
-  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  delegate_to: "{{ _delegate_host }}"
   when: _preflight_port_open
 
 - name: Parse authentication result
