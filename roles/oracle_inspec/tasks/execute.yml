@@ -29,7 +29,7 @@
   register: delegate_system_path
   changed_when: false
   delegate_to: "{{ _delegate_host }}"
-  when: not _target_env.PATH or _target_env.PATH == ''
+  when: not (_target_env.PATH | default('')) or (_target_env.PATH | default('')) == ''
 
 - name: Update target environment with system PATH
   set_fact:

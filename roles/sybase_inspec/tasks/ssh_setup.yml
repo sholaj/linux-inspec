@@ -10,7 +10,7 @@
 - name: Build Sybase environment variables using delegate host facts
   set_fact:
     sybase_environment:
-      PATH: "{{ sybase_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH }}"
+      PATH: "{{ sybase_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH | default('') }}"
       LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
       SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
