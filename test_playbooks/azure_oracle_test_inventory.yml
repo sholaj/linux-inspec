@@ -1,0 +1,56 @@
+---
+# Azure Oracle Test Inventory
+# For regression testing of oracle_inspec role PATH/LD_LIBRARY_PATH fixes
+
+all:
+  vars:
+    # Global settings
+    base_results_dir: /tmp/compliance_scans
+    enable_debug: true
+
+    # Delegate host - the Azure runner VM runs InSpec
+    inspec_delegate_host: "runner_vm"
+
+    # Oracle client environment on runner VM (Oracle Instant Client 21c)
+    ORACLE_HOME: "/usr/lib/oracle/21/client64"
+
+  children:
+    # Delegate hosts - where InSpec runs
+    delegate_hosts:
+      hosts:
+        runner_vm:
+          ansible_host: 20.106.154.159
+          ansible_user: azureuser
+          ansible_ssh_private_key_file: "~/.ssh/inspec_azure"
+          ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+          ansible_python_interpreter: /usr/bin/python3.9
+          ansible_connection: ssh
+
+    # Oracle databases to scan
+    oracle_databases:
+      hosts:
+        oracle_xe_cdb:
+          # Connection parameters
+          oracle_server: 10.0.2.5
+          oracle_port: 1521
+          oracle_database: XE
+          oracle_service: XE
+          oracle_version: "19c"  # Using 19c profile even for XE 21c
+          oracle_username: system
+          oracle_password: OraclePass123
+
+          # Delegate execution
+          ansible_connection: local
+
+        oracle_xe_pdb:
+          # Connection parameters
+          oracle_server: 10.0.2.5
+          oracle_port: 1521
+          oracle_database: XEPDB1
+          oracle_service: XEPDB1
+          oracle_version: "19c"
+          oracle_username: system
+          oracle_password: OraclePass123
+
+          # Delegate execution
+          ansible_connection: local

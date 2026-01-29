@@ -12,7 +12,7 @@
     _preflight_port_open: false
     _preflight_auth_valid: false
 
-# Step 1: TCP Port Connectivity Check
+# Step 1: TCP Port Connectivity Check for Oracle InSpec role
 - name: Test TCP port connectivity
   wait_for:
     host: "{{ oracle_server }}"
@@ -30,6 +30,33 @@
     preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
 
 # Step 2: Authentication Check (only if port is open)
+# DEBUG: Check what's actually on the server
+- name: Debug - Check ORACLE_HOME and sqlplus existence
+  shell: |
+    echo "=== ORACLE_HOME: {{ ORACLE_HOME }} ==="
+    echo "=== Checking if directory exists ==="
+    ls -la {{ ORACLE_HOME }}/bin/ 2>&1 || echo "Directory does not exist"
+    echo "=== Checking sqlplus binary ==="
+    ls -la {{ ORACLE_HOME }}/bin/sqlplus 2>&1 || echo "sqlplus binary not found"
+    echo "=== Checking file type ==="
+    file {{ ORACLE_HOME }}/bin/sqlplus 2>&1 || echo "Cannot check file type"
+    echo "=== Checking if executable ==="
+    test -x {{ ORACLE_HOME }}/bin/sqlplus && echo "sqlplus is executable" || echo "sqlplus is NOT executable"
+    echo "=== Current hostname and user ==="
+    hostname
+    whoami
+  register: _oracle_debug
+  ignore_errors: true
+  delegate_to: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+  when: _preflight_port_open
+
+- name: Display debug info
+  debug:
+    var: _oracle_debug.stdout_lines
+  when:
+    - _preflight_port_open
+    - _oracle_debug is defined
+
 - name: Test database authentication
   shell: |
     # Test connection with sqlplus using full path
