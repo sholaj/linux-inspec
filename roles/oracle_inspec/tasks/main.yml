@@ -9,8 +9,8 @@
 
 - name: Set delegation variables
   set_fact:
-    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
-    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] else inventory_hostname }}"
+    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
+    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Oracle InSpec Compliance Scan Starting
   debug:
