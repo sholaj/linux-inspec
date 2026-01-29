@@ -7,25 +7,10 @@
 # 2. If preflight fails → generate skip report, skip scan
 # 3. If preflight passes → execute InSpec controls
 
-- name: Get current hostname for delegation check
-  command: hostname -s
-  register: _current_hostname
-  changed_when: false
-  delegate_to: localhost
-
 - name: Set delegation variables
   set_fact:
-    # Check if we're already on the delegate host (skip SSH hop if so)
-    _already_on_delegate: "{{ (inspec_delegate_host | default('')) != '' and (_current_hostname.stdout in inspec_delegate_host or inspec_delegate_host in _current_hostname.stdout) }}"
     _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
-    _delegate_host: >-
-      {%- if (inspec_delegate_host | default('')) in ['', 'localhost'] -%}
-        localhost
-      {%- elif _current_hostname.stdout in inspec_delegate_host or inspec_delegate_host in _current_hostname.stdout -%}
-        localhost
-      {%- else -%}
-        {{ inspec_delegate_host }}
-      {%- endif -%}
+    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
 
 - name: Oracle InSpec Compliance Scan Starting
   debug:
@@ -37,7 +22,7 @@
       Service: {{ oracle_service }}
       Version: {{ oracle_version }}
       Username: {{ oracle_username }}
-      Execution: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate and not _already_on_delegate else 'LOCAL (already on delegate host)' if _already_on_delegate else 'LOCALHOST' }}
+      Execution: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate else 'LOCALHOST (target host)' }}
 
       Starting Oracle InSpec compliance scan...
 
