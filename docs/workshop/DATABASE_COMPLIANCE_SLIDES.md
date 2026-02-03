@@ -1,777 +1,498 @@
-# Database Compliance Scanning Framework
-## Workshop Presentation Outline
+---
+marp: true
+theme: gaia
+paginate: true
+backgroundColor: #fff
+style: |
+  section {
+    font-size: 24px;
+    padding: 40px;
+  }
+  h1 {
+    font-size: 48px;
+    color: #0056b3;
+  }
+  h2 {
+    font-size: 36px;
+    color: #444;
+  }
+  h3 {
+    font-size: 30px;
+    color: #666;
+  }
+  table {
+    font-size: 20px;
+    width: 100%;
+  }
+  th {
+    background-color: #f0f0f0;
+  }
+  pre {
+    background: #f4f4f4;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+  }
+  /* Specific class for ASCII art to ensure it fits */
+  .ascii-art {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    line-height: 1.1;
+    white-space: pre;
+    overflow-x: auto;
+    background: #fafafa;
+    padding: 10px;
+    border: 1px solid #eee;
+  }
+---
 
-**Duration:** 2-3 hours
-**Audience:** DevOps Engineers, Platform Engineers, Security Teams
-**Date:** 2026-01-30
+<!-- _class: lead -->
+# Database Compliance Scanning
+## Presentation Slides
+
+**Format:** Demonstration + Discussion | **Time:** 11:15 | **Presenter:** Shola
 
 ---
 
-# Slide Deck Outline
+## Slide Deck Overview
 
-This document provides a slide-by-slide outline that can be converted to PowerPoint, Google Slides, or any presentation format.
+This presentation supports a **demo + discussion** format:
 
----
-
-## SECTION 1: Introduction (5 slides)
-
----
-
-### Slide 1: Title Slide
-
-**Database Compliance Scanning Framework**
-
-Automating NIST Compliance Across Enterprise Databases
-
-- Workshop Facilitated by: Platform Engineering Team
-- Technologies: Ansible AAP2 | InSpec | GitHub
+1. **Demo** (15 min) — Show the capability
+2. **Pain Points** (15 min) — The four blockers
+3. **Discussion** (15 min) — Capabilities, challenges, gaps
+4. **Next Steps** (5 min) — What we need from you
 
 ---
 
-### Slide 2: Agenda
-
-**Workshop Agenda**
-
-1. Architecture & Design Patterns (20 min)
-2. Multi-Platform Database Support (25 min)
-3. Password Management & Security (15 min)
-4. AAP2 Integration (20 min)
-5. GitHub Workflow (10 min)
-6. Hands-On Exercises (45 min)
-7. Q&A (15 min)
+<!-- _class: lead -->
+## SECTION 1: Introduction (2 slides)
 
 ---
 
-### Slide 3: The Challenge
+### Slide 1: Title
 
-**Enterprise Database Compliance: Current State**
+# Database Compliance Scanning
 
-Manual Process Challenges:
-- 100+ MSSQL databases
-- 100+ Sybase databases
-- Oracle databases (expanding)
-- Manual scans take weeks
-- Inconsistent execution
-- Audit trail gaps
+From POC to Production: What's Working, What's Blocking Us
 
-**Goal:** 90% reduction in manual effort
+*Demonstration + Group Discussion*
 
 ---
 
-### Slide 4: The Solution
+### Slide 2: What We'll Cover
 
-**Automated Compliance Framework**
+**Agenda**
+
+| Time | Topic |
+|------|-------|
+| 11:15 | **Demo** — Live compliance scan |
+| 11:30 | **Pain Points** — The four blockers |
+| 11:45 | **Discussion** — What we need from you |
+| 12:00 | **Next Steps** — Action items |
+
+**Goal:** Shared understanding of where we are and what's needed to move forward
+
+---
+
+<!-- _class: lead -->
+## SECTION 2: The Demo (3 slides)
+
+---
+
+### Slide 3: What You'll See
+
+**The Capability Exists**
+
+1. Inventory-driven scanning (databases defined in YAML)
+2. Multi-platform support (MSSQL, Oracle, Sybase)
+3. Delegate host pattern (no new firewall rules)
+4. Standardized JSON output
+
+*Live demo follows...*
+
+---
+
+### Slide 4: Demo Steps
+
+**Live Demonstration**
 
 ```
-+-------------+     +---------------+     +----------------+
-|             |     |               |     |                |
-|   AAP2      | --> |  Delegate     | --> |  Databases     |
-|   Controller|     |  Host         |     |  (MSSQL/Oracle/|
-|             |     |  + InSpec     |     |   Sybase)      |
-+-------------+     +---------------+     +----------------+
-```
-
-Key Components:
-- Ansible Automation Platform 2 (AAP2)
-- InSpec compliance controls
-- Delegate host pattern
-- JSON results output
-
----
-
-### Slide 5: Success Metrics
-
-**What Success Looks Like**
-
-| Metric | Before | After |
-|--------|--------|-------|
-| Manual Effort | Weeks | Hours |
-| Time to Report | Days | < 1 hour |
-| Scan Frequency | Quarterly | Monthly |
-| Database Coverage | ~60% | 100% |
-| Audit Readiness | Manual | Automated |
-
----
-
-## SECTION 2: Architecture (6 slides)
-
----
-
-### Slide 6: Why Delegate Host Pattern?
-
-**Enterprise Network Reality**
-
-Challenges:
-- Databases in isolated network zones
-- No direct connectivity from AAP2
-- Firewall changes require months of approval
-- Existing bastion/jump server infrastructure
-
-Solution: **Delegate Host Pattern**
-- Use existing approved access paths
-- No new firewall rules required
-- Leverage bastion host capabilities
-
----
-
-### Slide 7: Architecture Diagram
-
-**Delegate Host Architecture**
-
-```
-    +------------------+
-    |                  |
-    |   AAP2           |
-    |   Controller     |
-    |                  |
-    +--------+---------+
-             |
-             | SSH (Existing Access)
-             |
-             v
-    +--------+---------+
-    |                  |
-    |  Delegate Host   |
-    |  +-----------+   |
-    |  | InSpec    |   |
-    |  | sqlcmd    |   |
-    |  | sqlplus   |   |
-    |  | isql      |   |
-    |  +-----------+   |
-    +--------+---------+
-             |
-    +--------+--------+--------+
-    |        |        |        |
-    v        v        v        v
- +-----+  +-----+  +-----+  +-----+
- |MSSQL|  |MSSQL|  |Oracle| |Sybase|
- |  01 |  |  02 |  |  01  | |  01  |
- +-----+  +-----+  +-----+  +-----+
+1. Show inventory file
+2. Launch scan
+3. Watch execution on delegate host
+4. Review JSON results
+5. Show compliance summary
 ```
 
 ---
 
-### Slide 8: One-Line Mode Switch
+### Slide 5: Key Takeaway
 
-**Switching Execution Modes**
+**The Technical Capability Exists**
 
-Delegate Mode:
-```yaml
-inspec_delegate_host: "bastion01.internal"
-```
+<div class="ascii-art">
+┌────────────────────────────────────────────────────────────────┐
+│                                                                │
+│   The challenge is not building it.                           │
+│   The challenge is operationalizing it across affiliates.     │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+</div>
 
-Local Mode:
-```yaml
-inspec_delegate_host: ""
-```
-
-That's it! One variable controls the entire execution path.
-
----
-
-### Slide 9: Credential Separation
-
-**Two Credential Layers**
-
-| Layer | Purpose | Credentials |
-|-------|---------|-------------|
-| SSH | Ansible to Delegate | Machine Credential |
-| Database | InSpec to Database | Custom Credential |
-
-```
-AAP2 --[SSH Cred]--> Delegate --[DB Cred]--> Database
-```
-
-Never mix these credentials!
+Let's talk about what's blocking us...
 
 ---
 
-### Slide 10: Connection Flow
+<!-- _class: lead -->
+## SECTION 3: The Four Pain Points (8 slides)
 
-**Execution Flow**
+---
 
+### Slide 6: Pain Point Overview
+
+**What's Blocking Enterprise Rollout?**
+
+<div class="ascii-art">
+    ┌─────────────────┐
+    │  1. Discovery   │  "We can't scan databases we don't know about"
+    └────────┬────────┘
+             │
+    ┌────────▼────────┐
+    │  2. Passwords   │  "Different affiliates, different tools"
+    └────────┬────────┘
+             │
+    ┌────────▼────────┐
+    │  3. Network     │  "Every affiliate has different architecture"
+    └────────┬────────┘
+             │
+    ┌────────▼────────┐
+    │  4. RBAC        │  "Connection methods vary everywhere"
+    └─────────────────┘
+</div>
+
+---
+
+### Slide 7: Pain Point 1 — Discovery
+
+**We Can't Scan Databases We Don't Know About**
+
+| What We Need | What We Get |
+|--------------|-------------|
+| Server, port, version | Outdated spreadsheets |
+| Service account | "We'll get back to you" |
+| Network path | "Check with infrastructure" |
+| Contact person | Rotating team members |
+
+**Why it's hard:**
+- No single source of truth (SNOW, Server Guru, local CMDBs)
+- Affiliate autonomy — each BU manages inventory differently
+- Data staleness — databases added/removed without notification
+
+---
+
+### Slide 8: Pain Point 2 — Password Management
+
+**Different Affiliates Use Different Tools**
+
+| Affiliate | Tool | Integration |
+|-----------|------|-------------|
+| BU-1 | CyberArk | API lookup (CCP) |
+| BU-2 | Cloakware | File-based retrieval |
+| BU-3 | USM | Manual rotation tracking |
+| Others | AAP2 Vault | Direct injection |
+
+**Why it's hard:**
+- No single integration for all affiliates
+- Rotation schedules vary (weekly to quarterly)
+- Ownership unclear (who provisions? who rotates?)
+
+---
+
+### Slide 9: Pain Point 3 — Network Connectivity
+
+**Every Affiliate Has Different Network Architecture**
+
+<div class="ascii-art">
+                    AAP2 Controller
+                          │
+          ┌───────────────┼───────────────┐
+          ▼               ▼               ▼
+    ┌──────────┐    ┌──────────┐    ┌──────────┐
+    │  BU-1    │    │  BU-2    │    │  BU-3    │
+    │ Jump Box │    │ Jump Box │    │ Jump Box │
+    │ (Linux)  │    │ (Windows)│    │ (???)    │
+    └────┬─────┘    └────┬─────┘    └────┬─────┘
+         │               │               │
+    ┌────┴────┐     ┌────┴────┐     ┌────┴────┐
+    │ DBs     │     │ DBs     │     │ DBs     │
+    │(reachable)    │(partial)│     │(unknown)│
+    └─────────┘     └─────────┘     └─────────┘
+</div>
+
+**Why it's hard:**
+- Different delegate hosts per affiliate
+- SSH vs WinRM (Linux vs Windows)
+- Firewall rules vary — some paths exist, others need requests
+
+---
+
+### Slide 10: Pain Point 4 — RBAC & Connection Posture
+
+**Connection Methods Vary by Platform, Environment, and Policy**
+
+| Platform | Options | Complexity |
+|----------|---------|------------|
+| **MSSQL** | SQL Auth, Windows Auth, WinRM | Domain trust for Windows Auth |
+| **Oracle** | Easy Connect, TNS, TCPS, Wallet | TNS needs tnsnames.ora; TCPS needs certs |
+| **Sybase** | Direct isql, SSH tunnel | Three authentication layers |
+
+**Example:**
 ```
-1. User launches job in AAP2
-         |
-         v
-2. AAP2 SSHs to delegate host
-         |
-         v
-3. Ansible deploys control files
-         |
-         v
-4. InSpec executes against database
-         |
-         v
-5. Results collected as JSON
-         |
-         v
-6. Summary report generated
-```
-
----
-
-### Slide 11: Why This Works
-
-**Pattern Benefits**
-
-| Challenge | How Delegate Pattern Solves It |
-|-----------|-------------------------------|
-| Firewall restrictions | Uses existing approved paths |
-| Network segmentation | Bastion already has access |
-| Infrastructure cost | Uses existing hosts |
-| Audit requirements | Single execution point |
-| Client tool management | Centralized on delegate |
-
----
-
-## SECTION 3: Multi-Platform Support (6 slides)
-
----
-
-### Slide 12: Platform Overview
-
-**Supported Database Platforms**
-
-| Platform | Versions | Scan Level |
-|----------|----------|------------|
-| MSSQL | 2008-2022 | Server (all DBs) |
-| Oracle | 11g-19c | Database |
-| Sybase | 15, 16 | Database |
-
-Each platform has its own:
-- Ansible role
-- Connection method
-- InSpec controls
-
----
-
-### Slide 13: MSSQL Implementation
-
-**MSSQL: Server-Level Scanning**
-
-Key Characteristics:
-- One scan per server
-- Discovers all databases automatically
-- Uses `sqlcmd` client
-
-```yaml
-mssql_databases:
-  hosts:
-    sqlserver01_1433:
-      mssql_server: sqlserver01.internal
-      mssql_port: 1433
-      mssql_version: "2019"
-```
-
-Connection: `sqlcmd -S server,port -U user -P $PASSWORD`
-
----
-
-### Slide 14: Oracle Implementation
-
-**Oracle: Multiple Connection Types**
-
-| Connection Type | When to Use |
-|-----------------|-------------|
-| Easy Connect | Simple environments (default) |
-| TNS Names | Complex environments |
-| TCPS | Encrypted connections |
-| Wallet | Certificate authentication |
-
-Challenge Solved: Remote Environment Variables
-```yaml
-oracle_environment:
-  PATH: "{{ ORACLE_HOME }}/bin:{{ existing_path }}"
-  LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib"
-  ORACLE_HOME: "/tools/ver/oracle-client"
+BU-1: sqlcmd -S server,1433 -U scanuser -P $PASSWORD
+BU-2: WinRM to Windows host, then trusted connection (Kerberos)
+BU-3: sqlplus user/pass@//server:1521/service
+BU-4: TNS alias via tnsnames.ora (requires TNS_ADMIN)
 ```
 
 ---
 
-### Slide 15: Oracle Connection Examples
+### Slide 11: The Real Problem
 
-**Oracle Connection Configurations**
+**This Is Not a Technical Problem**
 
-Easy Connect:
-```yaml
-oracle_server: oracledb.internal
-oracle_port: 1521
-oracle_service: ORCLPRD
-```
-
-TNS Names:
-```yaml
-oracle_use_tns: true
-oracle_tns_alias: ORCLPRD
-oracle_tns_admin: /opt/oracle/network/admin
-```
-
-TCPS (Future):
-```yaml
-oracle_connection_type: tcps
-oracle_tcps_port: 2484
-```
+<div class="ascii-art">
+┌────────────────────────────────────────────────────────────────┐
+│                                                                │
+│   The framework works.                                         │
+│   We've proven it in POC.                                     │
+│                                                                │
+│   The blockers are:                                           │
+│   - Getting accurate information from affiliates              │
+│   - Coordinating access and credentials                       │
+│   - Navigating different tools and policies per BU            │
+│                                                                │
+│   This is a COORDINATION problem, not a coding problem.       │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+</div>
 
 ---
 
-### Slide 16: Sybase Implementation
+### Slide 12: Where We Are
 
-**Sybase: SSH Transport Pattern**
+**Project Phases**
 
-Unique Requirement:
-- Original scripts used SSH to Sybase host
-- InSpec runs ON the Sybase host
-- Then connects to local database
+<div class="ascii-art">
+  Discovery ──▶ POC ──▶ Onboarding ──▶ MVP ──▶ Rollout
+      ✓           ✓          ●           ○         ○
+                             ▲
+                             │
+                       WE ARE HERE
+                      (Most Problematic)
+</div>
 
-Three Authentication Layers:
-```
-1. AAP2 --> SSH --> Delegate (ansible_user)
-2. Delegate --> SSH --> Sybase Host (sybase_ssh_user)
-3. InSpec --> isql --> Database (sybase_username)
-```
-
----
-
-### Slide 17: Control File Management
-
-**InSpec Controls Deployment**
-
-Repository Structure:
-```
-roles/
-  mssql_inspec/
-    files/
-      MSSQL2019_ruby/
-        trusted.rb
-        audit.rb
-  oracle_inspec/
-    files/
-      ORACLE19c_ruby/
-        trusted.rb
-```
-
-Ansible automatically:
-1. Discovers version-specific controls
-2. Deploys to delegate host
-3. Executes against database
-4. Collects results
+| Phase | Status |
+|-------|--------|
+| Discovery | ✓ Requirements gathered |
+| POC | ✓ Pattern proven (Windows & Linux) |
+| **Onboarding** | ● **Current — Blocked on access & credentials** |
+| MVP | ○ Pending onboarding |
+| Rollout | ○ Future |
 
 ---
 
-## SECTION 4: Password Management (5 slides)
+### Slide 13: Why Onboarding Is the Bottleneck
+
+**What's Needed vs What We Have**
+
+| Requirement | Status |
+|-------------|--------|
+| SSH access to delegate hosts | Partial |
+| Service account ownership | Unclear |
+| Credential retrieval method | Varies by affiliate |
+| Compliance profile mapping | TBD |
+| Security policy exceptions | TBD |
+
+**We can't move to MVP until onboarding completes for at least one affiliate.**
 
 ---
 
-### Slide 18: Security Golden Rule
-
-**Password Security: The Golden Rule**
-
-Passwords are NEVER exposed in:
-- Command-line arguments
-- Ansible logs
-- Process listings (`ps aux`)
-- AAP2 job output
-
-How? **Environment Variables**
+<!-- _class: lead -->
+## SECTION 4: Discussion (3 slides)
 
 ---
 
-### Slide 19: Secure Implementation
+### Slide 14: Discussion Questions — Discovery
 
-**Secure vs Insecure**
+**Getting Database Information**
 
-INSECURE (Never do this):
-```yaml
-shell: |
-  inspec exec control.rb \
-    --input passwd='{{ mssql_password }}'
-```
+1. What's the best source of database inventory for your affiliate?
+   - SNOW? Server Guru? Local CMDB? Manual list?
 
-SECURE (Always do this):
-```yaml
-shell: |
-  inspec exec control.rb \
-    --input passwd="$INSPEC_DB_PASSWORD"
-environment:
-  INSPEC_DB_PASSWORD: "{{ mssql_password }}"
-no_log: true
-```
+2. How do we stay current when databases are added/removed?
+
+3. Who should we contact for database information?
 
 ---
 
-### Slide 20: AAP2 Credential Injection
+### Slide 15: Discussion Questions — Credentials & Network
 
-**Current State: AAP2 Credentials**
+**Passwords and Connectivity**
 
-```
-+------------------+
-|                  |
-|  AAP2 Vault      |  (Encrypted Storage)
-|                  |
-+--------+---------+
-         |
-         | Custom Credential Type
-         v
-+--------+---------+
-|                  |
-|  Job Template    |  (Credential Attached)
-|                  |
-+--------+---------+
-         |
-         | Injector (extra_vars)
-         v
-+--------+---------+
-|                  |
-|  Playbook        |  mssql_password available
-|                  |
-+------------------+
-```
+**Password Management:**
+1. Which credential tool does your affiliate use? (CyberArk, Cloakware, USM, other)
+2. Who owns the service accounts for scanning?
+3. What happens when passwords rotate?
+
+**Network:**
+1. Do you have a designated "scanning host" / jump server?
+2. What firewall/access requests would be needed?
+3. SSH or WinRM to reach your environment?
 
 ---
 
-### Slide 21: Target State - CyberArk
+### Slide 16: Discussion Questions — Connection Posture
 
-**Target State: CyberArk CCP Integration**
+**RBAC and Authentication**
 
-Benefits:
-- Automatic password rotation
-- Zero exposure in AAP2
-- Full audit trail
-- Dual control policies
+1. SQL Auth vs Windows Auth — what does your environment use?
 
-```
-AAP2 Job --> CyberArk API --> Password --> InSpec
-   ^                                          |
-   |                                          |
-   +---- Audit Log <----- Audit Log ----------+
-```
+2. Easy Connect vs TNS — which does Oracle require?
+
+3. Are there encryption requirements (TCPS, etc.)?
+
+4. What permissions does the scan service account need?
 
 ---
 
-### Slide 22: Alternative Tools
-
-**Password Management Options**
-
-| Tool | Best For |
-|------|----------|
-| AAP2 Vault | Simple deployments |
-| CyberArk CCP | Enterprise banking |
-| HashiCorp Vault | Multi-cloud |
-
-All integrate with AAP2 via:
-- Custom Credential Types
-- Credential Plugins
-- External Lookups
+<!-- _class: lead -->
+## SECTION 5: What We Need (3 slides)
 
 ---
 
-## SECTION 5: AAP2 Integration (4 slides)
+### Slide 17: What We Need From Each Affiliate
+
+**To Move Forward**
+
+| Item | Who Provides |
+|------|-------------|
+| Database inventory (server, port, version, platform) | DBA Team |
+| Delegate host (Linux/Windows we can scan from) | Infrastructure |
+| Service account with scan permissions | DBA + Security |
+| Credential tool access (how we get passwords) | Security Team |
+| Connection details (auth method, ports, TNS/Easy Connect) | DBA Team |
+| Point of contact (who to call when scans fail) | Operations |
 
 ---
 
-### Slide 23: AAP2 Components
+### Slide 18: What We Need From Security/Compliance
 
-**AAP2 Configuration**
+**Standards and Exceptions**
 
-| Component | Purpose |
-|-----------|---------|
-| Execution Environment | Container with InSpec, DB clients |
-| Credential Types | MSSQL, Oracle, Sybase definitions |
-| Credentials | Actual username/password pairs |
-| Job Templates | Playbook + Inventory + Credentials |
-| Workflows | Multi-platform orchestration |
+| Item | Why We Need It |
+|------|---------------|
+| Minimum scan permissions | What DB privileges does the scan account need? |
+| Compliance profile mapping | Which NIST controls apply to which database tiers? |
+| Exception handling | Process when databases can't be scanned |
 
 ---
 
-### Slide 24: Job Template Setup
+### Slide 19: Next Steps
 
-**Creating a Job Template**
+**Action Items**
 
-1. **Playbook:** `test_playbooks/run_mssql_inspec.yml`
-2. **Inventory:** Database Compliance Inventory
-3. **Credentials:**
-   - Machine (SSH to delegate)
-   - MSSQL Database (custom)
-4. **Limit:** `mssql_databases`
-5. **Execution Environment:** db-compliance-ee
+| Action | Owner | Timeline |
+|--------|-------|----------|
+| Share discovery questionnaire | Workshop facilitator | This week |
+| Identify delegate hosts | Infrastructure leads | 2 weeks |
+| Provision service accounts | DBA teams | 2 weeks |
+| Document credential retrieval | Security teams | 2 weeks |
 
----
-
-### Slide 25: Workflow Orchestration
-
-**Enterprise Workflow**
-
-```
-        START
-          |
-    +-----+-----+-----+
-    |     |     |     |
-    v     v     v     v
-  MSSQL Oracle Sybase PostgreSQL
-    |     |     |     |
-    +-----+-----+-----+
-          |
-          v
-    Generate Report
-          |
-          v
-       COMPLETE
-```
-
-Parallel execution for efficiency.
+**MVP Success Criteria:**
+- At least one affiliate fully onboarded
+- Working scan against real (non-prod) databases
+- Credential retrieval working (not manual)
+- Results flowing to compliance reporting
 
 ---
 
-### Slide 26: Scheduling
+### Slide 20: Questions?
 
-**Automated Compliance**
+**Let's Discuss**
 
-Schedule Options:
-- Monthly full scans
-- Weekly critical databases
-- On-demand for remediation validation
-
-AAP2 Schedules:
-```
-Name: Monthly MSSQL Compliance
-Schedule: 0 2 1 * *  (2 AM, 1st of month)
-Template: MSSQL Compliance Scan
-```
+- What did you see in the demo that would work for your environment?
+- What challenges do you anticipate for your affiliate?
+- What's the first step we can take together?
 
 ---
 
-## SECTION 6: GitHub Integration (3 slides)
-
----
-
-### Slide 27: Repository Structure
-
-**Git Repository Layout**
-
-```
-linux-inspec/
-+-- roles/
-|   +-- mssql_inspec/
-|   +-- oracle_inspec/
-|   +-- sybase_inspec/
-+-- test_playbooks/
-+-- inventory_converter/
-+-- docs/
-+-- .gitignore
-```
-
-AAP2 Project syncs from GitHub automatically.
-
----
-
-### Slide 28: What Never Goes in Git
-
-**Security Exclusions**
-
-NEVER commit:
-- Real server names
-- IP addresses
-- Credentials (even encrypted)
-- Production inventory files
-- Terraform state files
-
-.gitignore:
-```
-*vault*.yml
-*inventory*.yml
-*.tfstate
-credentials/
-```
-
----
-
-### Slide 29: Branching Strategy
-
-**Git Workflow**
-
-```
-main (production)
-  |
-  +-- develop (integration)
-        |
-        +-- feat/new-oracle-control
-        +-- feat/tcps-support
-        +-- fix/sybase-timeout
-```
-
-All changes via Pull Request with:
-- Code review
-- Testing in sandbox
-- Documentation update
-
----
-
-## SECTION 7: Hands-On Exercises (3 slides)
-
----
-
-### Slide 30: Exercise 1
-
-**Exercise 1: Configure Delegate Mode**
-
-Steps:
-1. Edit inventory file
-2. Add: `inspec_delegate_host: "delegate01"`
-3. Run playbook
-4. Verify execution on delegate
-
-Validation:
-```bash
-ssh delegate01 "ps aux | grep inspec"
-```
-
-Time: 15 minutes
-
----
-
-### Slide 31: Exercise 2
-
-**Exercise 2: Add New Oracle Database**
-
-Steps:
-1. Add host to `oracle_databases` group
-2. Configure TNS variables
-3. Test connectivity
-4. Run compliance scan
-
-New Host:
-```yaml
-new_oracle_db:
-  oracle_server: newdb.internal
-  oracle_use_tns: true
-  oracle_tns_alias: NEWDB
-```
-
-Time: 20 minutes
-
----
-
-### Slide 32: Exercise 3
-
-**Exercise 3: Create AAP2 Job Template**
-
-Steps:
-1. Create Custom Credential Type
-2. Create Credential Instance
-3. Create Job Template
-4. Attach both credentials
-5. Execute and review results
-
-Time: 25 minutes
-
----
-
-## SECTION 8: Summary (3 slides)
-
----
-
-### Slide 33: Key Takeaways
-
-**What We Covered**
-
-1. **Delegate Pattern** - Bypass firewall restrictions
-2. **Multi-Platform** - MSSQL, Oracle, Sybase
-3. **Secure Passwords** - Environment variables only
-4. **AAP2 Integration** - Enterprise automation
-5. **Git Workflow** - Version-controlled compliance
-
----
-
-### Slide 34: Architecture Decision Summary
-
-**Why We Made These Choices**
-
-| Decision | Rationale |
-|----------|-----------|
-| Delegate Host | No new firewall rules |
-| Environment Variables | Password protection |
-| Platform-Specific Roles | Clean separation |
-| InSpec | Industry standard |
-| AAP2 | Enterprise RBAC/audit |
-
----
-
-### Slide 35: Next Steps
-
-**Your Action Items**
-
-1. Deploy to test environment
-2. Onboard service accounts
-3. Configure AAP2 templates
-4. Pilot on non-production
-5. Scale to production
-
-Questions?
-
-Contact: Platform Engineering Team
-
----
-
+<!-- _class: lead -->
 ## APPENDIX: Speaker Notes
 
 ---
 
-### Notes for Slide 6 (Why Delegate Host?)
+### Notes for Slide 5 (Key Takeaway)
 
-- Emphasize that this pattern was driven by real enterprise constraints
-- Mention typical firewall approval timelines (3-6 months)
-- Highlight that we're using existing infrastructure investment
+**Pause here.**
 
-### Notes for Slide 18 (Security Golden Rule)
+Emphasize: "We've built the technical solution. The demo you just saw works. But technology alone doesn't solve this problem."
 
-- Ask audience: "Has anyone ever seen a password in `ps aux`?"
-- Demonstrate live if possible (safely)
-- Stress that `no_log: true` must ALWAYS be set, never conditional
-
-### Notes for Slide 20 (AAP2 Credential Injection)
-
-- Walk through the Custom Credential Type JSON
-- Show how injectors work
-- Demonstrate in AAP2 UI if available
-
-### Notes for Slides 30-32 (Exercises)
-
-- Have pre-configured sandbox environments ready
-- Ensure network connectivity is tested before workshop
-- Have fallback demo if connectivity issues arise
+This sets up the pivot to discussing coordination challenges.
 
 ---
 
-## Presentation Tips
+### Notes for Slides 7-10 (Pain Points)
 
-1. **Diagrams**: Use ASCII art for compatibility, or convert to visual diagrams
-2. **Code Blocks**: Ensure syntax highlighting in presentation tool
-3. **Timing**: Leave buffer for questions during hands-on sections
-4. **Backup**: Have screenshots of successful runs ready
-5. **Audience Engagement**: Ask questions about their current processes
+**Invite examples:**
+- "Has anyone experienced this in your affiliate?"
+- "What tools do you use for X?"
+
+The goal is to surface affiliate-specific information, not lecture.
+
+---
+
+### Notes for Slide 11 (The Real Problem)
+
+**This is the key slide.**
+
+Make it clear: We're not asking for help building the technical solution. We're asking for help with the operational coordination needed to deploy it.
+
+---
+
+### Notes for Slides 14-16 (Discussion)
+
+**Facilitate, don't lecture.**
+
+Capture answers on whiteboard or shared doc. This is the information we need to move forward.
+
+Expected time: 15 minutes. Don't rush through — this is where we get the information we need.
+
+---
+
+### Notes for Slide 19 (Next Steps)
+
+**Make the asks concrete.**
+
+If specific people are in the room, assign actions directly:
+- "John, can your team identify the delegate host by next Friday?"
+- "Sarah, who on your side owns service accounts?"
 
 ---
 
 ## Conversion Instructions
 
-### For PowerPoint:
-1. Each `### Slide N:` becomes a new slide
-2. Use bullet points from the content
-3. Code blocks go in monospace font boxes
-4. Tables can be inserted as PowerPoint tables
-5. ASCII diagrams can be replaced with SmartArt
+**For PowerPoint/Google Slides:**
+- Each `### Slide N:` = one slide
+- Tables → native table format
+- ASCII diagrams → SmartArt or screenshots
+- Code blocks → monospace text boxes
 
-### For Google Slides:
-1. Same structure as PowerPoint
-2. Use "Courier New" for code
-3. Consider using draw.io for architecture diagrams
-
-### For reveal.js (HTML):
-1. Each slide becomes a `<section>`
-2. Use `<pre><code>` for code blocks
-3. Supports Markdown natively
+**For the demo:**
+- Have the scan ready to run before the meeting
+- Test connectivity the day before
+- Have backup screenshots if live demo fails
 
 ---
 
-**End of Presentation Outline**
+**End of Presentation**
