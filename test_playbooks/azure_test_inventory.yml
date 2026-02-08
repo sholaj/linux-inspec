@@ -32,7 +32,7 @@ all:
           mssql_port: 1433
           mssql_version: "2019"
           mssql_username: sa
-          mssql_password: "MssqlPass123!"
+          mssql_password: "TestPass2024"
           mssql_database: master
 
           # Delegate execution
