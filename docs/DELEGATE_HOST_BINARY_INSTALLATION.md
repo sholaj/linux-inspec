@@ -22,12 +22,14 @@ This document provides step-by-step instructions for installing the required bin
 | **Swap** | 2 GB | 4 GB | For memory spikes |
 
 ### Network Requirements
-| Database | Port | Protocol |
-|----------|------|----------|
-| MSSQL | 1433 | TCP |
-| Oracle | 1521 | TCP |
-| Sybase | 5000 | TCP |
-| SSH (if Sybase SSH transport) | 22 | TCP |
+| Database | Port | Protocol | Notes |
+|----------|------|----------|-------|
+| MSSQL | 1433 | TCP | TDS direct connection |
+| MSSQL (WinRM) | 5985 | TCP | WinRM HTTP (Windows Auth) |
+| MSSQL (WinRM SSL) | 5986 | TCP | WinRM HTTPS (Windows Auth) |
+| Oracle | 1521 | TCP | Oracle Net listener |
+| Sybase | 5000 | TCP | Sybase ASE default |
+| SSH (Sybase SSH transport) | 22 | TCP | Alternative Sybase access |
 
 ---
 
@@ -35,9 +37,10 @@ This document provides step-by-step instructions for installing the required bin
 
 ### Binary Installation Paths
 
-| Component | Installation Path | Binary |
-|-----------|------------------|--------|
+| Component | Installation Path | Binary/Plugin |
+|-----------|------------------|---------------|
 | InSpec | `/usr/local/bin` | `inspec` |
+| train-winrm | InSpec plugin | `inspec plugin install train-winrm` |
 | MSSQL Tools 18 | `/opt/mssql-tools18/bin` | `sqlcmd` |
 | Oracle Instant Client | `/opt/oracle/instantclient_19_16` | `sqlplus` |
 | Sybase ASE Client | `/opt/sap/OCS-16_0/bin` | `isql` |
@@ -115,6 +118,98 @@ curl -L https://omnitruck.chef.io/install.sh | \
 # Verify
 /opt/inspec/bin/inspec version
 ```
+
+---
+
+## Step 2b: Install train-winrm Plugin (For Windows/AD Authentication)
+
+The `train-winrm` plugin enables InSpec to connect to Windows SQL Servers via WinRM transport with Active Directory authentication.
+
+### When is train-winrm Required?
+
+| Connection Mode | train-winrm Required | Authentication |
+|-----------------|---------------------|----------------|
+| Direct (sqlcmd) | No | SQL Server Auth |
+| WinRM | **Yes** | Windows/AD Auth |
+
+### Installation
+
+```bash
+#!/bin/bash
+# Install train-winrm plugin for InSpec
+
+# Install the plugin
+inspec plugin install train-winrm
+
+# Verify installation
+inspec plugin list | grep train-winrm
+# Expected: train-winrm (x.x.x)
+
+# Check available transports
+inspec plugin list
+```
+
+### Dependencies
+
+The train-winrm plugin requires these Ruby gems (installed automatically):
+- `winrm` - WinRM client library
+- `winrm-fs` - WinRM file system operations
+- `rubyntlm` - NTLM authentication
+
+### Verify WinRM Transport
+
+```bash
+# Test WinRM connectivity (replace placeholders)
+inspec detect -t winrm://[AD_USER]@[WINDOWS_HOST] --password '[AD_PASSWORD]'
+
+# Example output:
+# == Platform Details
+# Name:      windows
+# Families:  windows
+# Release:   10.0.17763
+# Arch:      x86_64
+```
+
+### Troubleshooting train-winrm
+
+```bash
+# Check if plugin is installed
+inspec plugin list
+
+# Reinstall if needed
+inspec plugin uninstall train-winrm
+inspec plugin install train-winrm
+
+# Check for gem conflicts
+gem list | grep -E '(winrm|train)'
+
+# Verbose connection test
+inspec detect -t winrm://[AD_USER]@[WINDOWS_HOST] --password '[AD_PASSWORD]' -l debug
+```
+
+### WinRM Architecture
+
+```
+┌─────────────────┐     WinRM (5985/5986)    ┌──────────────────┐
+│  Delegate Host  │ ───────────────────────→ │ Windows SQL      │
+│  (Linux/RHEL)   │   AD User credentials    │ Server           │
+│                 │                          │                  │
+│  - InSpec       │                          │  InSpec runs     │
+│  - train-winrm  │                          │  commands here   │
+└─────────────────┘                          └────────┬─────────┘
+                                                      │
+                                              mssql_session()
+                                              Windows Auth
+                                              (Trusted Connection)
+                                                      │
+                                                      ▼
+                                              SQL Server Database
+```
+
+### Reference
+
+- [train-winrm GitHub](https://github.com/inspec/train-winrm)
+- [InSpec WinRM Transport Docs](https://docs.chef.io/inspec/transport/)
 
 ---
 
@@ -346,6 +441,10 @@ inspec version
 which inspec
 
 echo ""
+echo "=== train-winrm Plugin ==="
+inspec plugin list | grep train-winrm || echo "train-winrm NOT installed (required for WinRM mode)"
+
+echo ""
 echo "=== MSSQL (sqlcmd) ==="
 sqlcmd -? 2>&1 | head -3
 which sqlcmd
@@ -479,6 +578,7 @@ chmod 644 /opt/sap/OCS-16_0/lib/*.so*
 |-----------|---------|--------|-------|
 | RHEL | 8.6 | 8.9 | RHEL 9 also supported |
 | InSpec | 5.22.0 | 5.22.29 | Chef license required |
+| train-winrm | 0.2.0 | 0.2.13 | Required for WinRM mode |
 | Ruby | 2.7 | 3.0+ | For InSpec gem install |
 | MSSQL Tools | 17.0 | 18.x | TLS 1.2/1.3 support |
 | Oracle Client | 19.0 | 19.16 | 19c LTS release |
