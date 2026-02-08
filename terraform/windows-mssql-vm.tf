@@ -135,7 +135,7 @@ resource "azurerm_windows_virtual_machine" "mssql" {
 }
 
 # ========================================
-# Custom Script Extension - Setup WinRM
+# Custom Script Extension - Setup WinRM & SQL Server
 # ========================================
 resource "azurerm_virtual_machine_extension" "winrm_setup" {
   count                      = var.deploy_windows_mssql ? 1 : 0
@@ -146,12 +146,110 @@ resource "azurerm_virtual_machine_extension" "winrm_setup" {
   type_handler_version       = "1.10"
   auto_upgrade_minor_version = true
 
-  # Simple WinRM configuration command
+  # Comprehensive WinRM + SQL Server setup
   protected_settings = jsonencode({
-    commandToExecute = "powershell -ExecutionPolicy Unrestricted -Command \"Set-Service -Name WinRM -StartupType Automatic; Start-Service -Name WinRM; winrm quickconfig -force; winrm set winrm/config/service '@{AllowUnencrypted=\\\"true\\\"}'; winrm set winrm/config/service/auth '@{Basic=\\\"true\\\"}'; winrm set winrm/config '@{MaxEnvelopeSizekb=\\\"8192\\\"}'; New-NetFirewallRule -DisplayName 'WinRM HTTP' -Direction Inbound -Protocol TCP -LocalPort 5985 -Action Allow -ErrorAction SilentlyContinue; 'WinRM configured' | Out-File C:\\WindowsAzure\\winrm-complete.txt\""
+    commandToExecute = <<-EOT
+powershell -ExecutionPolicy Unrestricted -Command "
+$ErrorActionPreference = 'Continue'
+$logFile = 'C:\\WindowsAzure\\setup.log'
+
+function Log { param($msg) Add-Content $logFile \"$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss'): $msg\" }
+
+Log 'Starting WinRM and SQL Server setup...'
+
+# ============ WinRM Configuration ============
+Log 'Configuring WinRM...'
+
+# Enable WinRM service
+Set-Service -Name WinRM -StartupType Automatic
+Start-Service -Name WinRM
+
+# Configure WinRM for remote access
+winrm quickconfig -force 2>&1 | Out-Null
+
+# Set WinRM service settings
+winrm set winrm/config/service '@{AllowUnencrypted=\"true\"}'
+winrm set winrm/config/service/auth '@{Basic=\"true\"}'
+winrm set winrm/config/service/auth '@{Negotiate=\"true\"}'
+winrm set winrm/config/service/auth '@{CredSSP=\"true\"}'
+winrm set winrm/config '@{MaxEnvelopeSizekb=\"8192\"}'
+winrm set winrm/config/client '@{AllowUnencrypted=\"true\"}'
+winrm set winrm/config/client/auth '@{Basic=\"true\"}'
+
+# Set TrustedHosts to allow connections from any host
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value '*' -Force
+
+# Configure LocalAccountTokenFilterPolicy for remote admin access
+New-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\System' -Name 'LocalAccountTokenFilterPolicy' -Value 1 -PropertyType DWORD -Force -ErrorAction SilentlyContinue
+
+# Restart WinRM to apply changes
+Restart-Service WinRM
+
+# Firewall rules
+New-NetFirewallRule -DisplayName 'WinRM HTTP' -Direction Inbound -Protocol TCP -LocalPort 5985 -Action Allow -ErrorAction SilentlyContinue
+New-NetFirewallRule -DisplayName 'SQL Server' -Direction Inbound -Protocol TCP -LocalPort 1433 -Action Allow -ErrorAction SilentlyContinue
+
+Log 'WinRM configured successfully'
+
+# ============ SQL Server Express Installation ============
+Log 'Downloading SQL Server Express 2019...'
+
+# Create temp directory
+New-Item -ItemType Directory -Path 'C:\\SQLSetup' -Force | Out-Null
+
+# Download SQL Server Express
+\$sqlUrl = 'https://go.microsoft.com/fwlink/?linkid=866658'
+\$sqlInstaller = 'C:\\SQLSetup\\SQL2019-SSEI-Expr.exe'
+
+try {
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+    Invoke-WebRequest -Uri \$sqlUrl -OutFile \$sqlInstaller -UseBasicParsing
+    Log 'SQL Server Express downloaded'
+} catch {
+    Log \"Download failed: \$_\"
+}
+
+# Run SQL Server Express installer (download media)
+if (Test-Path \$sqlInstaller) {
+    Log 'Extracting SQL Server media...'
+    Start-Process -FilePath \$sqlInstaller -ArgumentList '/Action=Download', '/MediaPath=C:\\SQLSetup', '/MediaType=Core', '/Quiet' -Wait
+
+    # Find and run setup
+    \$setupExe = Get-ChildItem -Path 'C:\\SQLSetup' -Recurse -Filter 'setup.exe' | Select-Object -First 1
+    if (\$setupExe) {
+        Log 'Installing SQL Server Express...'
+        \$installArgs = '/Q /ACTION=Install /FEATURES=SQLENGINE /INSTANCENAME=MSSQLSERVER /SQLSVCACCOUNT=\"NT AUTHORITY\\SYSTEM\" /SQLSYSADMINACCOUNTS=\"BUILTIN\\Administrators\" /SECURITYMODE=SQL /SAPWD=\"${var.windows_admin_password}\" /TCPENABLED=1 /IACCEPTSQLSERVERLICENSETERMS'
+        Start-Process -FilePath \$setupExe.FullName -ArgumentList \$installArgs -Wait
+        Log 'SQL Server Express installed'
+    }
+}
+
+# Enable SQL Server TCP/IP and set port
+try {
+    Import-Module SQLPS -DisableNameChecking -ErrorAction SilentlyContinue
+    \$smo = 'Microsoft.SqlServer.Management.Smo.'
+    \$wmi = New-Object (\$smo + 'Wmi.ManagedComputer') .
+    \$tcp = \$wmi.ServerInstances['MSSQLSERVER'].ServerProtocols['Tcp']
+    \$tcp.IsEnabled = \$true
+    \$tcp.Alter()
+    Restart-Service MSSQLSERVER -Force -ErrorAction SilentlyContinue
+    Log 'SQL Server TCP/IP enabled'
+} catch {
+    Log \"SQL config warning: \$_\"
+}
+
+Log 'Setup complete!'
+'Setup completed successfully' | Out-File 'C:\\WindowsAzure\\winrm-complete.txt'
+"
+EOT
   })
 
   tags = azurerm_resource_group.main.tags
+
+  # Increase timeout for SQL Server installation
+  timeouts {
+    create = "60m"
+  }
 
   depends_on = [azurerm_windows_virtual_machine.mssql]
 }
