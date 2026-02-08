@@ -1,0 +1,61 @@
+---
+# Error aggregation and reporting for MSSQL InSpec scans
+# ======================================================
+# Collects errors across batch scans and generates a summary report.
+# Useful for large-scale scanning where individual failures shouldn't
+# stop the entire batch.
+#
+# This task should be included in cleanup.yml or called from the playbook
+# after all hosts have been processed.
+
+# Initialize error tracking (run once per playbook execution)
+- name: "[Error] Initialize error tracking"
+  set_fact:
+    _scan_errors: "{{ _scan_errors | default([]) }}"
+  run_once: true
+  delegate_to: localhost
+
+# Record scan failure if preflight failed
+- name: "[Error] Record scan failure"
+  set_fact:
+    _scan_errors: "{{ _scan_errors + [_error_record] }}"
+  vars:
+    _error_record:
+      timestamp: "{{ ansible_date_time.iso8601 }}"
+      host: "{{ inventory_hostname }}"
+      mssql_server: "{{ mssql_server }}"
+      mssql_port: "{{ mssql_port }}"
+      mssql_database: "{{ mssql_database }}"
+      connection_mode: "{{ _connection_mode | default('direct') }}"
+      error_code: "{{ preflight_error_code | default('UNKNOWN') }}"
+      error_message: "{{ preflight_skip_reason | default('Unknown error') }}"
+      winrm_host: "{{ winrm_host | default('N/A') if (_connection_mode | default('direct')) == 'winrm' else 'N/A' }}"
+  when: not (preflight_passed | default(false) | bool)
+  delegate_to: localhost
+  delegate_facts: true
+
+# Generate error summary report (run once at end of batch)
+- name: "[Error] Generate error summary report"
+  template:
+    src: error_summary.j2
+    dest: "{{ inspec_results_dir }}/error_summary_{{ ansible_date_time.epoch }}.txt"
+  delegate_to: localhost
+  run_once: true
+  when: (_scan_errors | default([]) | length) > 0
+
+- name: "[Error] Display error summary"
+  debug:
+    msg: |
+      ═══════════════════════════════════════════════════════════════════
+       MSSQL Scan Error Summary
+      ═══════════════════════════════════════════════════════════════════
+       Total Errors: {{ _scan_errors | default([]) | length }}
+
+      {% for error in _scan_errors | default([]) %}
+       - {{ error.mssql_server }}:{{ error.mssql_port }} [{{ error.error_code }}]
+         {{ error.error_message }}
+      {% endfor %}
+      ═══════════════════════════════════════════════════════════════════
+  delegate_to: localhost
+  run_once: true
+  when: (_scan_errors | default([]) | length) > 0

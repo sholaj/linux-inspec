@@ -1,0 +1,95 @@
+---
+# InSpec execution tasks for MSSQL - WINRM MODE
+# =============================================
+# Executes InSpec via WinRM connection to Windows SQL Server.
+# Called from execute.yml when use_winrm is true.
+#
+# Architecture:
+#   Delegate Host (Linux) --WinRM--> Windows VM --ADO.NET--> SQL Server
+#
+# When using WinRM mode, InSpec runs on the Windows target machine,
+# so mssql_server should typically be 'localhost' or '.' since SQL
+# Server is accessed locally from the Windows machine.
+
+# Verify InSpec is available on delegate
+- name: "[WinRM Execute] Verify InSpec binary"
+  shell: command -v inspec
+  args:
+    executable: /bin/bash
+  register: _inspec_check
+  changed_when: false
+  failed_when: _inspec_check.rc != 0
+  delegate_to: "{{ _delegate_host }}"
+
+- name: "[WinRM Execute] Set InSpec path"
+  set_fact:
+    _inspec_bin: "{{ _inspec_check.stdout | trim }}"
+
+# Build WinRM connection string
+- name: "[WinRM Execute] Build WinRM target URL"
+  set_fact:
+    _winrm_target: "winrm://{{ winrm_username }}@{{ winrm_host }}:{{ winrm_port }}"
+    _winrm_ssl_flag: "{{ '--ssl' if (winrm_ssl | default(false) | bool) else '--no-ssl' }}"
+    _winrm_verify_flag: "{{ '--self-signed' if not (winrm_ssl_verify | default(true) | bool) else '' }}"
+
+# For WinRM mode, SQL Server is typically accessed locally from Windows
+# Use mssql_server as provided (could be localhost, ., or actual IP if SQL is remote)
+- name: "[WinRM Execute] Set MSSQL connection parameters for WinRM"
+  set_fact:
+    _mssql_host_for_winrm: "{{ mssql_server }}"
+
+- name: "[WinRM Execute] Display WinRM execution info"
+  debug:
+    msg: |
+      WinRM Execution Configuration:
+        Target: {{ _winrm_target }}
+        SSL: {{ winrm_ssl | default(false) }}
+        MSSQL Host (from Windows): {{ _mssql_host_for_winrm }}
+        MSSQL Port: {{ mssql_port }}
+        Profile: {{ _remote_controls_path }}
+  when: inspec_debug_mode | default(false) | bool
+
+# Execute InSpec via WinRM transport
+- name: "[WinRM Execute] Execute InSpec profile via WinRM"
+  shell: |
+    export CHEF_LICENSE=accept
+
+    "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
+      -t {{ _winrm_target }} \
+      --password '{{ winrm_password }}' \
+      {{ _winrm_ssl_flag }} \
+      {{ _winrm_verify_flag }} \
+      --input mssql_user='{{ mssql_username }}' \
+              mssql_password='{{ mssql_password }}' \
+              mssql_host='{{ _mssql_host_for_winrm }}' \
+              mssql_port='{{ mssql_port }}' \
+              mssql_instance='{{ mssql_service | default("") }}' \
+              connection_mode='winrm' \
+              usernm='{{ mssql_username }}' \
+              passwd='{{ mssql_password }}' \
+              hostnm='{{ _mssql_host_for_winrm }}' \
+              port='{{ mssql_port }}' \
+              servicenm='{{ mssql_service | default("") }}' \
+      --reporter=json-min \
+      --no-color \
+      --chef-license=accept
+  args:
+    executable: /bin/bash
+  register: _inspec_profile_result
+  changed_when: false
+  failed_when: _inspec_profile_result.rc not in [0, 100, 101]
+  delegate_to: "{{ _delegate_host }}"
+  timeout: "{{ scan_timeout | default(300) }}"
+  no_log: true
+
+# Convert single result to list for compatibility with downstream tasks
+- name: "[WinRM Execute] Wrap InSpec result for processing"
+  set_fact:
+    inspec_results:
+      results:
+        - stdout: "{{ _inspec_profile_result.stdout }}"
+          rc: "{{ _inspec_profile_result.rc }}"
+          item:
+            path: "{{ _remote_controls_path }}"
+            connection_mode: "winrm"
+            winrm_host: "{{ winrm_host }}"

@@ -1,0 +1,108 @@
+---
+# Pre-flight connectivity checks for MSSQL InSpec role - WINRM MODE
+# ==================================================================
+# Validates WinRM connectivity to Windows target before running InSpec scans.
+# Called from preflight.yml when use_winrm is true.
+#
+# Output facts:
+#   - preflight_passed: true/false - whether to proceed with InSpec scan
+#   - preflight_skip_reason: string - reason for skipping (if applicable)
+#   - preflight_error_code: string - error classification code
+#   - winrm_platform_detected: string - platform info from inspec detect
+
+# Step 1: Verify train-winrm gem is installed
+- name: "[WinRM Preflight] Verify train-winrm gem installed"
+  shell: gem list train-winrm | grep -q train-winrm
+  args:
+    executable: /bin/bash
+  register: _winrm_gem_check
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ _delegate_host }}"
+
+- name: "[WinRM Preflight] Fail if train-winrm not installed"
+  set_fact:
+    preflight_passed: false
+    preflight_skip_reason: "train-winrm gem is not installed on {{ _delegate_host }}. Install with: gem install train-winrm --no-document"
+    preflight_error_code: "WINRM_GEM_MISSING"
+  when: _winrm_gem_check.rc != 0
+
+# Step 2: Test WinRM connectivity (only if gem is installed)
+- name: "[WinRM Preflight] Test WinRM connectivity"
+  shell: |
+    export CHEF_LICENSE=accept
+    inspec detect \
+      -t winrm://{{ winrm_username }}@{{ winrm_host }}:{{ winrm_port }} \
+      --password '{{ winrm_password }}' \
+      {% if winrm_ssl | default(false) | bool %}--ssl{% else %}--no-ssl{% endif %} \
+      {% if not (winrm_ssl_verify | default(true) | bool) %}--self-signed{% endif %} \
+      2>&1
+  args:
+    executable: /bin/bash
+  register: _winrm_detect
+  changed_when: false
+  failed_when: false
+  delegate_to: "{{ _delegate_host }}"
+  no_log: "{{ not (inspec_debug_mode | default(false)) }}"
+  timeout: "{{ winrm_timeout | default(60) }}"
+  when: _winrm_gem_check.rc == 0
+
+- name: "[WinRM Preflight] Parse WinRM detection result"
+  set_fact:
+    _winrm_connection_valid: "{{ _winrm_detect.rc == 0 if _winrm_detect is defined and _winrm_detect.rc is defined else false }}"
+    winrm_platform_detected: "{{ _winrm_detect.stdout | default('') }}"
+    _winrm_error_msg: >-
+      {%- if _winrm_detect is skipped -%}
+      train-winrm gem check failed - skipped WinRM test
+      {%- elif _winrm_detect.rc | default(0) == 124 -%}
+      WinRM connection timeout after {{ winrm_timeout | default(60) }}s
+      {%- elif 'Connection refused' in (_winrm_detect.stderr | default('')) -%}
+      WinRM connection refused on {{ winrm_host }}:{{ winrm_port }}
+      {%- elif 'Authentication failed' in (_winrm_detect.stderr | default('')) or 'Access is denied' in (_winrm_detect.stderr | default('')) -%}
+      WinRM authentication failed for user '{{ winrm_username }}'
+      {%- elif 'getaddrinfo' in (_winrm_detect.stderr | default('')) or 'Name or service not known' in (_winrm_detect.stderr | default('')) -%}
+      Cannot resolve hostname '{{ winrm_host }}'
+      {%- elif 'Connection timed out' in (_winrm_detect.stderr | default('')) -%}
+      WinRM connection timed out
+      {%- elif _winrm_detect.rc | default(0) != 0 -%}
+      WinRM connection failed (exit code: {{ _winrm_detect.rc | default('unknown') }})
+      {%- else -%}
+      {%- endif -%}
+  when: _winrm_gem_check.rc == 0
+
+- name: "[WinRM Preflight] Set WinRM error details"
+  set_fact:
+    preflight_skip_reason: "{{ _winrm_error_msg }}"
+    preflight_error_code: >-
+      {%- if _winrm_detect.rc | default(0) == 124 -%}
+      WINRM_TIMEOUT
+      {%- elif 'Connection refused' in (_winrm_detect.stderr | default('')) -%}
+      WINRM_CONNECTION_REFUSED
+      {%- elif 'Authentication failed' in (_winrm_detect.stderr | default('')) or 'Access is denied' in (_winrm_detect.stderr | default('')) -%}
+      WINRM_AUTH_FAILED
+      {%- elif 'getaddrinfo' in (_winrm_detect.stderr | default('')) or 'Name or service not known' in (_winrm_detect.stderr | default('')) -%}
+      WINRM_HOST_UNREACHABLE
+      {%- elif 'Connection timed out' in (_winrm_detect.stderr | default('')) -%}
+      WINRM_CONNECTION_TIMEOUT
+      {%- elif _winrm_detect.rc | default(0) != 0 -%}
+      WINRM_CONNECTION_FAILED
+      {%- else -%}
+      {%- endif -%}
+  when:
+    - _winrm_gem_check.rc == 0
+    - not (_winrm_connection_valid | default(false))
+
+# Step 3: Set final preflight result
+- name: "[WinRM Preflight] Set final preflight status"
+  set_fact:
+    preflight_passed: "{{ _winrm_connection_valid | default(false) }}"
+  when: _winrm_gem_check.rc == 0
+
+- name: "[WinRM Preflight] Display WinRM detection"
+  debug:
+    msg: |
+      WinRM Detection Result:
+      {{ winrm_platform_detected }}
+  when:
+    - preflight_passed | default(false)
+    - inspec_debug_mode | default(false) | bool

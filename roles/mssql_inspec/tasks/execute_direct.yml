@@ -1,0 +1,78 @@
+---
+# InSpec execution tasks for MSSQL - DIRECT MODE
+# ===============================================
+# Executes InSpec via sqlcmd/TDS connection to MSSQL server.
+# Called from execute.yml when use_winrm is false.
+
+# Build PATH with MSSQL tools directories
+- name: "[Direct Execute] Build execution environment"
+  set_fact:
+    _mssql_env:
+      PATH: "{{ mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
+      CHEF_LICENSE: "accept"
+
+# Verify sqlcmd is available
+- name: "[Direct Execute] Verify sqlcmd binary"
+  shell: |
+    export PATH="{{ _mssql_env.PATH }}"
+    command -v sqlcmd
+  args:
+    executable: /bin/bash
+  register: _sqlcmd_check
+  changed_when: false
+  failed_when: _sqlcmd_check.rc != 0
+  delegate_to: "{{ _delegate_host }}"
+
+- name: "[Direct Execute] Set sqlcmd path"
+  set_fact:
+    _sqlcmd_bin: "{{ _sqlcmd_check.stdout | trim }}"
+
+# Verify InSpec is available
+- name: "[Direct Execute] Verify InSpec binary"
+  shell: |
+    export PATH="{{ _mssql_env.PATH }}"
+    command -v inspec
+  args:
+    executable: /bin/bash
+  register: _inspec_check
+  changed_when: false
+  failed_when: _inspec_check.rc != 0
+  delegate_to: "{{ _delegate_host }}"
+
+- name: "[Direct Execute] Set InSpec path"
+  set_fact:
+    _inspec_bin: "{{ _inspec_check.stdout | trim }}"
+
+# Execute InSpec profile (contains all controls)
+- name: "[Direct Execute] Execute InSpec profile"
+  shell: |
+    export PATH="{{ _mssql_env.PATH }}"
+    export CHEF_LICENSE=accept
+
+    "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
+      --input usernm='{{ mssql_username }}' \
+              passwd='{{ mssql_password }}' \
+              hostnm='{{ mssql_server }}' \
+              servicenm='{{ mssql_service | default("") }}' \
+              port='{{ mssql_port }}' \
+      --reporter=json-min \
+      --no-color
+  args:
+    executable: /bin/bash
+  register: _inspec_profile_result
+  changed_when: false
+  failed_when: _inspec_profile_result.rc not in [0, 100, 101]
+  no_log: true
+  delegate_to: "{{ _delegate_host }}"
+  timeout: "{{ scan_timeout | default(300) }}"
+
+# Convert single result to list for compatibility with downstream tasks
+- name: "[Direct Execute] Wrap InSpec result for processing"
+  set_fact:
+    inspec_results:
+      results:
+        - stdout: "{{ _inspec_profile_result.stdout }}"
+          rc: "{{ _inspec_profile_result.rc }}"
+          item:
+            path: "{{ _remote_controls_path }}"
+            connection_mode: "direct"
