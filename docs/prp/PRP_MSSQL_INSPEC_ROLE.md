@@ -1,8 +1,12 @@
 # PRP: MSSQL InSpec Compliance Role
 
+> **STATUS: COMPLETED** | Closed: 2026-02-08
+>
+> All requirements implemented. Role fully functional with CIS benchmark controls for MSSQL 2016/2017/2018/2019. Tested through Azure delegate host infrastructure.
+
 ## Product Requirement Prompt/Plan
 
-**Purpose:** Complete the MSSQL InSpec scanning role to production-ready status with comprehensive NIST-mapped controls for SQL Server 2016, 2017, 2018, and 2019.
+**Purpose:** Complete the MSSQL InSpec scanning role to production-ready status with comprehensive CIS-mapped controls for SQL Server 2016, 2017, 2018, and 2019.
 
 ---
 
