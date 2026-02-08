@@ -1,0 +1,85 @@
+===============================================================================
+ MSSQL InSpec Compliance Scan - Error Summary
+ Generated: {{ ansible_date_time.iso8601 }}
+===============================================================================
+
+Total Errors: {{ _scan_errors | length }}
+
+{% for error in _scan_errors %}
+-------------------------------------------------------------------------------
+Error {{ loop.index }}:
+  Timestamp:      {{ error.timestamp }}
+  Inventory Host: {{ error.host }}
+  MSSQL Server:   {{ error.mssql_server }}
+  MSSQL Port:     {{ error.mssql_port }}
+  Database:       {{ error.mssql_database }}
+  Connection:     {{ error.connection_mode | upper }}
+{% if error.connection_mode == 'winrm' %}
+  WinRM Target:   {{ error.winrm_host }}
+{% endif %}
+  Error Code:     {{ error.error_code }}
+  Message:        {{ error.error_message }}
+{% endfor %}
+
+===============================================================================
+ Recommended Actions by Error Code
+-------------------------------------------------------------------------------
+{% for error in _scan_errors | unique(attribute='error_code') %}
+{{ error.error_code }}:
+{% if error.error_code == 'WINRM_CONNECTION_FAILED' %}
+  - Verify WinRM is enabled on target: winrm quickconfig -force
+  - Check firewall rules for port {{ winrm_port | default(5985) }}
+  - Verify credentials: winrm_username / winrm_password
+  - Test manually: winrs -r:{{ error.winrm_host }} hostname
+{% elif error.error_code == 'WINRM_GEM_MISSING' %}
+  - Install train-winrm on delegate host: gem install train-winrm --no-document
+  - Verify InSpec can use WinRM: inspec detect -t winrm://user@host
+{% elif error.error_code == 'WINRM_AUTH_FAILED' %}
+  - Verify Windows credentials (winrm_username/winrm_password)
+  - Check if account is locked or disabled
+  - Ensure account has WinRM access permissions
+{% elif error.error_code == 'WINRM_TIMEOUT' %}
+  - Increase winrm_timeout value (current: {{ winrm_timeout | default(60) }}s)
+  - Check network latency to target
+  - Verify WinRM service is running on target
+{% elif error.error_code == 'PORT_UNREACHABLE' %}
+  - Verify SQL Server is running on target
+  - Check firewall rules for port 1433
+  - Test with: telnet {{ error.mssql_server }} {{ error.mssql_port }}
+{% elif error.error_code == 'AUTH_FAILED' %}
+  - Verify SQL credentials (mssql_username/mssql_password)
+  - Check SQL authentication mode (Mixed Mode required)
+  - Verify account has database access
+{% elif error.error_code == 'SQLCMD_NOT_FOUND' %}
+  - Install MSSQL Tools on delegate host
+  - RHEL/CentOS: yum install mssql-tools
+  - Ubuntu/Debian: apt install mssql-tools
+  - Update mssql_tools_paths variable if installed elsewhere
+{% elif error.error_code == 'DATABASE_NOT_FOUND' %}
+  - Verify database name '{{ error.mssql_database }}' exists
+  - Check if account has access to the database
+{% elif error.error_code == 'AUTH_TIMEOUT' %}
+  - Increase preflight_auth_timeout value
+  - Check network connectivity to SQL Server
+  - Verify SQL Server is not overloaded
+{% endif %}
+
+{% endfor %}
+===============================================================================
+ Summary by Error Code
+-------------------------------------------------------------------------------
+{% set error_counts = {} %}
+{% for error in _scan_errors %}
+{% if error.error_code in error_counts %}
+{% set _ = error_counts.update({error.error_code: error_counts[error.error_code] + 1}) %}
+{% else %}
+{% set _ = error_counts.update({error.error_code: 1}) %}
+{% endif %}
+{% endfor %}
+{% for code, count in error_counts.items() %}
+  {{ code }}: {{ count }} occurrence(s)
+{% endfor %}
+
+===============================================================================
+ End of Error Summary
+===============================================================================

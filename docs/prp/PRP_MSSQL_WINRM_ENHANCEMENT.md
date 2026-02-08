@@ -1,5 +1,10 @@
 # PRP: MSSQL InSpec Role - WinRM Enhancement & Large-Scale Scanning
 
+> **STATUS: COMPLETED** | Closed: 2026-02-08
+>
+> WinRM mode integrated into main MSSQL role. Supports dual-mode execution
+> (direct sqlcmd and WinRM), preflight checks, and batch error handling.
+
 ## Product Requirement Prompt/Plan
 
 **Purpose:** Enhance the existing `mssql_inspec` role to support WinRM-based connectivity for Windows SQL Server scanning, with improvements for large-scale scanning across hundreds of servers.

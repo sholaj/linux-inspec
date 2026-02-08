@@ -9,6 +9,41 @@ Executes InSpec compliance checks against Microsoft SQL Server databases.
 - sqlcmd (MSSQL Tools 18) installed on the execution host
 - Network connectivity to target MSSQL servers
 
+## Connection Modes
+
+The role supports two connection modes controlled by `use_winrm`:
+
+### Direct Mode (Default)
+
+InSpec connects directly to SQL Server via TDS protocol (port 1433) using sqlcmd.
+
+```yaml
+use_winrm: false  # Default - use direct TDS connection
+```
+
+**Architecture:**
+```
+Delegate Host --[TDS 1433]--> SQL Server (Linux/Windows)
+```
+
+### WinRM Mode
+
+InSpec connects via WinRM to a Windows host, then uses ADO.NET to connect to SQL Server locally.
+
+```yaml
+use_winrm: true
+winrm_host: "windows-sql.example.com"
+winrm_port: 5985
+winrm_username: "Administrator"
+winrm_password: "{{ vault_winrm_password }}"
+mssql_server: "localhost"  # SQL accessed locally from Windows
+```
+
+**Architecture:**
+```
+Delegate Host --[WinRM 5985]--> Windows VM --[ADO.NET]--> SQL Server
+```
+
 ## Execution Modes
 
 The role supports two execution modes controlled by `inspec_delegate_host`:
@@ -59,6 +94,30 @@ splunk_hec_url: ""                       # Splunk HEC endpoint
 splunk_hec_token: ""                     # Splunk HEC token
 ```
 
+### WinRM Variables (when use_winrm: true)
+
+```yaml
+use_winrm: false                         # Enable WinRM mode
+winrm_host: ""                           # Windows VM hostname/IP
+winrm_port: 5985                         # WinRM HTTP port (5986 for HTTPS)
+winrm_username: ""                       # Windows admin user
+winrm_password: ""                       # Windows admin password
+winrm_ssl: false                         # Use HTTPS (port 5986)
+winrm_ssl_verify: true                   # Verify SSL certificate
+winrm_timeout: 60                        # Connection timeout (seconds)
+```
+
+### Batch Processing Variables
+
+```yaml
+batch_size: 0                            # Hosts per batch (0 = no batching)
+batch_delay: 5                           # Seconds between batches
+scan_timeout: 300                        # Per-host timeout (seconds)
+continue_on_winrm_failure: true          # Continue if WinRM fails
+max_retry_attempts: 2                    # Retry failed connections
+retry_delay: 10                          # Seconds between retries
+```
+
 ## Supported MSSQL Versions
 
 - MSSQL 2016
@@ -72,19 +131,28 @@ mssql_inspec/
 ├── tasks/
 │   ├── main.yml              # Entry point - determines execution mode
 │   ├── validate.yml          # Parameter validation
+│   ├── preflight.yml         # Connection mode routing
+│   ├── preflight_direct.yml  # Direct (sqlcmd) connectivity check
+│   ├── preflight_winrm.yml   # WinRM connectivity check
 │   ├── setup.yml             # Setup directories and copy controls
-│   ├── execute.yml           # Run InSpec controls
+│   ├── execute.yml           # Execution mode routing
+│   ├── execute_direct.yml    # Direct InSpec execution
+│   ├── execute_winrm.yml     # WinRM-based InSpec execution
 │   ├── process_results.yml   # Save results to files
 │   ├── cleanup.yml           # Generate reports, cleanup
+│   ├── error_handling.yml    # Error aggregation for batch scans
 │   └── splunk_integration.yml # Optional Splunk integration
-├── defaults/main.yml         # Default variables
+├── defaults/main.yml         # Default variables (includes WinRM)
 ├── vars/main.yml             # Role variables (tool paths)
 ├── files/
 │   ├── MSSQL2016_ruby/       # MSSQL 2016 controls
 │   ├── MSSQL2017_ruby/       # MSSQL 2017 controls
+│   ├── MSSQL2018_ruby/       # MSSQL 2018 controls
 │   └── MSSQL2019_ruby/       # MSSQL 2019 controls
 ├── templates/
-│   └── summary_report.j2     # Summary report template
+│   ├── summary_report.j2     # Summary report template
+│   ├── skip_report.j2        # Skip report template
+│   └── error_summary.j2      # Batch error summary template
 └── README.md
 ```
 
@@ -146,6 +214,52 @@ all:
       vars:
         inspec_delegate_host: "inspec-runner"
         mssql_username: scan_user
+```
+
+### WinRM Mode Playbook
+
+```yaml
+---
+- name: Run MSSQL Compliance Scan via WinRM
+  hosts: mssql_windows_databases
+  gather_facts: true
+
+  vars:
+    use_winrm: true
+    inspec_delegate_host: "inspec-runner"
+
+  roles:
+    - mssql_inspec
+```
+
+### WinRM Inventory Example
+
+```yaml
+all:
+  hosts:
+    inspec-runner:
+      ansible_host: linux-runner.example.com
+      ansible_connection: ssh
+
+  children:
+    mssql_windows_databases:
+      hosts:
+        WIN_SQL01:
+          # WinRM connection to Windows VM
+          winrm_host: winsql01.example.com
+          winrm_port: 5985
+          winrm_username: Administrator
+          winrm_password: "{{ vault_winrm_password }}"
+          # SQL Server accessed locally from Windows
+          mssql_server: localhost
+          mssql_port: 1433
+          mssql_database: master
+          mssql_username: sa
+          mssql_password: "{{ vault_mssql_password }}"
+          mssql_version: "2019"
+      vars:
+        use_winrm: true
+        inspec_delegate_host: "inspec-runner"
 ```
 
 ## Output

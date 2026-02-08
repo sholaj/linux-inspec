@@ -16,6 +16,39 @@ mssql_service: ""  # Named instance (optional)
 # - "<hostname>": Run InSpec on remote delegate host via SSH
 inspec_delegate_host: "localhost"
 
+# ======================
+# Connection Mode
+# ======================
+# When true, use WinRM transport to Windows VM
+# When false, use direct TDS connection via sqlcmd
+use_winrm: false
+
+# ======================
+# WinRM Configuration
+# ======================
+# Only used when use_winrm: true
+winrm_host: ""                    # Windows VM IP/hostname
+winrm_port: 5985                  # WinRM HTTP port (or 5986 for HTTPS)
+winrm_username: ""                # Windows admin user
+winrm_password: ""                # Windows admin password
+winrm_ssl: false                  # Use HTTPS (5986)
+winrm_ssl_verify: true            # Verify SSL certificate
+winrm_timeout: 60                 # Connection timeout (seconds)
+
+# ======================
+# Batch Processing
+# ======================
+batch_size: 0                     # 0 = no batching
+batch_delay: 5                    # Seconds between batches
+scan_timeout: 300                 # Per-host timeout (seconds)
+
+# ======================
+# Error Handling
+# ======================
+continue_on_winrm_failure: true   # Continue if WinRM connection fails
+max_retry_attempts: 2             # Retry failed WinRM connections
+retry_delay: 10                   # Seconds between retries
+
 # Results Configuration
 inspec_results_dir: "/tmp/inspec_mssql_results"
 generate_summary_report: true
