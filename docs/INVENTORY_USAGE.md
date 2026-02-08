@@ -86,7 +86,7 @@ all:
           mssql_server: server1.com
           mssql_port: 1433
           mssql_database: db1
-          mssql_username: nist_scan_user
+          mssql_username: cis_scan_user
           mssql_password: "{{ vault_password_server1_com_db1_1433 }}"
           mssql_version: '2019'
 ```

@@ -9,7 +9,12 @@
 
 ## 1. Purpose
 
-This document defines the design and architecture of the **Database Compliance Scanning Framework** using Ansible AAP2 and InSpec. The framework enables automated NIST compliance scanning across multiple database platforms — **MSSQL**, **Oracle**, and **Sybase** — using native credentials, standard Ansible roles, and repeatable playbooks executed from AAP2.
+This document defines the design and architecture of the **Database Compliance Scanning Framework** using Ansible AAP2 and InSpec. The framework enables automated CIS Benchmark compliance scanning across multiple database platforms — **MSSQL**, **Oracle**, and **Sybase** — using native credentials, standard Ansible roles, and repeatable playbooks executed from AAP2.
+
+**CIS Benchmark Versions:**
+- **MSSQL**: CIS Microsoft SQL Server Benchmark v1.3.0
+- **Oracle**: CIS Oracle Database Benchmark v1.1.0
+- **Sybase**: CIS SAP ASE Benchmark v1.1.0
 
 This solution refactors the original  bash script into a modern, scalable, and maintainable Ansible-based orchestration framework while maintaining full backward compatibility with existing file formats and workflows.
 
@@ -85,11 +90,11 @@ The framework operates on an **inventory-based architecture** where:
               │  │  JSON Results (Local Storage)        │  │
               │  │  /tmp/compliance_scans/              │  │
               │  │  ├── mssql/                          │  │
-              │  │  │   └── MSSQL_NIST_*.json           │  │
+              │  │  │   └── MSSQL_CIS_*.json           │  │
               │  │  ├── oracle/                         │  │
-              │  │  │   └── ORACLE_NIST_*.json          │  │
+              │  │  │   └── ORACLE_CIS_*.json          │  │
               │  │  └── sybase/                         │  │
-              │  │      └── SYBASE_NIST_*.json          │  │
+              │  │      └── SYBASE_CIS_*.json          │  │
               │  └──────────────────────────────────────┘  │
               │                    │                        │
               │                    ├──────────────────┐     │
@@ -812,22 +817,22 @@ inspec_timeout: 1800  # 30 minutes per control
 /tmp/compliance_scans/
 ├── mssql/
 │   └── server01_1733_1728912345/
-│       ├── MSSQL_NIST_12345_server01_db01_2019_1728912345_trusted.json
-│       ├── MSSQL_NIST_12345_server01_db01_2019_1728912345_audit.json
+│       ├── MSSQL_CIS_12345_server01_db01_2019_1728912345_trusted.json
+│       ├── MSSQL_CIS_12345_server01_db01_2019_1728912345_audit.json
 │       └── summary_report.txt
 ├── oracle/
 │   └── oracleserver01_orcl_1728912456/
-│       ├── ORACLE_NIST_12346_oracleserver01_orcl_19c_1728912456_trusted.json
+│       ├── ORACLE_CIS_12346_oracleserver01_orcl_19c_1728912456_trusted.json
 │       └── summary_report.txt
 └── sybase/
     └── sybaseserver01_master_1728912567/
-        ├── SYBASE_NIST_12347_sybaseserver01_master_16_1728912567_trusted.json
+        ├── SYBASE_CIS_12347_sybaseserver01_master_16_1728912567_trusted.json
         └── summary_report.txt
 ```
 
 **File Naming Convention (Original Script Compatibility):**
 ```
-{PLATFORM}_NIST_{PID}_{SERVER}_{DATABASE}_{VERSION}_{TIMESTAMP}_{CONTROL}.json
+{PLATFORM}_CIS_{PID}_{SERVER}_{DATABASE}_{VERSION}_{TIMESTAMP}_{CONTROL}.json
 
 Where:
 - PLATFORM: MSSQL, ORACLE, SYBASE
@@ -841,9 +846,9 @@ Where:
 
 **Examples:**
 ```
-MSSQL_NIST_98765_sqlserver01_master_2019_1728912345_trusted.json
-ORACLE_NIST_98766_oracleserver01_orcl_19c_1728912456_trusted.json
-SYBASE_NIST_98767_sybaseserver01_master_16_1728912567_trusted.json
+MSSQL_CIS_98765_sqlserver01_master_2019_1728912345_trusted.json
+ORACLE_CIS_98766_oracleserver01_orcl_19c_1728912456_trusted.json
+SYBASE_CIS_98767_sybaseserver01_master_16_1728912567_trusted.json
 ```
 
 ### 7.2 Summary Report Format (Text)
@@ -910,7 +915,7 @@ Results Location: /tmp/compliance_scans/mssql/sqlserver01_1733_1728912345/
     "compliance_score": 94.67,
     "scan_duration": 45.67,
     "status": "completed",
-    "result_file": "/tmp/compliance_scans/mssql/sqlserver01_1733_1728912345/MSSQL_NIST_98765_sqlserver01_master_2019_1728912345_trusted.json"
+    "result_file": "/tmp/compliance_scans/mssql/sqlserver01_1733_1728912345/MSSQL_CIS_98765_sqlserver01_master_2019_1728912345_trusted.json"
   }
 }
 ```
