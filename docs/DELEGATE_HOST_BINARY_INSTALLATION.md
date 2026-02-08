@@ -34,15 +34,6 @@ This document provides step-by-step instructions for installing the required bin
 | Sybase | 5000 | TCP | Sybase ASE (port varies by instance) |
 | SSH (Sybase SSH transport) | 22 | TCP | Alternative Sybase access |
 
-**Example: Non-standard MSSQL ports**
-```
-Server          Database        Port    Version
-m02dms3         BIRS_Confidential 1733  2017
-m02dms3         DBA_Reports       1733  2017
-gdcuwvc8756     CMDB              1733  2017
-gdcuwvc8756     CMDBStage         1733  2017
-```
-
 Ensure firewall rules are opened for the specific ports used by target databases.
 
 ---
@@ -55,9 +46,9 @@ Ensure firewall rules are opened for the specific ports used by target databases
 |-----------|------------------|---------------|--------|
 | Ansible | `/usr/bin` | `ansible` | Internal repo |
 | InSpec | `/usr/bin` or `/usr/local/bin` | `inspec` | Internal repo |
-| train-winrm | InSpec plugin | `inspec plugin install train-winrm` | InSpec plugin |
+| train-winrm | InSpec plugin dir | `inspec plugin install train-winrm` | Via InSpec |
 | MSSQL Tools 18 | `/opt/mssql-tools18/bin` | `sqlcmd` | `dnf` / `yum` |
-| Oracle Client | `/tools/ver/oracle-19.16.0.0-64` | `sqlplus` | NFS share |
+| Oracle Client | `/tools/ver/oracle-21.3.0.0-64` | `sqlplus` | NFS share (`/tools/ver/`) |
 | Sybase ASE Client | `/tools/ver/sybase/OCS-16_0/bin` | `isql` | Official SAP sources |
 
 **Note:** All binaries must be sourced from approved internal repositories or NFS shares. External public repositories (e.g., EPEL, Fedora) are **not permitted** in production environments.
@@ -265,12 +256,12 @@ ACCEPT_EULA=Y dnf install -y mssql-tools18 unixODBC-devel
 ## Step 4: Install Oracle Instant Client
 
 ### Version
-- **Required:** 19.16.0.0-64 or higher (19c Long Term Release)
+- **Required:** 21.3.0.0-64 or higher
 
 ### Source Location
 Oracle Client binaries are available on the internal NFS share:
 ```
-/tools/ver/oracle-19.16.0.0-64
+/tools/ver/oracle-21.3.0.0-64
 ```
 
 ### Installation (Using NFS Share)
@@ -280,8 +271,8 @@ Oracle Client binaries are available on the internal NFS share:
 # Oracle Instant Client installation from NFS share
 
 # NFS share path (verify with infrastructure team)
-ORACLE_NFS="/tools/ver/oracle-19.16.0.0-64"
-ORACLE_HOME="/tools/ver/oracle-19.16.0.0-64"
+ORACLE_NFS="/tools/ver/oracle-21.3.0.0-64"
+ORACLE_HOME="/tools/ver/oracle-21.3.0.0-64"
 
 # Verify NFS share is mounted
 if [ ! -d "${ORACLE_NFS}" ]; then
@@ -305,13 +296,13 @@ mkdir -p ${ORACLE_HOME}/network/admin
 
 ### Required Libraries
 Verify these libraries exist on the NFS share:
-- `libclntsh.so.19.1`
-- `libnnz19.so`
-- `libocci.so.19.1`
-- `libociicus.so`
+- `libclntsh.so` (client shared library)
+- `libnnz*.so` (network security)
+- `libocci.so` (C++ interface)
+- `libociicus.so` (instant client)
 
 ```bash
-ls -la /tools/ver/oracle-19.16.0.0-64/*.so*
+ls -la /tools/ver/oracle-21.3.0.0-64/*.so*
 ```
 
 ---
@@ -408,7 +399,7 @@ export PATH="/usr/local/bin:${PATH}"
 export PATH="/opt/mssql-tools18/bin:${PATH}"
 
 # Oracle Instant Client (NFS share)
-export PATH="/tools/ver/oracle-19.16.0.0-64:${PATH}"
+export PATH="/tools/ver/oracle-21.3.0.0-64:${PATH}"
 
 # Sybase ASE Client (NFS share)
 export PATH="/tools/ver/sybase/OCS-16_0/bin:${PATH}"
@@ -417,7 +408,7 @@ export PATH="/tools/ver/sybase/OCS-16_0/bin:${PATH}"
 # LD_LIBRARY_PATH Configuration
 #===============================================
 # Oracle libraries (required for sqlplus)
-export LD_LIBRARY_PATH="/tools/ver/oracle-19.16.0.0-64:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="/tools/ver/oracle-21.3.0.0-64:${LD_LIBRARY_PATH}"
 
 # Sybase libraries (required for isql)
 export LD_LIBRARY_PATH="/tools/ver/sybase/OCS-16_0/lib:${LD_LIBRARY_PATH}"
@@ -425,7 +416,7 @@ export LD_LIBRARY_PATH="/tools/ver/sybase/OCS-16_0/lib:${LD_LIBRARY_PATH}"
 #===============================================
 # Oracle Environment
 #===============================================
-export ORACLE_HOME="/tools/ver/oracle-19.16.0.0-64"
+export ORACLE_HOME="/tools/ver/oracle-21.3.0.0-64"
 export TNS_ADMIN="${ORACLE_HOME}/network/admin"
 export NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
 
@@ -498,7 +489,7 @@ fi
 echo ""
 echo "=== NFS Shares ==="
 echo "Oracle NFS:"
-ls -la /tools/ver/oracle-19.16.0.0-64/sqlplus 2>/dev/null || echo "NOT MOUNTED"
+ls -la /tools/ver/oracle-21.3.0.0-64/sqlplus 2>/dev/null || echo "NOT MOUNTED"
 echo "Sybase NFS:"
 ls -la /tools/ver/sybase/OCS-16_0/bin/isql 2>/dev/null || echo "NOT MOUNTED"
 
@@ -540,21 +531,21 @@ echo "SELECT @@version\ngo" | tsql -H [DB_SERVER] -p 5000 -U [USER] -P [PASSWORD
 ### Complete PATH (Copy/Paste)
 
 ```bash
-export PATH="/opt/mssql-tools18/bin:/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
+export PATH="/opt/mssql-tools18/bin:/tools/ver/oracle-21.3.0.0-64:/tools/ver/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
 ```
 
 ### Complete LD_LIBRARY_PATH (Copy/Paste)
 
 ```bash
-export LD_LIBRARY_PATH="/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/lib:${LD_LIBRARY_PATH}"
+export LD_LIBRARY_PATH="/tools/ver/oracle-21.3.0.0-64:/tools/ver/sybase/OCS-16_0/lib:${LD_LIBRARY_PATH}"
 ```
 
 ### All Environment Variables (Copy/Paste)
 
 ```bash
-export PATH="/opt/mssql-tools18/bin:/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
-export LD_LIBRARY_PATH="/tools/ver/oracle-19.16.0.0-64:/tools/ver/sybase/OCS-16_0/lib:${LD_LIBRARY_PATH}"
-export ORACLE_HOME="/tools/ver/oracle-19.16.0.0-64"
+export PATH="/opt/mssql-tools18/bin:/tools/ver/oracle-21.3.0.0-64:/tools/ver/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
+export LD_LIBRARY_PATH="/tools/ver/oracle-21.3.0.0-64:/tools/ver/sybase/OCS-16_0/lib:${LD_LIBRARY_PATH}"
+export ORACLE_HOME="/tools/ver/oracle-21.3.0.0-64"
 export TNS_ADMIN="${ORACLE_HOME}/network/admin"
 export NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
 export SYBASE="/tools/ver/sybase"
@@ -571,7 +562,7 @@ export CHEF_LICENSE="accept-silent"
 ```bash
 # Check if binary exists
 ls -la /opt/mssql-tools18/bin/sqlcmd
-ls -la /tools/ver/oracle-19.16.0.0-64/sqlplus
+ls -la /tools/ver/oracle-21.3.0.0-64/sqlplus
 ls -la /tools/ver/sybase/OCS-16_0/bin/isql
 
 # Check if NFS shares are mounted
@@ -588,7 +579,7 @@ source /etc/profile.d/db-compliance.sh
 
 ```bash
 # Check library dependencies
-ldd /tools/ver/oracle-19.16.0.0-64/sqlplus
+ldd /tools/ver/oracle-21.3.0.0-64/sqlplus
 ldd /tools/ver/sybase/OCS-16_0/bin/isql
 
 # Check LD_LIBRARY_PATH
@@ -616,7 +607,7 @@ mount | grep nfs
 df -h | grep tools
 
 # Contact infrastructure team to mount:
-# - /tools/ver/oracle-19.16.0.0-64
+# - /tools/ver/oracle-21.3.0.0-64
 # - /tools/ver/sybase/OCS-16_0
 ```
 
@@ -631,7 +622,7 @@ df -h | grep tools
 | train-winrm | 0.2.0 | 0.2.13 | Required for WinRM mode |
 | Ruby | 2.7 | 3.0+ | For InSpec gem install |
 | MSSQL Tools | 17.0 | 18.x | TLS 1.2/1.3 support |
-| Oracle Client | 19.0 | 19.16 | 19c LTS release |
+| Oracle Client | 19.0 | 21.3 | 21c release |
 | FreeTDS | 1.0 | 1.3+ | TDS 5.0 for Sybase |
 
 ---
