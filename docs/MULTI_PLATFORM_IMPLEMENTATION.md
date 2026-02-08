@@ -1,7 +1,17 @@
 # Multi-Platform Database Compliance Implementation
 
 ## Overview
-Successfully implemented Oracle and Sybase InSpec compliance scanning roles alongside the existing MSSQL solution, following the original `NIST_for_db.ksh` script patterns.
+Successfully implemented Oracle and Sybase InSpec compliance scanning roles alongside the existing MSSQL solution, following the original compliance scanning script patterns.
+
+**CIS Benchmark Versions:**
+- **MSSQL**: CIS Microsoft SQL Server Benchmark v1.3.0
+- **Oracle**: CIS Oracle Database Benchmark v1.1.0
+- **Sybase**: CIS SAP ASE Benchmark v1.1.0
+
+**Control Tag Structure:**
+- `cis` - CIS Benchmark control identifier (e.g., "1.1", "2.3.1")
+- `cis_level` - CIS profile level ("1" or "2")
+- `severity` - Control severity ("high", "medium", "low")
 
 ## [OK] Completed Implementation
 
@@ -56,20 +66,20 @@ aks-gitops/
 ### MSSQL (Existing)
 - **Standard connectivity** - Direct database connections
 - **Versions**: 2008, 2012, 2014, 2016, 2017, 2018, 2019
-- **File pattern**: `MSSQL_NIST_*_*.json`
+- **File pattern**: `MSSQL_CIS_*_*.json`
 
 ### Oracle (New)
 - **Database connectivity** - TNS/Service name support
 - **Versions**: 11g, 12c, 18c, 19c
 - **Connection modes**: SID or Service Name
-- **File pattern**: `ORACLE_NIST_*_*.json`
+- **File pattern**: `ORACLE_CIS_*_*.json`
 - **Hello World**:  Oracle InSpec Compliance Scan
 
 ### Sybase (New)
 - **SSH tunnel support** - Matches original script SSH logic
 - **Versions**: 15, 16 (ASE)
 - **SSH command pattern**: `--ssh://oracle:password@server -o keyfile`
-- **File pattern**: `SYBASE_NIST_*_*.json`
+- **File pattern**: `SYBASE_CIS_*_*.json`
 - **Hello World**:  Sybase InSpec Compliance Scan
 - **Unique feature**: SSH connectivity validation
 
@@ -181,7 +191,7 @@ Note: This role includes SSH tunnel support as per original script!
 | `dbversion=$6` | `{platform}_version` |
 | `ruby_dir=$script_dir/${platform}_${dbversion}_ruby` | `{platform}_inspec/files/{PLATFORM}{VERSION}_ruby/` |
 | SSH for Sybase: `--ssh://oracle:edcp!cv0576@` | `sybase_ssh_setup.yml` with vault credentials |
-| File naming: `${platform}_NIST_$$_${servernm}_${dbname}_${dbversion}_${now}_${file_prefix}.json` | Maintained exactly |
+| File naming: `${platform}_CIS_$$_${servernm}_${dbname}_${dbversion}_${now}_${file_prefix}.json` | Maintained exactly |
 
 ## 🎯 Production Readiness
 
@@ -217,11 +227,11 @@ sybase_controls_base_dir: "{{ role_path }}/files"
 ### Result File Paths
 ```bash
 # Original pattern:
-${platform}_NIST_$$_${servernm}_${dbname}_${dbversion}_${now}_${file_prefix}.json
+${platform}_CIS_$$_${servernm}_${dbname}_${dbversion}_${now}_${file_prefix}.json
 
 # Examples:
-ORACLE_NIST_12345_oracleserver01_orcl_19c_1759083705_trusted.json
-SYBASE_NIST_12345_sybaseserver01_master_16_1759083705_trusted.json
+ORACLE_CIS_12345_oracleserver01_orcl_19c_1759083705_trusted.json
+SYBASE_CIS_12345_sybaseserver01_master_16_1759083705_trusted.json
 ```
 
 ## 📋 Next Steps

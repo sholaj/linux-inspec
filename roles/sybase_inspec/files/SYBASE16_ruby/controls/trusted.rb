@@ -51,7 +51,7 @@ control 'sybase-16-1.02' do
 
   tag cis: '1.2'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query('select @@version as version').row(0).column('version') do
     its('value') { should match(/Adaptive Server Enterprise/) }
@@ -93,7 +93,7 @@ control 'sybase-16-1.05' do
 
   tag cis: '1.5'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'allow remote access'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -280,7 +280,7 @@ control 'sybase-16-2.06' do
 
   tag cis: '2.6'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'min digits in password'").row(0).column('value') do
     its('value') { should be >= 1 }
@@ -294,7 +294,7 @@ control 'sybase-16-2.07' do
 
   tag cis: '2.7'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'min special char in password'").row(0).column('value') do
     its('value') { should be >= 1 }
@@ -308,7 +308,7 @@ control 'sybase-16-2.08' do
 
   tag cis: '2.8'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'min upper char in password'").row(0).column('value') do
     its('value') { should be >= 1 }
@@ -322,7 +322,7 @@ control 'sybase-16-2.09' do
 
   tag cis: '2.9'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'min lower char in password'").row(0).column('value') do
     its('value') { should be >= 1 }
@@ -336,7 +336,7 @@ control 'sybase-16-2.10' do
 
   tag cis: '2.10'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'min password length'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -350,7 +350,7 @@ control 'sybase-16-2.11' do
 
   tag cis: '2.11'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'password exp warn interval'").row(0).column('value') do
     its('value') { should be >= 7 }
@@ -364,7 +364,7 @@ control 'sybase-16-2.12' do
 
   tag cis: '2.12'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'allow expired password'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -410,7 +410,7 @@ control 'sybase-16-3.03' do
 
   tag cis: '3.3'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysloginroles lr join master..syssrvroles r on lr.srid = r.srid where r.name = 'oper_role'").row(0).column('cnt') do
     its('value') { should be <= 5 }
@@ -424,7 +424,7 @@ control 'sybase-16-3.04' do
 
   tag cis: '3.4'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysloginroles lr join master..syssrvroles r on lr.srid = r.srid where r.name = 'replication_role'").row(0).column('cnt') do
     its('value') { should be <= 3 }
@@ -466,7 +466,7 @@ control 'sybase-16-3.07' do
 
   tag cis: '3.7'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysloginroles lr join master..syssrvroles r on lr.srid = r.srid where r.name = 'sybase_ts_role'").row(0).column('cnt') do
     its('value') { should be <= 3 }
@@ -480,7 +480,7 @@ control 'sybase-16-3.08' do
 
   tag cis: '3.8'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysloginroles lr join master..syssrvroles r on lr.srid = r.srid where r.name = 'mon_role'").row(0).column('cnt') do
     its('value') { should be <= 5 }
@@ -494,7 +494,7 @@ control 'sybase-16-3.09' do
 
   tag cis: '3.9'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysloginroles lr join master..syssrvroles r on lr.srid = r.srid where r.name = 'js_admin_role'").row(0).column('cnt') do
     its('value') { should be <= 3 }
@@ -526,7 +526,7 @@ control 'sybase-16-4.02' do
 
   tag cis: '4.2'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from sybsecurity..sysauditoptions where name = 'logout' and (sopt = 'pass' or sopt = 'both')").row(0).column('cnt') do
     its('value') { should be >= 1 }
@@ -582,7 +582,7 @@ control 'sybase-16-4.06' do
 
   tag cis: '4.6'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from sybsecurity..sysauditoptions where name = 'cmdtext' and sopt = 'on'").row(0).column('cnt') do
     its('value') { should be >= 1 }
@@ -596,7 +596,7 @@ control 'sybase-16-4.07' do
 
   tag cis: '4.7'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from sybsecurity..sysauditoptions where name = 'errors' and sopt = 'on'").row(0).column('cnt') do
     its('value') { should be >= 1 }
@@ -610,7 +610,7 @@ control 'sybase-16-4.08' do
 
   tag cis: '4.8'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from sybsecurity..sysauditoptions where name = 'disk' and (sopt = 'pass' or sopt = 'both')").row(0).column('cnt') do
     its('value') { should be >= 1 }
@@ -624,7 +624,7 @@ control 'sybase-16-4.09' do
 
   tag cis: '4.9'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from sybsecurity..sysauditoptions where name = 'dbcc' and (sopt = 'pass' or sopt = 'both')").row(0).column('cnt') do
     its('value') { should be >= 1 }
@@ -638,7 +638,7 @@ control 'sybase-16-4.10' do
 
   tag cis: '4.10'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from sybsecurity..sysauditoptions where name = 'rpc' and (sopt = 'pass' or sopt = 'both')").row(0).column('cnt') do
     its('value') { should be >= 1 }
@@ -740,7 +740,7 @@ control 'sybase-16-5.04' do
 
   tag cis: '5.4'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'use security services'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -829,7 +829,7 @@ control 'sybase-16-6.03' do
 
   tag cis: '6.3'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select (status2 & 8) as select_into from master..sysdatabases where name = db_name()").row(0).column('select_into') do
     its('value') { should cmp 0 }
@@ -843,7 +843,7 @@ control 'sybase-16-6.04' do
 
   tag cis: '6.4'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select (status & 8) as trunc_log from master..sysdatabases where name = db_name()").row(0).column('trunc_log') do
     its('value') { should cmp 0 }
@@ -900,7 +900,7 @@ control 'sybase-16-6.08' do
 
   tag cis: '6.8'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'allow procedure grouping'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -946,7 +946,7 @@ control 'sybase-16-7.03' do
 
   tag cis: '7.3'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'esp unload dll'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -960,7 +960,7 @@ control 'sybase-16-7.04' do
 
   tag cis: '7.4'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysprotects where id = object_id('master..xp_logevent') and uid = 0").row(0).column('cnt') do
     its('value') { should cmp 0 }
@@ -974,7 +974,7 @@ control 'sybase-16-7.05' do
 
   tag cis: '7.5'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysprotects where id = object_id('master..xp_sendmail') and uid = 0").row(0).column('cnt') do
     its('value') { should cmp 0 }
@@ -1048,7 +1048,7 @@ control 'sybase-16-8.02' do
 
   tag cis: '8.2'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'fips login password encryption'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -1090,7 +1090,7 @@ control 'sybase-16-8.05' do
 
   tag cis: '8.5'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'ssl certificate dn'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -1122,7 +1122,7 @@ control 'sybase-16-9.02' do
 
   tag cis: '9.2'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysdatabases where name not in ('master', 'model', 'tempdb', 'sybsystemprocs', 'sybsystemdb', 'sybsecurity')").row(0).column('cnt') do
     its('value') { should be >= 0 }
@@ -1136,7 +1136,7 @@ control 'sybase-16-9.03' do
 
   tag cis: '9.3'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysloginroles lr join master..syssrvroles r on lr.srid = r.srid where r.name = 'oper_role'").row(0).column('cnt') do
     its('value') { should be <= 5 }
@@ -1150,7 +1150,7 @@ control 'sybase-16-9.04' do
 
   tag cis: '9.4'
   tag cis_level: 2
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select value from master..sysconfigures where name = 'enable encrypted columns'").row(0).column('value') do
     its('value') { should_not be_nil }
@@ -1182,7 +1182,7 @@ control 'sybase-16-10.02' do
 
   tag cis: '10.2'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from master..sysprotects p join master..sysobjects o on p.id = o.id where o.type = 'P' and p.uid = 0 and p.action = 224 and o.name like 'sp_drop%'").row(0).column('cnt') do
     its('value') { should cmp 0 }
@@ -1196,7 +1196,7 @@ control 'sybase-16-10.03' do
 
   tag cis: '10.3'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from model..sysusers where name = 'guest'").row(0).column('cnt') do
     its('value') { should cmp 0 }
@@ -1238,7 +1238,7 @@ control 'sybase-16-10.06' do
 
   tag cis: '10.6'
   tag cis_level: 1
-  tag severity: 'medium'
+  tag severity: 'high'
 
   describe sql.query("select count(*) as cnt from sysusers u where u.suid != 0 and not exists (select 1 from master..syslogins l where l.suid = u.suid)").row(0).column('cnt') do
     its('value') { should cmp 0 }

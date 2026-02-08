@@ -17,7 +17,7 @@ all:
           mssql_version: "2019"
           database_platform: mssql
       vars:
-        mssql_username: nist_scan_user
+        mssql_username: cis_scan_user
         # mssql_password: injected by AAP2
         # inspec_delegate_host defaults to "localhost"
 ```
@@ -47,7 +47,7 @@ all:
           mssql_version: "2019"
           database_platform: mssql
       vars:
-        mssql_username: nist_scan_user
+        mssql_username: cis_scan_user
         inspec_delegate_host: inspec-runner  # SSH to this host
 ```
 
@@ -166,7 +166,7 @@ mssql_databases:
       mssql_version: "2019"
       database_platform: mssql
   vars:
-    mssql_username: nist_scan_user
+    mssql_username: cis_scan_user
     # mssql_password: injected by AAP2 (single credential for all DBs with RBAC)
 ```
 
@@ -183,7 +183,7 @@ oracle_databases:
       oracle_version: "19"
       database_platform: oracle
   vars:
-    oracle_username: nist_scan_user
+    oracle_username: cis_scan_user
     # oracle_password: injected by AAP2
 ```
 
@@ -201,7 +201,7 @@ sybase_databases:
       sybase_version: "16"
       database_platform: sybase
   vars:
-    sybase_username: nist_scan_user
+    sybase_username: cis_scan_user
     sybase_use_ssh: true
     sybase_ssh_user: oracle
     # sybase_password: injected by AAP2
@@ -270,7 +270,7 @@ all:
           mssql_version: "2019"
           database_platform: mssql
       vars:
-        mssql_username: nist_scan_user
+        mssql_username: cis_scan_user
         # mssql_password: injected by AAP2
         # inspec_delegate_host: "inspec-runner"  # Uncomment for remote delegate
 
@@ -284,7 +284,7 @@ all:
           oracle_version: "19"
           database_platform: oracle
       vars:
-        oracle_username: nist_scan_user
+        oracle_username: cis_scan_user
 
     sybase_databases:
       hosts:
@@ -295,7 +295,7 @@ all:
           sybase_version: "16"
           database_platform: sybase
       vars:
-        sybase_username: nist_scan_user
+        sybase_username: cis_scan_user
         sybase_use_ssh: true
         sybase_ssh_user: oracle
 

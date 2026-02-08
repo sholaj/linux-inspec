@@ -174,7 +174,7 @@ control 'mssql-2019-2.07' do
   desc 'The remote admin connections option allows client applications on remote computers to use the Dedicated Administrator Connection.'
 
   tag cis: '2.7'
-  tag cis_level: 1
+  tag cis_level: 2
   tag severity: 'medium'
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS results FROM sys.configurations WHERE name = 'remote admin connections'") do
@@ -202,7 +202,7 @@ control 'mssql-2019-2.09' do
   desc 'The external scripts enabled option allows execution of scripts with certain remote language extensions.'
 
   tag cis: '2.9'
-  tag cis_level: 2
+  tag cis_level: 1
   tag severity: 'critical'
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 AND value = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS results FROM sys.configurations WHERE name = 'external scripts enabled'") do
@@ -258,7 +258,7 @@ control 'mssql-2019-2.13' do
   desc 'Contained database authentication allows users to connect without server-level login.'
 
   tag cis: '2.13'
-  tag cis_level: 2
+  tag cis_level: 1
   tag severity: 'high'
 
   describe sql.query("SELECT CASE WHEN value_in_use = 0 THEN 'COMPLIANT' ELSE 'NOT COMPLIANT' END AS results FROM sys.configurations WHERE name = 'contained database authentication'") do

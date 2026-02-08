@@ -154,7 +154,7 @@ find /var/compliance_results -name "*.json"
 ls -lh /var/compliance_results/
 
 # Check MSSQL results
-find /var/compliance_results -name "MSSQL_NIST_*.json"
+find /var/compliance_results -name "MSSQL_CIS_*.json"
 ```
 
 ### 4.2 Review Logs

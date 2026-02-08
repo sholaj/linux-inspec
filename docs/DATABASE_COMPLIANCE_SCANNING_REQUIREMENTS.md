@@ -9,7 +9,12 @@
 
 ## Executive Summary
 
-This document outlines the business and functional requirements for implementing an automated Database Compliance Scanning Framework. The solution will replace legacy manual processes with a modern, automated approach to ensure our database infrastructure adheres to NIST security and compliance standards.
+This document outlines the business and functional requirements for implementing an automated Database Compliance Scanning Framework. The solution will replace legacy manual processes with a modern, automated approach to ensure our database infrastructure adheres to CIS Benchmark security and compliance standards.
+
+**CIS Benchmark Versions:**
+- **MSSQL**: CIS Microsoft SQL Server Benchmark v1.3.0
+- **Oracle**: CIS Oracle Database Benchmark v1.1.0
+- **Sybase**: CIS SAP ASE Benchmark v1.1.0
 
 **Key Business Drivers:**
 - Reduce manual effort and human error in compliance scanning
@@ -57,7 +62,7 @@ This document outlines the business and functional requirements for implementing
 - Sybase ASE (15, 16)
 
 **Functional Capabilities:**
-- Automated execution of NIST compliance controls
+- Automated execution of CIS Benchmark compliance controls
 - Support for scheduled and on-demand scans
 - JSON-formatted results for programmatic consumption
 - Human-readable summary reports
@@ -77,7 +82,7 @@ This document outlines the business and functional requirements for implementing
 - Network infrastructure compliance
 - Operating system compliance (separate initiative)
 - Remediation automation (future phase)
-- Custom compliance frameworks beyond NIST
+- Custom compliance frameworks beyond CIS Benchmarks
 
 ---
 
@@ -87,7 +92,7 @@ This document outlines the business and functional requirements for implementing
 
 | Requirement ID | Requirement | Priority |
 |----------------|-------------|----------|
-| FR-001 | System shall execute NIST compliance controls against target databases | MUST |
+| FR-001 | System shall execute CIS Benchmark compliance controls against target databases | MUST |
 | FR-002 | System shall support scanning of MSSQL, Oracle, and Sybase databases | MUST |
 | FR-003 | System shall support both scheduled and on-demand scan execution | MUST |
 | FR-004 | System shall scan all databases on a MSSQL server in a single execution | MUST |
@@ -190,7 +195,7 @@ This document outlines the business and functional requirements for implementing
 
 | Requirement ID | Requirement | Priority |
 |----------------|-------------|----------|
-| NFR-023 | System shall implement NIST SP 800-53 controls | MUST |
+| NFR-023 | System shall implement CIS Benchmark controls | MUST |
 | NFR-024 | System shall maintain audit trail for minimum 1 year | MUST |
 | NFR-025 | System shall support compliance reporting requirements | MUST |
 | NFR-026 | System shall segregate duties between scan execution and result review | SHOULD |
@@ -408,7 +413,8 @@ The solution will be considered successful when:
 |------|------------|
 | **AAP2** | Ansible Automation Platform 2 - Red Hat's enterprise automation platform |
 | **InSpec** | Chef InSpec - Open-source framework for testing and auditing infrastructure |
-| **NIST** | National Institute of Standards and Technology |
+| **CIS** | Center for Internet Security |
+| **CIS Benchmark** | Industry-standard security configuration guidelines published by CIS |
 | **CyberArk** | Enterprise privileged access management solution |
 | **Control** | A specific security or compliance requirement to be tested |
 | **Scan** | Execution of compliance controls against a database |
@@ -419,7 +425,9 @@ The solution will be considered successful when:
 
 ## Appendix B: References
 
-- NIST SP 800-53: Security and Privacy Controls for Information Systems
+- CIS Microsoft SQL Server Benchmark v1.3.0
+- CIS Oracle Database Benchmark v1.1.0
+- CIS SAP ASE Benchmark v1.1.0
 - CyberArk Integration Best Practices
 - Ansible Automation Platform Documentation
 - InSpec Compliance Framework Documentation
