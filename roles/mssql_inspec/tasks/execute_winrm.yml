@@ -58,6 +58,7 @@
       {{ _winrm_ssl_flag }} \
       {{ _winrm_verify_flag }} \
       --input hostnm='localhost' \
+              port='{{ mssql_port }}' \
               servicenm='{{ mssql_service | default("") }}' \
       --reporter=json-min \
       --no-color \
