@@ -1,38 +1,35 @@
-name: postgres15-cis-benchmark
+name: postgres-15-cis
 title: CIS PostgreSQL 15 Benchmark
-maintainer: DevOps Team
-copyright: Internal Use Only
-copyright_email: devops@example.com
-license: Proprietary
-summary: InSpec profile for CIS PostgreSQL 15 Benchmark compliance checks
-version: 1.2.0
-supports:
-  - platform-family: unix
-  - platform-family: linux
+maintainer: InSpec Compliance Team
+copyright: Copyright 2024
+license: Apache-2.0
+summary: InSpec profile for CIS PostgreSQL 15 compliance
+version: 1.0.0
+inspec_version: ">= 5.0"
 
 inputs:
-  - name: pg_host
-    description: PostgreSQL server hostname or IP
+  - name: usernm
+    description: PostgreSQL username for authentication
     type: string
     required: true
 
-  - name: pg_port
-    description: PostgreSQL server port
-    type: numeric
-    value: 5432
-
-  - name: pg_user
-    description: PostgreSQL username
-    type: string
-    required: true
-
-  - name: pg_password
-    description: PostgreSQL password
+  - name: passwd
+    description: PostgreSQL password for authentication
     type: string
     required: true
     sensitive: true
 
-  - name: pg_database
+  - name: hostnm
+    description: PostgreSQL server hostname or IP address
+    type: string
+    required: true
+
+  - name: port
+    description: PostgreSQL server port
+    type: numeric
+    value: 5432
+
+  - name: database
     description: PostgreSQL database name
     type: string
     value: postgres

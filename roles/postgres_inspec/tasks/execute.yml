@@ -53,11 +53,11 @@
     export PGPASSWORD='{{ postgres_password }}'
 
     "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
-      --input pg_user='{{ postgres_username }}' \
-              pg_password='{{ postgres_password }}' \
-              pg_host='{{ postgres_server }}' \
-              pg_port='{{ postgres_port }}' \
-              pg_database='{{ postgres_database }}' \
+      --input usernm='{{ postgres_username }}' \
+              passwd='{{ postgres_password }}' \
+              hostnm='{{ postgres_server }}' \
+              port='{{ postgres_port }}' \
+              database='{{ postgres_database }}' \
       --reporter=json-min \
       --no-color
   args:
