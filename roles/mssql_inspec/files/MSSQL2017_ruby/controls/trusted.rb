@@ -27,6 +27,7 @@ sql = if use_windows_auth
   # Windows Authentication - omit user/password to use current Windows identity
   mssql_session(
     host: _hostnm,
+    port: _port,
     instance: _servicenm
   )
 else
