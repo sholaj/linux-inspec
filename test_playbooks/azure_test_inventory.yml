@@ -1,26 +1,39 @@
 ---
+# Azure MSSQL Test Inventory
+# For testing mssql_inspec role against Azure container infrastructure
+
 all:
   vars:
-    base_results_dir: /tmp/compliance_scans
+    # Global settings
+    base_results_dir: /home/azureuser/compliance_scans
     enable_debug: true
-    ansible_ssh_private_key_file: ~/.ssh/inspec_azure
 
-  hosts:
-    40.114.45.75:
-      ansible_user: azureuser
-      ansible_python_interpreter: /usr/bin/python3
+    # Delegate host - the Azure runner VM runs InSpec
+    inspec_delegate_host: "runner_vm"
 
   children:
+    # Delegate hosts - where InSpec runs
+    delegate_hosts:
+      hosts:
+        runner_vm:
+          ansible_host: 20.106.154.159
+          ansible_user: azureuser
+          ansible_ssh_private_key_file: "~/.ssh/inspec_azure"
+          ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+          ansible_python_interpreter: /usr/bin/python3.9
+          ansible_connection: ssh
+
+    # MSSQL databases to scan
     mssql_databases:
       hosts:
         mssql_azure_test:
+          # Connection parameters
           mssql_server: 10.0.2.4
           mssql_port: 1433
           mssql_version: "2019"
           mssql_username: sa
-          mssql_password: 'FCmGkCGWbmyxqrffStr0ng\!'
+          mssql_password: "MssqlPass123!"
           mssql_database: master
-          inspec_delegate_host: 40.114.45.75
-          ansible_host: 40.114.45.75
-          ansible_user: azureuser
-          ansible_python_interpreter: /usr/bin/python3
+
+          # Delegate execution
+          ansible_connection: local
