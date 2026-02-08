@@ -2566,3 +2566,467 @@ DBSCAN-603 (Batch)      DBSCAN-604 (Error Handling)
 
 *Document generated for project planning purposes. Ticket IDs are placeholders - update with actual JIRA ticket numbers upon creation.*
 *Last Updated: 2026-01-25*
+
+---
+
+# Onboarding and Enterprise Deployment Phase
+
+## Overview
+
+This section covers the onboarding and enterprise deployment tickets required to roll out the Database Compliance Scanning Framework across all affiliates. These tickets focus on infrastructure access, service accounts, network connectivity, and production readiness.
+
+**Estimated Story Points:** 55-70 points
+**Target Audience:** DevOps Engineers, Platform Team, Security Team
+
+---
+
+## DBSCAN-700: Onboarding Process Documentation
+
+### Purpose
+**As a** Platform Engineer, **I want to** have a documented onboarding process for new affiliates, **so that** we can efficiently roll out the compliance scanning framework to each business unit.
+
+### Description
+Create comprehensive onboarding documentation that covers the end-to-end process for adding a new affiliate to the compliance scanning framework. This includes all prerequisite requests, access requirements, and validation steps.
+
+### Acceptance Criteria
+- [ ] Onboarding checklist document created
+- [ ] Step-by-step process for each affiliate type documented
+- [ ] Template requests for infrastructure, accounts, and network access prepared
+- [ ] Estimated timeline per affiliate documented (Discovery → POC → MVP → Rollout)
+- [ ] RACI matrix for onboarding tasks defined
+- [ ] Success criteria and validation steps documented
+
+### Technical Tasks
+1. Create `docs/ONBOARDING_GUIDE.md` with affiliate onboarding checklist
+2. Document infrastructure prerequisites per affiliate
+3. Create template SNOW tickets for common requests
+4. Define validation test cases for each onboarding phase
+5. Document rollback procedures if onboarding fails
+
+### Story Points: 5
+
+---
+
+## DBSCAN-701: Request Delegate Host per Affiliate (Template)
+
+### Purpose
+**As a** DevOps Engineer, **I want to** provision a dedicated delegate/jump box for each affiliate, **so that** InSpec scans can be executed within each network segment with proper access.
+
+### Description
+Create a template request for provisioning delegate hosts (bastion/jump servers) for each affiliate. The delegate host runs InSpec and database client tools, connecting to target databases within the affiliate's network.
+
+### Acceptance Criteria
+- [ ] Template SNOW request created for delegate host provisioning
+- [ ] Hardware/VM specifications documented (CPU, RAM, disk, OS)
+- [ ] Required software list documented (InSpec, sqlcmd, sqlplus, isql)
+- [ ] Network zone placement requirements documented
+- [ ] SSH access requirements defined (from AAP2 controller)
+- [ ] Firewall rules template for delegate host connectivity
+- [ ] Host naming convention defined per affiliate
+
+### Template Variables
+```yaml
+affiliate_code: "[BU-1|BU-2|BU-3]"
+environment: "[dev|test|prod]"
+delegate_hostname: "delegate-{{ affiliate_code }}-{{ environment }}"
+os_version: "RHEL 8.x"
+cpu_cores: 2
+memory_gb: 4
+disk_gb: 50
+```
+
+### Per-Affiliate Instances Required
+| Affiliate | Dev | Test | Prod | Total |
+|-----------|-----|------|------|-------|
+| BU-1 | 1 | 1 | 1 | 3 |
+| BU-2 | 1 | 1 | 1 | 3 |
+| BU-3 | 1 | 1 | 1 | 3 |
+
+### Story Points: 3 (template) + 2 per affiliate = 9 total
+
+---
+
+## DBSCAN-702: Request APMD Service Account per Environment
+
+### Purpose
+**As a** DevOps Engineer, **I want to** provision dedicated APMD (Automation Platform Managed Domain) service accounts for each environment and affiliate, **so that** automated scans have proper authentication credentials.
+
+### Description
+Create and provision service accounts for database compliance scanning. Each affiliate/environment combination requires a dedicated service account for separation of duties and audit compliance.
+
+### Acceptance Criteria
+- [ ] Service account naming convention defined
+- [ ] Template USM/Cloakware request created
+- [ ] Password rotation policy documented
+- [ ] Service account permissions matrix documented
+- [ ] Account provisioning verified per environment
+- [ ] Credentials stored in AAP2 credential store
+
+### Service Account Naming Convention
+```
+svc_inspec_[affiliate]_[env]
+Example: svc_inspec_bu1_prod
+```
+
+### Account Matrix
+| Affiliate | Environment | Account Name | Credential Store |
+|-----------|-------------|--------------|------------------|
+| BU-1 | dev | svc_inspec_bu1_dev | AAP2 |
+| BU-1 | test | svc_inspec_bu1_test | AAP2 |
+| BU-1 | prod | svc_inspec_bu1_prod | AAP2 |
+| BU-2 | dev | svc_inspec_bu2_dev | AAP2 |
+| BU-2 | test | svc_inspec_bu2_test | AAP2 |
+| BU-2 | prod | svc_inspec_bu2_prod | AAP2 |
+| BU-3 | dev | svc_inspec_bu3_dev | AAP2 |
+| BU-3 | test | svc_inspec_bu3_test | AAP2 |
+| BU-3 | prod | svc_inspec_bu3_prod | AAP2 |
+
+### Story Points: 2 (template) + 1 per affiliate/env = 11 total
+
+---
+
+## DBSCAN-703: Request GPO Permissions for Service Accounts
+
+### Purpose
+**As a** DevOps Engineer, **I want to** configure Group Policy Object (GPO) permissions for APMD service accounts, **so that** the accounts can authenticate via WinRM to Windows SQL Servers using AD credentials.
+
+### Description
+Request GPO configuration to grant service accounts the necessary permissions for WinRM remote management access to Windows database servers.
+
+### Acceptance Criteria
+- [ ] GPO change request template created
+- [ ] Required permissions documented (WinRM, Remote Management Users)
+- [ ] GPO scope defined (per OU, per server group)
+- [ ] GPO testing procedure documented
+- [ ] Rollback procedure documented
+- [ ] Validation test cases defined
+
+### Required Permissions
+```
+- WinRM Service Access (Remote Management Users group)
+- Read access to SQL Server configuration
+- Execute stored procedures for compliance queries
+- Event log read access (for audit controls)
+```
+
+### Per-Affiliate GPO Requests
+| Affiliate | Environment | GPO Name | Target OU |
+|-----------|-------------|----------|-----------|
+| BU-1 | all | GPO-InSpec-BU1 | OU=SQLServers,OU=BU1 |
+| BU-2 | all | GPO-InSpec-BU2 | OU=SQLServers,OU=BU2 |
+| BU-3 | all | GPO-InSpec-BU3 | OU=SQLServers,OU=BU3 |
+
+### Story Points: 3 per affiliate = 9 total
+
+---
+
+## DBSCAN-704: Firewall Request for WinRM Connectivity
+
+### Purpose
+**As a** DevOps Engineer, **I want to** request firewall rules to allow WinRM traffic from delegate hosts to Windows SQL Servers, **so that** AD-authenticated InSpec scans can reach target databases.
+
+### Description
+Create firewall change requests to permit WinRM (TCP 5985/5986) traffic from delegate hosts to Windows database servers in each network zone.
+
+### Acceptance Criteria
+- [ ] Firewall change request template created
+- [ ] Source/destination IP ranges documented per zone
+- [ ] Port requirements documented (5985 HTTP, 5986 HTTPS)
+- [ ] Change window and rollback procedures defined
+- [ ] Validation test procedure documented
+- [ ] Permanent vs temporary rule policy defined
+
+### Firewall Rules Template
+```yaml
+rule_name: "WinRM-InSpec-[affiliate]-[env]"
+source:
+  - delegate_host_ip: "[DELEGATE_HOST_IP]"
+destination:
+  - sql_server_subnet: "[SQL_SUBNET]/24"
+ports:
+  - 5985/tcp  # WinRM HTTP
+  - 5986/tcp  # WinRM HTTPS (optional)
+  - 1433/tcp  # SQL Server (for direct mode fallback)
+action: allow
+logging: enabled
+```
+
+### Story Points: 2 per affiliate/zone = 6 total
+
+---
+
+## DBSCAN-705: WinRM Connection Testing from Delegate Hosts
+
+### Purpose
+**As a** DevOps Engineer, **I want to** validate WinRM connectivity from delegate hosts to all target Windows SQL Servers, **so that** I can confirm AD authentication and network paths are working.
+
+### Description
+After infrastructure provisioning, perform end-to-end WinRM connectivity testing from each delegate host to all Windows SQL Servers in scope.
+
+### Acceptance Criteria
+- [ ] Test script created for WinRM validation
+- [ ] All delegate hosts can reach target SQL Servers via WinRM
+- [ ] AD authentication succeeds with service account credentials
+- [ ] InSpec `detect` command returns Windows platform details
+- [ ] InSpec can execute a simple compliance control via WinRM
+- [ ] Connection matrix documented per delegate/server pair
+
+### Test Script
+```bash
+#!/bin/bash
+# winrm_connectivity_test.sh
+inspec detect -t winrm://${AD_USER}@${SQL_SERVER}:5985 \
+  --password '${AD_PASS}' \
+  --no-ssl
+```
+
+### Validation Matrix
+| Delegate Host | SQL Server | WinRM Port | AD Auth | InSpec Detect |
+|---------------|------------|------------|---------|---------------|
+| delegate-bu1-prod | sqlprod01.bu1.corp | 5985 | ✅/❌ | ✅/❌ |
+| delegate-bu1-prod | sqlprod02.bu1.corp | 5985 | ✅/❌ | ✅/❌ |
+
+### Story Points: 5
+
+---
+
+## DBSCAN-706: MSSQL 2022 CIS Benchmark Controls
+
+### Purpose
+**As a** Compliance Engineer, **I want to** implement CIS Benchmark controls for MSSQL 2022, **so that** we can scan the latest SQL Server version for NIST compliance.
+
+### Description
+Create InSpec controls for Microsoft SQL Server 2022 based on the CIS Benchmark v1.4.0 (or latest). This involves adapting existing 2019 controls and adding new 2022-specific checks.
+
+### Acceptance Criteria
+- [ ] CIS MSSQL 2022 Benchmark document reviewed
+- [ ] Control mapping spreadsheet created (CIS ID → InSpec control)
+- [ ] InSpec controls created in `files/MSSQL2022_ruby/`
+- [ ] New 2022-specific controls identified and implemented
+- [ ] Controls tested against MSSQL 2022 test instance
+- [ ] Documentation updated for MSSQL 2022 support
+
+### Technical Tasks
+1. Download CIS Benchmark for MSSQL 2022 v1.4.0
+2. Compare with MSSQL 2019 v1.3.0 to identify differences
+3. Create `files/MSSQL2022_ruby/` directory structure
+4. Copy and adapt controls from MSSQL2019_ruby
+5. Implement new 2022-specific controls
+6. Update `defaults/main.yml` to include "2022" in supported versions
+7. Test against Azure MSSQL 2022 container
+
+### Story Points: 8
+
+---
+
+## DBSCAN-707: CyberArk Integration with AAP2
+
+### Purpose
+**As a** Security Engineer, **I want to** integrate CyberArk Central Credential Provider (CCP) with AAP2, **so that** database credentials are retrieved securely at runtime without storing them in inventory files.
+
+### Description
+Implement CyberArk CCP integration for dynamic credential retrieval in AAP2 job templates. This replaces static vault credentials with just-in-time credential lookup.
+
+### Acceptance Criteria
+- [ ] CyberArk CCP API connectivity verified from AAP2
+- [ ] AAP2 credential type created for CyberArk lookup
+- [ ] Lookup plugin/module implemented for credential retrieval
+- [ ] Playbooks updated to use dynamic credentials
+- [ ] Error handling for CyberArk unavailability
+- [ ] Fallback to static credentials documented (if needed)
+- [ ] Audit logging for credential access
+
+### Technical Tasks
+1. Configure CyberArk CCP API access for AAP2 service account
+2. Create custom AAP2 credential type for CyberArk
+3. Implement credential lookup in playbook pre_tasks
+4. Update all database roles to accept dynamic credentials
+5. Test credential rotation scenarios
+6. Document CyberArk integration in deployment guide
+
+### Dependencies
+- CyberArk CCP API endpoint and application ID
+- AAP2 service account registered in CyberArk
+- Network connectivity from AAP2 to CyberArk
+
+### Story Points: 13
+
+---
+
+## DBSCAN-708: Pipeline as Code Implementation
+
+### Purpose
+**As a** DevOps Engineer, **I want to** implement AAP2 job templates, workflows, and schedules as code, **so that** the compliance scanning pipeline is version-controlled, reproducible, and auditable.
+
+### Description
+Convert all AAP2 configurations (job templates, workflows, inventories, credentials, schedules) to YAML definitions that can be applied via the `awx.awx` Ansible collection or GitOps approach.
+
+### Acceptance Criteria
+- [ ] All job templates defined in YAML format
+- [ ] Workflows defined as code with approval gates
+- [ ] Schedules defined for monthly compliance scans
+- [ ] Credential types and credentials templated (secrets externalized)
+- [ ] Inventory sources defined as code
+- [ ] CI/CD pipeline to apply configurations to AAP2
+- [ ] Rollback procedure documented
+
+### Directory Structure
+```
+aap2-config/
+├── job-templates/
+│   ├── mssql-compliance-scan.yml
+│   ├── oracle-compliance-scan.yml
+│   ├── sybase-compliance-scan.yml
+│   └── multi-platform-scan.yml
+├── workflows/
+│   ├── monthly-compliance-workflow.yml
+│   └── ad-hoc-scan-workflow.yml
+├── schedules/
+│   └── monthly-schedules.yml
+├── credentials/
+│   └── credential-types.yml
+├── inventories/
+│   └── dynamic-inventory-sources.yml
+└── apply-config.yml
+```
+
+### Story Points: 8
+
+---
+
+## DBSCAN-709: RBAC Posture and Connection Types
+
+### Purpose
+**As a** Security Architect, **I want to** document the RBAC posture and connection types for each database role, **so that** we have clear security boundaries and access patterns for compliance scanning.
+
+### Description
+Document the Role-Based Access Control (RBAC) requirements and connection patterns for each database platform. This includes service account permissions, authentication methods, and network flows.
+
+### Acceptance Criteria
+- [ ] RBAC matrix documented per database platform
+- [ ] Connection types documented (SQL Auth, AD Auth, WinRM, SSH)
+- [ ] Minimum required permissions documented per platform
+- [ ] Network flow diagrams created
+- [ ] Security review completed
+- [ ] Least-privilege validation performed
+
+### RBAC Matrix Template
+| Platform | Connection Type | Auth Method | Required Permissions |
+|----------|----------------|-------------|---------------------|
+| MSSQL (Linux) | Direct/TDS | SQL Auth | VIEW SERVER STATE, VIEW DATABASE STATE |
+| MSSQL (Windows) | WinRM | AD/Kerberos | VIEW SERVER STATE, SQL Server login |
+| Oracle | Direct/Net8 | Oracle Auth | SELECT ANY DICTIONARY, AUDIT_VIEWER |
+| Sybase | Direct/TDS | Sybase Auth | sa_role or mon_role |
+
+### Story Points: 5
+
+---
+
+## DBSCAN-710: Error Handling for Unreachable Hosts
+
+### Purpose
+**As a** DevOps Engineer, **I want to** enhance error handling to produce a consolidated list of unreachable hosts and authentication failures, **so that** operators can quickly identify and remediate connectivity issues after batch scans.
+
+### Description
+Enhance the existing preflight check logic to aggregate all host failures (unreachable, auth failed, timeout) into a summary report at the end of execution. This is partially implemented in `error_handling.yml` but needs enhancement.
+
+### Acceptance Criteria
+- [ ] All failure types captured (unreachable, auth_failed, timeout, port_blocked)
+- [ ] Summary report generated at end of playbook execution
+- [ ] Report includes remediation suggestions per error type
+- [ ] Report can be sent to email/Slack/Splunk
+- [ ] Failed hosts list available as Ansible fact for downstream processing
+- [ ] Continue-on-failure behavior is configurable
+
+### Error Categories
+```yaml
+error_categories:
+  - PORT_UNREACHABLE: "Cannot connect to database port"
+  - AUTH_FAILED: "Authentication failed - check credentials"
+  - WINRM_AUTH_FAILED: "WinRM/AD authentication failed"
+  - CONNECTION_TIMEOUT: "Connection timed out"
+  - DATABASE_NOT_FOUND: "Database does not exist"
+  - PERMISSION_DENIED: "Insufficient permissions"
+```
+
+### Story Points: 5
+
+---
+
+## DBSCAN-711: DB Client Installation Documentation
+
+### Purpose
+**As a** DevOps Engineer, **I want to** have comprehensive documentation for installing database clients on delegate hosts and Ansible execution environments, **so that** new environments can be provisioned consistently.
+
+### Description
+Create installation guides for all required database clients (sqlcmd, sqlplus, isql) on RHEL 8.x delegate hosts and containerized Ansible execution environments.
+
+### Acceptance Criteria
+- [ ] Installation guide for MSSQL tools (sqlcmd, ODBC drivers)
+- [ ] Installation guide for Oracle Instant Client (sqlplus)
+- [ ] Installation guide for Sybase Open Client (isql)
+- [ ] Container-specific installation instructions (execution environment)
+- [ ] Verification test commands documented
+- [ ] Troubleshooting section for common issues
+- [ ] Ansible playbook for automated installation
+
+### Documentation Structure
+```
+docs/
+├── DELEGATE_HOST_BINARY_INSTALLATION.md
+│   ├── Prerequisites
+│   ├── MSSQL Tools Installation
+│   ├── Oracle Instant Client Installation
+│   ├── Sybase Open Client Installation
+│   ├── Verification Tests
+│   └── Troubleshooting
+└── EXECUTION_ENVIRONMENT_BUILD.md
+    ├── Base Image Selection
+    ├── Dockerfile/Containerfile
+    ├── Required Packages
+    └── Testing the EE
+```
+
+### Story Points: 5
+
+---
+
+## Sprint Planning - Onboarding Phase
+
+### Sprint O+1 (Week 1): Documentation and Templates
+- DBSCAN-700: Onboarding Process Documentation (5 pts)
+- DBSCAN-701: Delegate Host Request Template (3 pts)
+- DBSCAN-702: Service Account Request Template (2 pts)
+- DBSCAN-711: DB Client Installation Docs (5 pts)
+- **Sprint Total: 15 points**
+
+### Sprint O+2 (Week 2): Network and Access Requests
+- DBSCAN-703: GPO Permissions Request (3 pts for template)
+- DBSCAN-704: Firewall Request Template (2 pts for template)
+- DBSCAN-709: RBAC Posture Documentation (5 pts)
+- **Sprint Total: 10 points**
+
+### Sprint O+3 (Week 3): MSSQL 2022 and Error Handling
+- DBSCAN-706: MSSQL 2022 CIS Controls (8 pts)
+- DBSCAN-710: Error Handling Enhancement (5 pts)
+- **Sprint Total: 13 points**
+
+### Sprint O+4 (Week 4): CyberArk and Pipeline as Code
+- DBSCAN-707: CyberArk Integration (13 pts)
+- DBSCAN-708: Pipeline as Code (8 pts)
+- **Sprint Total: 21 points**
+
+### Sprint O+5 (Week 5): Per-Affiliate Deployment
+- DBSCAN-701: BU-1 Delegate Host (2 pts)
+- DBSCAN-702: BU-1 Service Accounts (3 pts)
+- DBSCAN-703: BU-1 GPO Permissions (3 pts)
+- DBSCAN-704: BU-1 Firewall Rules (2 pts)
+- DBSCAN-705: BU-1 WinRM Testing (2 pts)
+- **Sprint Total: 12 points**
+
+*(Repeat Sprint O+5 pattern for BU-2 and BU-3)*
+
+---
+
+*Document generated for project planning purposes.*
+*Last Updated: 2026-02-08*

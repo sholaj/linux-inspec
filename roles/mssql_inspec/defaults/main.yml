@@ -86,3 +86,24 @@ supported_mssql_versions:
   - "2017"
   - "2018"
   - "2019"
+  - "2022"
+
+# ======================
+# Enhanced Error Reporting (DBSCAN-710)
+# ======================
+# Generate consolidated failed hosts report at end of batch execution
+generate_failed_hosts_report: true
+
+# Export failed hosts as JSON for downstream processing
+export_failed_hosts_json: true
+
+# Failed hosts report filename (in inspec_results_dir)
+failed_hosts_report_file: "failed_hosts_summary.json"
+
+# Include remediation suggestions in error reports
+include_remediation_hints: true
+
+# Error notification settings
+notify_on_scan_errors: false
+notification_email: ""
+notification_webhook_url: ""
