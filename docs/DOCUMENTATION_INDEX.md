@@ -70,6 +70,27 @@ Step-by-step quick start guide.
 - Running tests
 - Common operations
 
+### 11. **DELEGATE_HOST_BINARY_INSTALLATION.md**
+Binary installation guide for Delegate Host / Ansible EE.
+- RHEL 8 minimum specifications
+- InSpec installation
+- Database client tools (sqlcmd, sqlplus, isql)
+- PATH and LD_LIBRARY_PATH configuration
+- Verification procedures
+
+### 12. **ANSIBLE_EXECUTION_ENVIRONMENT.md**
+Complete Ansible EE build specifications.
+- Container image definition
+- System packages
+- Database client binaries
+- EE definition file (execution-environment.yml)
+
+### 13. **DELEGATE_EXECUTION_CONFLUENCE.md**
+Delegate vs. Local execution modes.
+- Mode switching (one-line change)
+- Credential separation
+- Troubleshooting
+
 ---
 
 ## Test Files and Playbooks
@@ -212,7 +233,10 @@ linux-inspec/
 │   ├── LOCAL_TESTING_GUIDE.md
 │   ├── MULTI_PLATFORM_IMPLEMENTATION.md
 │   ├── QUICK_START_GUIDE.md
-│   └── SECURITY_PASSWORD_HANDLING.md
+│   ├── SECURITY_PASSWORD_HANDLING.md
+│   ├── DELEGATE_HOST_BINARY_INSTALLATION.md
+│   ├── ANSIBLE_EXECUTION_ENVIRONMENT.md
+│   └── DELEGATE_EXECUTION_CONFLUENCE.md
 ├── test_playbooks/                 # All test and production playbooks
 │   ├── README.md
 │   ├── run_compliance_scans.yml    # Primary production playbook
@@ -297,8 +321,8 @@ Check git history for changes and rationale.
 
 ---
 
-**Last Updated**: 2025-12-14
-**Total Documentation Files**: 10 core docs + 1 index = 11 files
+**Last Updated**: 2026-02-05
+**Total Documentation Files**: 13 core docs + 1 index = 14 files
 **Status**: Updated and Consolidated ✓
 **Project Structure**: Aligned with test_playbooks/ directory
 **Variables**: Using correct `ansible_password` (not deprecated `ansible_ssh_pass`)

@@ -62,7 +62,7 @@
           =========================================
           Profile path: {{ sybase_profile_path }}
           SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
-      when: inspec_debug_mode | default(false)
+      when: inspec_debug_mode | default(false) | bool
 
     - name: Fail if Sybase InSpec profile not found
       fail:

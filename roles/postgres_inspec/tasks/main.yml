@@ -30,7 +30,7 @@
 - name: Display execution mode
   debug:
     msg: "Execution mode: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate else 'LOCALHOST (target host)' }}"
-  when: inspec_debug_mode | default(false)
+  when: inspec_debug_mode | default(false) | bool
   tags: always
 
 # Step 2: Validate parameters

@@ -125,14 +125,14 @@
     msg: "Preflight PASSED - {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }} is reachable and authenticated"
   when:
     - preflight_passed
-    - inspec_debug_mode | default(false)
+    - inspec_debug_mode | default(false) | bool
 
 - name: Log preflight failure
   debug:
     msg: "Preflight FAILED - {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
   when:
     - not preflight_passed
-    - inspec_debug_mode | default(false)
+    - inspec_debug_mode | default(false) | bool
 
 # Step 4: Register this database in the scan results tracker
 - name: Register database scan attempt

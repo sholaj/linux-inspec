@@ -66,6 +66,6 @@
       {% endif %}
   when:
     - sybase_use_ssh | default(true)
-    - inspec_debug_mode | default(false)
+    - inspec_debug_mode | default(false) | bool
 
 # SSH connection string no longer needed - credentials passed via environment variables in execute.yml
