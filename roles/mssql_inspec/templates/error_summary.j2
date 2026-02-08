@@ -15,7 +15,7 @@ Error {{ loop.index }}:
   Database:       {{ error.mssql_database }}
   Connection:     {{ error.connection_mode | upper }}
 {% if error.connection_mode == 'winrm' %}
-  WinRM Target:   {{ error.winrm_host }}
+  AD User:        {{ error.ad_user }}
 {% endif %}
   Error Code:     {{ error.error_code }}
   Message:        {{ error.error_message }}
@@ -27,29 +27,30 @@ Error {{ loop.index }}:
 {% for error in _scan_errors | unique(attribute='error_code') %}
 {{ error.error_code }}:
 {% if error.error_code == 'WINRM_CONNECTION_FAILED' %}
-  - Verify WinRM is enabled on target: winrm quickconfig -force
+  - Verify WinRM is enabled on SQL Server: winrm quickconfig -force
   - Check firewall rules for port {{ winrm_port | default(5985) }}
-  - Verify credentials: winrm_username / winrm_password
-  - Test manually: winrs -r:{{ error.winrm_host }} hostname
+  - Verify AD credentials: winrm_username / winrm_password
+  - Test manually: winrs -r:{{ error.mssql_server }} hostname
 {% elif error.error_code == 'WINRM_GEM_MISSING' %}
   - Install train-winrm on delegate host: gem install train-winrm --no-document
-  - Verify InSpec can use WinRM: inspec detect -t winrm://user@host
+  - Verify InSpec can use WinRM: inspec detect -t winrm://user@server
 {% elif error.error_code == 'WINRM_AUTH_FAILED' %}
-  - Verify Windows credentials (winrm_username/winrm_password)
-  - Check if account is locked or disabled
-  - Ensure account has WinRM access permissions
+  - Verify AD credentials (winrm_username/winrm_password)
+  - Check if AD account is locked or disabled
+  - Ensure AD account has WinRM access permissions on SQL Server
+  - Verify AD account format: DOMAIN\user or user@domain.com
 {% elif error.error_code == 'WINRM_TIMEOUT' %}
   - Increase winrm_timeout value (current: {{ winrm_timeout | default(60) }}s)
-  - Check network latency to target
-  - Verify WinRM service is running on target
+  - Check network latency to SQL Server
+  - Verify WinRM service is running on SQL Server
 {% elif error.error_code == 'PORT_UNREACHABLE' %}
   - Verify SQL Server is running on target
   - Check firewall rules for port 1433
   - Test with: telnet {{ error.mssql_server }} {{ error.mssql_port }}
 {% elif error.error_code == 'AUTH_FAILED' %}
   - Verify SQL credentials (mssql_username/mssql_password)
-  - Check SQL authentication mode (Mixed Mode required)
-  - Verify account has database access
+  - Check SQL authentication mode (Mixed Mode required for SQL Auth)
+  - For WinRM mode, verify AD account has SQL Server login
 {% elif error.error_code == 'SQLCMD_NOT_FOUND' %}
   - Install MSSQL Tools on delegate host
   - RHEL/CentOS: yum install mssql-tools

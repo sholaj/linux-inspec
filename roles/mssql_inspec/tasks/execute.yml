@@ -20,7 +20,7 @@
       Execution Mode: {{ _connection_mode | upper }}
       Delegate Host: {{ _delegate_host }}
       MSSQL Target: {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
-      {% if _connection_mode == 'winrm' %}WinRM Target: {{ winrm_host }}:{{ winrm_port }}{% endif %}
+      {% if _connection_mode == 'winrm' %}AD User: {{ winrm_username }}{% endif %}
   when: inspec_debug_mode | default(false) | bool
 
 # Route to appropriate execution based on mode
@@ -51,7 +51,7 @@
        MSSQL InSpec Compliance Scan Results
        Database: {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
        Mode: {{ _connection_mode | upper }}
-       {% if _connection_mode == 'winrm' %}WinRM Target: {{ winrm_host }}:{{ winrm_port }}{% endif %}
+       {% if _connection_mode == 'winrm' %}AD User: {{ winrm_username }}{% endif %}
       ═══════════════════════════════════════════════════════════════════
       {% set ns = namespace(passed=0, failed=0, total=0) %}
       {% for result in _parsed_results | default([]) %}

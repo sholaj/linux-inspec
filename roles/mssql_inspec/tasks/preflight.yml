@@ -42,7 +42,7 @@
     msg: |
       Preflight PASSED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
       Mode: {{ _connection_mode | upper }}
-      {% if _connection_mode == 'winrm' %}WinRM Target: {{ winrm_host }}:{{ winrm_port }}{% endif %}
+      {% if _connection_mode == 'winrm' %}AD User: {{ winrm_username }}{% endif %}
   when:
     - preflight_passed
     - inspec_debug_mode | default(false) | bool
@@ -52,7 +52,7 @@
     msg: |
       Preflight FAILED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
       Mode: {{ _connection_mode | upper }}
-      {% if _connection_mode == 'winrm' %}WinRM Target: {{ winrm_host }}:{{ winrm_port }}{% endif %}
+      {% if _connection_mode == 'winrm' %}AD User: {{ winrm_username }}{% endif %}
       Reason: {{ preflight_skip_reason }}
       Error Code: {{ preflight_error_code }}
   when:
@@ -69,7 +69,7 @@
       db_type: "mssql"
       version: "{{ mssql_version }}"
       connection_mode: "{{ _connection_mode }}"
-      winrm_host: "{{ winrm_host | default('N/A') if _connection_mode == 'winrm' else 'N/A' }}"
+      ad_user: "{{ winrm_username | default('N/A') if _connection_mode == 'winrm' else 'N/A' }}"
       preflight_passed: "{{ preflight_passed }}"
       skip_reason: "{{ preflight_skip_reason }}"
       error_code: "{{ preflight_error_code }}"

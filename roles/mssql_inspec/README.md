@@ -26,23 +26,28 @@ use_winrm: false  # Default - use direct TDS connection
 Delegate Host --[TDS 1433]--> SQL Server (Linux/Windows)
 ```
 
-### WinRM Mode
+### WinRM Mode (Windows/AD Authentication)
 
-InSpec connects via WinRM to a Windows host, then uses ADO.NET to connect to SQL Server locally.
+InSpec connects directly to SQL Server via WinRM using Windows/AD authentication.
+A single AD account can scan multiple SQL Servers in the domain.
 
 ```yaml
 use_winrm: true
-winrm_host: "windows-sql.example.com"
+mssql_server: "sqlserver.example.com"  # Target SQL Server
 winrm_port: 5985
-winrm_username: "Administrator"
-winrm_password: "{{ vault_winrm_password }}"
-mssql_server: "localhost"  # SQL accessed locally from Windows
+winrm_username: "DOMAIN\\svc_inspec"   # AD service account
+winrm_password: "{{ vault_ad_password }}"
 ```
 
 **Architecture:**
 ```
-Delegate Host --[WinRM 5985]--> Windows VM --[ADO.NET]--> SQL Server
+Delegate Host --[WinRM + AD Auth]--> SQL Server (Windows)
 ```
+
+**Key Points:**
+- `mssql_server` is the target SQL Server (no separate `winrm_host`)
+- AD credentials authenticate both WinRM transport and SQL Server access
+- One AD account can scan all SQL Servers it has access to
 
 ## Execution Modes
 
@@ -94,18 +99,19 @@ splunk_hec_url: ""                       # Splunk HEC endpoint
 splunk_hec_token: ""                     # Splunk HEC token
 ```
 
-### WinRM Variables (when use_winrm: true)
+### WinRM Variables (Windows/AD Authentication)
 
 ```yaml
-use_winrm: false                         # Enable WinRM mode
-winrm_host: ""                           # Windows VM hostname/IP
+use_winrm: false                         # Enable WinRM/AD authentication mode
 winrm_port: 5985                         # WinRM HTTP port (5986 for HTTPS)
-winrm_username: ""                       # Windows admin user
-winrm_password: ""                       # Windows admin password
+winrm_username: ""                       # AD username (DOMAIN\user or user@domain)
+winrm_password: ""                       # AD password
 winrm_ssl: false                         # Use HTTPS (port 5986)
 winrm_ssl_verify: true                   # Verify SSL certificate
 winrm_timeout: 60                        # Connection timeout (seconds)
 ```
+
+**Note:** When `use_winrm: true`, InSpec connects directly to `mssql_server` using WinRM with AD credentials. No separate `winrm_host` is needed.
 
 ### Batch Processing Variables
 
@@ -232,7 +238,7 @@ all:
     - mssql_inspec
 ```
 
-### WinRM Inventory Example
+### WinRM/AD Authentication Inventory Example
 
 ```yaml
 all:
@@ -244,23 +250,27 @@ all:
   children:
     mssql_windows_databases:
       hosts:
-        WIN_SQL01:
-          # WinRM connection to Windows VM
-          winrm_host: winsql01.example.com
-          winrm_port: 5985
-          winrm_username: Administrator
-          winrm_password: "{{ vault_winrm_password }}"
-          # SQL Server accessed locally from Windows
-          mssql_server: localhost
+        # Each host is a SQL Server to scan
+        SQLPROD01:
+          mssql_server: sqlprod01.example.com
           mssql_port: 1433
           mssql_database: master
-          mssql_username: sa
-          mssql_password: "{{ vault_mssql_password }}"
+          mssql_version: "2019"
+        SQLPROD02:
+          mssql_server: sqlprod02.example.com
+          mssql_port: 1433
+          mssql_database: master
           mssql_version: "2019"
       vars:
+        # WinRM/AD settings apply to all SQL Servers
         use_winrm: true
+        winrm_username: "CORP\\svc_inspec"  # AD service account
+        winrm_password: "{{ vault_ad_password }}"
+        winrm_port: 5985
         inspec_delegate_host: "inspec-runner"
 ```
+
+**Note:** With AD authentication, the same `winrm_username`/`winrm_password` can scan multiple SQL Servers.
 
 ## Output
 

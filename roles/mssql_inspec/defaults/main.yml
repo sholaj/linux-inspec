@@ -19,18 +19,19 @@ inspec_delegate_host: "localhost"
 # ======================
 # Connection Mode
 # ======================
-# When true, use WinRM transport to Windows VM
-# When false, use direct TDS connection via sqlcmd
+# When true, use WinRM transport with Windows/AD authentication
+# When false, use direct TDS connection via sqlcmd (SQL authentication)
 use_winrm: false
 
 # ======================
-# WinRM Configuration
+# WinRM Configuration (Windows/AD Authentication)
 # ======================
 # Only used when use_winrm: true
-winrm_host: ""                    # Windows VM IP/hostname
+# WinRM connects directly to mssql_server using AD credentials
+# This allows scanning multiple SQL Servers with a single AD account
 winrm_port: 5985                  # WinRM HTTP port (or 5986 for HTTPS)
-winrm_username: ""                # Windows admin user
-winrm_password: ""                # Windows admin password
+winrm_username: ""                # AD username (DOMAIN\user or user@domain)
+winrm_password: ""                # AD password
 winrm_ssl: false                  # Use HTTPS (5986)
 winrm_ssl_verify: true            # Verify SSL certificate
 winrm_timeout: 60                 # Connection timeout (seconds)
