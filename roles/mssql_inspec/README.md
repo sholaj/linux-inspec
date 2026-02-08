@@ -28,8 +28,9 @@ Delegate Host --[TDS 1433]--> SQL Server (Linux/Windows)
 
 ### WinRM Mode (Windows/AD Authentication)
 
-InSpec connects directly to SQL Server via WinRM using Windows/AD authentication.
-A single AD account can scan multiple SQL Servers in the domain.
+InSpec connects to the Windows SQL Server via WinRM transport, then uses Windows
+Authentication (Trusted Connection) for SQL Server access. This leverages the
+[train-winrm](https://github.com/inspec/train-winrm) transport plugin.
 
 ```yaml
 use_winrm: true
@@ -41,13 +42,39 @@ winrm_password: "{{ vault_ad_password }}"
 
 **Architecture:**
 ```
-Delegate Host --[WinRM + AD Auth]--> SQL Server (Windows)
+┌─────────────┐     WinRM Transport      ┌──────────────────┐
+│   Delegate  │ ──────────────────────→  │ Windows SQL      │
+│   (Linux)   │   AD User credentials    │ Server           │
+└─────────────┘                          └────────┬─────────┘
+                                                  │
+                                         InSpec runs HERE
+                                                  │
+                                         mssql_session()
+                                         uses Windows Auth
+                                         (no SQL credentials)
+                                                  │
+                                                  ▼
+                                         SQL Server Database
 ```
 
 **Key Points:**
 - `mssql_server` is the target SQL Server (no separate `winrm_host`)
-- AD credentials authenticate both WinRM transport and SQL Server access
+- AD credentials authenticate the WinRM transport layer
+- SQL Server uses Windows Authentication (the AD user's identity)
 - One AD account can scan all SQL Servers it has access to
+- The AD user must have SQL Server login permissions via Windows Auth
+
+**How Windows Authentication Works:**
+
+Per [InSpec mssql_session documentation](https://docs.chef.io/inspec/resources/mssql_session/),
+omitting the `user` and `password` parameters triggers Windows Authentication:
+
+> "Omitting the username or password parameters results in the use of Windows
+> authentication as the user Chef InSpec is executing as."
+
+The InSpec profile automatically detects when credentials are not provided and
+omits them from `mssql_session()`, triggering Windows Auth using the WinRM
+user's Windows identity.
 
 ## Execution Modes
 
@@ -82,7 +109,7 @@ mssql_port: 1433        # MSSQL port
 mssql_database: "master"  # Target database
 mssql_username: ""      # Database username
 mssql_password: ""      # Database password (use vault/AAP credential)
-mssql_version: "2019"   # MSSQL version (2016, 2017, 2019)
+mssql_version: "2019"   # MSSQL version (2016, 2017, 2018, 2019, 2022)
 ```
 
 ### Optional Variables
@@ -126,9 +153,11 @@ retry_delay: 10                          # Seconds between retries
 
 ## Supported MSSQL Versions
 
-- MSSQL 2016
-- MSSQL 2017
-- MSSQL 2019
+- MSSQL 2016 (CIS Benchmark v1.3.0)
+- MSSQL 2017 (CIS Benchmark v1.3.0)
+- MSSQL 2018 (CIS Benchmark v1.3.0)
+- MSSQL 2019 (CIS Benchmark v1.3.0)
+- MSSQL 2022 (CIS Benchmark v1.0.0) - includes Ledger, Query Store, Contained AG controls
 
 ## Directory Structure
 
@@ -154,7 +183,8 @@ mssql_inspec/
 │   ├── MSSQL2016_ruby/       # MSSQL 2016 controls
 │   ├── MSSQL2017_ruby/       # MSSQL 2017 controls
 │   ├── MSSQL2018_ruby/       # MSSQL 2018 controls
-│   └── MSSQL2019_ruby/       # MSSQL 2019 controls
+│   ├── MSSQL2019_ruby/       # MSSQL 2019 controls
+│   └── MSSQL2022_ruby/       # MSSQL 2022 controls
 ├── templates/
 │   ├── summary_report.j2     # Summary report template
 │   ├── skip_report.j2        # Skip report template
@@ -321,6 +351,49 @@ gem install inspec-bin -v 5.22.29
 ```bash
 # Test connectivity
 sqlcmd -S server,port -U user -P password -Q "SELECT @@VERSION"
+```
+
+### WinRM Connection Failed
+
+```bash
+# Test WinRM connectivity from delegate host
+# Using curl (basic auth)
+curl -v http://sqlserver:5985/wsman
+
+# Using PowerShell (if available)
+Test-WSMan -ComputerName sqlserver
+
+# Common issues:
+# - Firewall blocking port 5985/5986
+# - WinRM service not running on target
+# - AD user not in Remote Management Users group
+# - TrustedHosts not configured on target
+```
+
+**WinRM Server Configuration (on Windows SQL Server):**
+```powershell
+# Enable WinRM
+Enable-PSRemoting -Force
+
+# Allow connections from any host (or specific IPs)
+Set-Item WSMan:\localhost\Client\TrustedHosts -Value "*" -Force
+
+# Verify WinRM is listening
+winrm enumerate winrm/config/listener
+```
+
+### SQL Server Windows Auth Failed
+
+When using WinRM mode, ensure the AD user has SQL Server access:
+
+```sql
+-- On SQL Server, verify the AD user has a login
+SELECT name, type_desc FROM sys.server_principals
+WHERE name LIKE '%svc_inspec%';
+
+-- Grant access if needed
+CREATE LOGIN [DOMAIN\svc_inspec] FROM WINDOWS;
+ALTER SERVER ROLE [sysadmin] ADD MEMBER [DOMAIN\svc_inspec];
 ```
 
 ### Debug Mode

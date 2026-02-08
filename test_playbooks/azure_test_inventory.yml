@@ -16,7 +16,7 @@ all:
     delegate_hosts:
       hosts:
         runner_vm:
-          ansible_host: 20.106.154.159
+          ansible_host: 172.191.50.107
           ansible_user: azureuser
           ansible_ssh_private_key_file: "~/.ssh/inspec_azure"
           ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
@@ -26,14 +26,27 @@ all:
     # MSSQL databases to scan
     mssql_databases:
       hosts:
-        mssql_azure_test:
-          # Connection parameters
+        # Linux MSSQL container - Direct mode
+        mssql_azure_linux:
           mssql_server: 10.0.2.4
           mssql_port: 1433
           mssql_version: "2019"
           mssql_username: sa
           mssql_password: "TestPass2024"
           mssql_database: master
+          use_winrm: false
+          ansible_connection: local
 
-          # Delegate execution
+        # Windows MSSQL VM - WinRM mode
+        mssql_azure_winrm:
+          mssql_server: 10.0.1.4
+          mssql_port: 1433
+          mssql_version: "2019"
+          mssql_database: master
+          # WinRM authentication
+          use_winrm: true
+          winrm_port: 5985
+          winrm_username: "azureadmin"
+          winrm_password: "WinRMTest2024!"
+          winrm_ssl: false
           ansible_connection: local

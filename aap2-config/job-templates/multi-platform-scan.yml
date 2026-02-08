@@ -6,7 +6,7 @@ job_template:
   description: "Execute compliance scans across all database platforms (MSSQL, Oracle, Sybase, PostgreSQL)"
   job_type: run
   inventory: "Database Compliance Inventory"
-  project: "linux-inspec"
+  project: "CHF"
   playbook: "test_playbooks/run_compliance_scans.yml"
   execution_environment: "db-compliance-ee"
 

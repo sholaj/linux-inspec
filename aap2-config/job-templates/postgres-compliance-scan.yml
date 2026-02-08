@@ -6,7 +6,7 @@ job_template:
   description: "Execute InSpec CIS Benchmark compliance scans on PostgreSQL databases"
   job_type: run
   inventory: "Database Compliance Inventory"
-  project: "linux-inspec"
+  project: "CHF"
   playbook: "test_playbooks/run_postgres_inspec.yml"
   execution_environment: "db-compliance-ee"
 
