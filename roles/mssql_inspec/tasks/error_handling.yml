@@ -29,7 +29,7 @@
       connection_mode: "{{ _connection_mode | default('direct') }}"
       error_code: "{{ preflight_error_code | default('UNKNOWN') }}"
       error_message: "{{ preflight_skip_reason | default('Unknown error') }}"
-      winrm_host: "{{ winrm_host | default('N/A') if (_connection_mode | default('direct')) == 'winrm' else 'N/A' }}"
+      ad_user: "{{ winrm_username | default('N/A') if (_connection_mode | default('direct')) == 'winrm' else 'N/A' }}"
   when: not (preflight_passed | default(false) | bool)
   delegate_to: localhost
   delegate_facts: true

@@ -1,8 +1,11 @@
 ---
 # Pre-flight connectivity checks for MSSQL InSpec role - WINRM MODE
 # ==================================================================
-# Validates WinRM connectivity to Windows target before running InSpec scans.
+# Validates WinRM/AD connectivity to SQL Server before running InSpec scans.
 # Called from preflight.yml when use_winrm is true.
+#
+# WinRM mode uses Windows/AD authentication to connect directly to mssql_server.
+# This allows a single AD account to scan multiple SQL Servers in the domain.
 #
 # Output facts:
 #   - preflight_passed: true/false - whether to proceed with InSpec scan
@@ -27,12 +30,13 @@
     preflight_error_code: "WINRM_GEM_MISSING"
   when: _winrm_gem_check.rc != 0
 
-# Step 2: Test WinRM connectivity (only if gem is installed)
-- name: "[WinRM Preflight] Test WinRM connectivity"
+# Step 2: Test WinRM connectivity to SQL Server (only if gem is installed)
+# Connects directly to mssql_server using AD credentials
+- name: "[WinRM Preflight] Test WinRM/AD connectivity to SQL Server"
   shell: |
     export CHEF_LICENSE=accept
     inspec detect \
-      -t winrm://{{ winrm_username }}@{{ winrm_host }}:{{ winrm_port }} \
+      -t winrm://{{ winrm_username }}@{{ mssql_server }}:{{ winrm_port }} \
       --password '{{ winrm_password }}' \
       {% if winrm_ssl | default(false) | bool %}--ssl{% else %}--no-ssl{% endif %} \
       {% if not (winrm_ssl_verify | default(true) | bool) %}--self-signed{% endif %} \
@@ -55,17 +59,17 @@
       {%- if _winrm_detect is skipped -%}
       train-winrm gem check failed - skipped WinRM test
       {%- elif _winrm_detect.rc | default(0) == 124 -%}
-      WinRM connection timeout after {{ winrm_timeout | default(60) }}s
+      WinRM connection timeout after {{ winrm_timeout | default(60) }}s to {{ mssql_server }}
       {%- elif 'Connection refused' in (_winrm_detect.stderr | default('')) -%}
-      WinRM connection refused on {{ winrm_host }}:{{ winrm_port }}
+      WinRM connection refused on {{ mssql_server }}:{{ winrm_port }}
       {%- elif 'Authentication failed' in (_winrm_detect.stderr | default('')) or 'Access is denied' in (_winrm_detect.stderr | default('')) -%}
-      WinRM authentication failed for user '{{ winrm_username }}'
+      AD authentication failed for user '{{ winrm_username }}' on {{ mssql_server }}
       {%- elif 'getaddrinfo' in (_winrm_detect.stderr | default('')) or 'Name or service not known' in (_winrm_detect.stderr | default('')) -%}
-      Cannot resolve hostname '{{ winrm_host }}'
+      Cannot resolve hostname '{{ mssql_server }}'
       {%- elif 'Connection timed out' in (_winrm_detect.stderr | default('')) -%}
-      WinRM connection timed out
+      WinRM connection timed out to {{ mssql_server }}
       {%- elif _winrm_detect.rc | default(0) != 0 -%}
-      WinRM connection failed (exit code: {{ _winrm_detect.rc | default('unknown') }})
+      WinRM connection failed to {{ mssql_server }} (exit code: {{ _winrm_detect.rc | default('unknown') }})
       {%- else -%}
       {%- endif -%}
   when: _winrm_gem_check.rc == 0
@@ -101,8 +105,9 @@
 - name: "[WinRM Preflight] Display WinRM detection"
   debug:
     msg: |
-      WinRM Detection Result:
-      {{ winrm_platform_detected }}
+      WinRM/AD Authentication Successful
+      Target: {{ mssql_server }}:{{ winrm_port }}
+      Platform: {{ winrm_platform_detected }}
   when:
     - preflight_passed | default(false)
     - inspec_debug_mode | default(false) | bool
