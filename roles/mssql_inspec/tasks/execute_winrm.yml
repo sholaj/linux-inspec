@@ -45,8 +45,9 @@
   when: inspec_debug_mode | default(false) | bool
 
 # Execute InSpec via WinRM transport with AD authentication
-# For Windows Auth, the AD user running InSpec is used for SQL authentication
-# The mssql_username/password inputs may still be needed for specific controls
+# Windows Auth: Do NOT pass usernm/passwd - the profile detects nil/empty and
+# omits credentials from mssql_session, triggering Windows Authentication.
+# The WinRM user's Windows identity is used for SQL Server authentication.
 - name: "[WinRM Execute] Execute InSpec profile via WinRM/AD"
   shell: |
     export CHEF_LICENSE=accept
@@ -56,14 +57,7 @@
       --password '{{ winrm_password }}' \
       {{ _winrm_ssl_flag }} \
       {{ _winrm_verify_flag }} \
-      --input mssql_host='localhost' \
-              mssql_port='{{ mssql_port }}' \
-              mssql_instance='{{ mssql_service | default("") }}' \
-              connection_mode='winrm' \
-              usernm='' \
-              passwd='' \
-              hostnm='localhost' \
-              port='{{ mssql_port }}' \
+      --input hostnm='localhost' \
               servicenm='{{ mssql_service | default("") }}' \
       --reporter=json-min \
       --no-color \

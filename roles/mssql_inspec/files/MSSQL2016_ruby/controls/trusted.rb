@@ -10,13 +10,34 @@
 #   - Excluded: PolyBase (2.10), External Scripts (2.09), CLR Strict Security (2.12)
 
 # Establish connection to MSSQL
-sql = mssql_session(
-  user: input('usernm'),
-  password: input('passwd'),
-  host: input('hostnm'),
-  port: input('port', value: 1433),
-  instance: input('servicenm', value: '')
-)
+# Supports both SQL Server Authentication and Windows Authentication
+# - Windows Auth: When usernm is empty/nil, omit credentials to use Windows identity
+# - SQL Auth: When usernm is provided, use SQL Server Authentication
+_usernm = input('usernm', value: nil)
+_passwd = input('passwd', value: nil)
+_hostnm = input('hostnm', value: 'localhost')
+_port = input('port', value: 1433)
+_servicenm = input('servicenm', value: '')
+
+# Determine authentication mode - empty/nil credentials trigger Windows Auth
+use_windows_auth = _usernm.nil? || _usernm.to_s.strip.empty?
+
+sql = if use_windows_auth
+  # Windows Authentication - omit user/password to use current Windows identity
+  mssql_session(
+    host: _hostnm,
+    instance: _servicenm
+  )
+else
+  # SQL Server Authentication - use provided credentials
+  mssql_session(
+    user: _usernm,
+    password: _passwd,
+    host: _hostnm,
+    port: _port,
+    instance: _servicenm
+  )
+end
 
 # ==============================================================================
 # Section 1: Installation, Updates, and Patches
