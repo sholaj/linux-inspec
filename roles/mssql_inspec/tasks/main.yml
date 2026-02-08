@@ -2,8 +2,8 @@
 # MSSQL InSpec Role - Main Task File
 # ===================================
 #
-# EXECUTION MODES:
-# 1. Localhost Mode: inspec_delegate_host is empty, undefined, or "localhost"
+# EXECUTION MODES (where InSpec runs):
+# 1. Localhost Mode: inspec_delegate_host is empty or "localhost"
 #    - InSpec runs on the Ansible control node
 #    - Control files are used directly from role_path
 #
@@ -11,6 +11,30 @@
 #    - InSpec runs on the remote delegate host
 #    - Control files are copied to the delegate host
 #    - Results are fetched back to the control node
+#
+# CONNECTION MODES (how InSpec connects to SQL Server):
+# 1. Direct Mode (use_winrm: false) - Default
+#    - Uses sqlcmd/TDS protocol (port 1433)
+#    - SQL Server Authentication (username/password)
+#    - Works for Linux and Windows SQL Servers
+#
+# 2. WinRM Mode (use_winrm: true)
+#    - Uses WinRM transport (train-winrm) to Windows SQL Server
+#    - Windows/AD Authentication (domain credentials)
+#    - AD user's identity used for SQL Server access (Trusted Connection)
+#    - Requires: AD account with SQL Server login via Windows Auth
+#
+# ARCHITECTURE:
+#   Direct Mode:
+#     Delegate Host --[TDS/1433]--> SQL Server
+#
+#   WinRM Mode:
+#     Delegate Host --[WinRM/5985]--> Windows SQL Server
+#                                         |
+#                                    InSpec runs here
+#                                         |
+#                                    mssql_session()
+#                                    (Windows Auth)
 #
 # PRE-FLIGHT CHECKS:
 # Before running InSpec, the role validates:
