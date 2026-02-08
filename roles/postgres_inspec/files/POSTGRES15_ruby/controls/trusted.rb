@@ -1,13 +1,21 @@
-# PostgreSQL 15 InSpec Controls - CIS Benchmark v1.2.0
-# Compliance checks based on CIS PostgreSQL 15 Benchmark
+# PostgreSQL 15 InSpec Controls - CIS PostgreSQL 15 Benchmark v1.0.0
+# Version: 3.0.0
+# Last Updated: 2026-02-08
+#
+# This profile implements CIS PostgreSQL 15 Benchmark controls
+# for compliance reporting.
+#
+# Control ID Format: postgres-15-X.X.X
+
+title 'CIS PostgreSQL 15 Security Compliance Controls'
 
 # Establish connection to PostgreSQL
 sql = postgres_session(
-  input('pg_user'),
-  input('pg_password'),
-  input('pg_host'),
-  input('pg_port'),
-  input('pg_database')
+  input('usernm'),
+  input('passwd'),
+  input('hostnm'),
+  input('port', value: 5432),
+  input('database', value: 'postgres')
 )
 
 # ==============================================================================
@@ -15,7 +23,7 @@ sql = postgres_session(
 # ==============================================================================
 
 # Control 1.3: Ensure Data Cluster Initialized Successfully
-control '1.3' do
+control 'postgres-15-1.3' do
   impact 1.0
   title 'Ensure the Data Cluster Was Initialized Successfully'
   desc 'Verify PostgreSQL data cluster is properly initialized and running.'
@@ -28,7 +36,7 @@ control '1.3' do
 end
 
 # Control 1.4: Ensure PostgreSQL Version is Current
-control '1.4' do
+control 'postgres-15-1.4' do
   impact 0.7
   title 'Ensure PostgreSQL Version is Up-to-Date'
   desc 'Running outdated PostgreSQL versions may expose the system to known vulnerabilities.'
@@ -41,7 +49,7 @@ control '1.4' do
 end
 
 # Control 1.5: Ensure Only Required Extensions Are Installed
-control '1.5' do
+control 'postgres-15-1.5' do
   impact 0.7
   title 'Ensure Only Necessary Extensions Are Installed'
   desc 'Unnecessary extensions increase the attack surface and should be removed.'
@@ -58,7 +66,7 @@ end
 # ==============================================================================
 
 # Control 2.1: Ensure the File Permissions Mask is Correct
-control '2.1' do
+control 'postgres-15-2.1' do
   impact 1.0
   title 'Ensure the File Permissions Mask Is Correct'
   desc 'PostgreSQL should use restrictive file permissions to protect sensitive data.'
@@ -71,7 +79,7 @@ control '2.1' do
 end
 
 # Control 2.2: Ensure the PostgreSQL pg_wheel Group Membership is Correct
-control '2.2' do
+control 'postgres-15-2.2' do
   impact 0.7
   title 'Ensure PostgreSQL Ownership is Correct'
   desc 'PostgreSQL data directories should be owned by the postgres user.'
@@ -88,7 +96,7 @@ end
 # ==============================================================================
 
 # Control 3.1.2: Ensure the Log Destination is Configured Correctly
-control '3.1.2' do
+control 'postgres-15-3.1.2' do
   impact 1.0
   title 'Ensure the Log Destinations Are Set Correctly'
   desc 'Log destinations should be configured to ensure audit trail availability.'
@@ -101,7 +109,7 @@ control '3.1.2' do
 end
 
 # Control 3.1.3: Ensure the Logging Collector is Enabled
-control '3.1.3' do
+control 'postgres-15-3.1.3' do
   impact 1.0
   title 'Ensure the Logging Collector is Enabled'
   desc 'The logging collector captures stderr output to log files.'
@@ -114,7 +122,7 @@ control '3.1.3' do
 end
 
 # Control 3.1.4: Ensure the Log File Destination Directory is Configured
-control '3.1.4' do
+control 'postgres-15-3.1.4' do
   impact 0.7
   title 'Ensure the Log File Destination Directory is Set Correctly'
   desc 'Log files should be stored in a dedicated directory.'
@@ -127,7 +135,7 @@ control '3.1.4' do
 end
 
 # Control 3.1.5: Ensure the Filename Pattern for Log Files is Configured
-control '3.1.5' do
+control 'postgres-15-3.1.5' do
   impact 0.5
   title 'Ensure the Filename Pattern for Log Files is Set Correctly'
   desc 'Log filenames should include timestamps for proper rotation and archival.'
@@ -140,7 +148,7 @@ control '3.1.5' do
 end
 
 # Control 3.1.6: Ensure the Log File Permissions are Correct
-control '3.1.6' do
+control 'postgres-15-3.1.6' do
   impact 1.0
   title 'Ensure the Log File Permissions Are Set Correctly'
   desc 'Log files should have restrictive permissions (0600).'
@@ -153,7 +161,7 @@ control '3.1.6' do
 end
 
 # Control 3.1.7: Ensure Log File Rotation is Enabled
-control '3.1.7' do
+control 'postgres-15-3.1.7' do
   impact 0.7
   title 'Ensure Log Rotation Age is Configured'
   desc 'Log files should be rotated regularly to manage disk space.'
@@ -166,7 +174,7 @@ control '3.1.7' do
 end
 
 # Control 3.1.8: Ensure Log Rotation Size is Configured
-control '3.1.8' do
+control 'postgres-15-3.1.8' do
   impact 0.7
   title 'Ensure Log Rotation Size is Configured'
   desc 'Log files should be rotated based on size to prevent excessive disk usage.'
@@ -179,7 +187,7 @@ control '3.1.8' do
 end
 
 # Control 3.1.9: Ensure Syslog Facility is Configured Correctly
-control '3.1.9' do
+control 'postgres-15-3.1.9' do
   impact 0.5
   title 'Ensure the Syslog Facility is Set Correctly'
   desc 'When using syslog, ensure proper facility is configured.'
@@ -192,7 +200,7 @@ control '3.1.9' do
 end
 
 # Control 3.1.10: Ensure Client Connection Logging is Enabled
-control '3.1.10' do
+control 'postgres-15-3.1.10' do
   impact 1.0
   title 'Ensure log_connections is Enabled'
   desc 'Logging connections helps track who connected to the database.'
@@ -205,7 +213,7 @@ control '3.1.10' do
 end
 
 # Control 3.1.11: Ensure Client Disconnection Logging is Enabled
-control '3.1.11' do
+control 'postgres-15-3.1.11' do
   impact 1.0
   title 'Ensure log_disconnections is Enabled'
   desc 'Logging disconnections helps track session duration and patterns.'
@@ -218,7 +226,7 @@ control '3.1.11' do
 end
 
 # Control 3.1.12: Ensure Error Verbosity is Appropriate
-control '3.1.12' do
+control 'postgres-15-3.1.12' do
   impact 0.7
   title 'Ensure log_error_verbosity is Set Appropriately'
   desc 'Error messages should provide sufficient detail for troubleshooting.'
@@ -231,7 +239,7 @@ control '3.1.12' do
 end
 
 # Control 3.1.13: Ensure Log Line Prefix is Configured
-control '3.1.13' do
+control 'postgres-15-3.1.13' do
   impact 0.7
   title 'Ensure log_line_prefix Is Set Correctly'
   desc 'Log line prefix should include timestamp, user, database, and session info.'
@@ -244,7 +252,7 @@ control '3.1.13' do
 end
 
 # Control 3.1.14: Ensure Log Statement is Set Appropriately
-control '3.1.14' do
+control 'postgres-15-3.1.14' do
   impact 0.7
   title 'Ensure log_statement is Set Correctly'
   desc 'DDL statements should be logged for audit purposes.'
@@ -257,7 +265,7 @@ control '3.1.14' do
 end
 
 # Control 3.1.15: Ensure Log Timezone is Configured
-control '3.1.15' do
+control 'postgres-15-3.1.15' do
   impact 0.5
   title 'Ensure log_timezone is Set Correctly'
   desc 'Log timezone should be set for consistent timestamp interpretation.'
@@ -270,7 +278,7 @@ control '3.1.15' do
 end
 
 # Control 3.1.16: Ensure Log Duration is Configured
-control '3.1.16' do
+control 'postgres-15-3.1.16' do
   impact 0.5
   title 'Ensure log_duration is Enabled for Long Statements'
   desc 'Logging statement duration helps identify performance issues.'
@@ -283,7 +291,7 @@ control '3.1.16' do
 end
 
 # Control 3.1.17: Ensure Log Min Duration Statement is Set
-control '3.1.17' do
+control 'postgres-15-3.1.17' do
   impact 0.7
   title 'Ensure log_min_duration_statement is Set'
   desc 'Statements exceeding the threshold should be logged for analysis.'
@@ -296,7 +304,7 @@ control '3.1.17' do
 end
 
 # Control 3.1.18: Ensure Log Hostname is Enabled
-control '3.1.18' do
+control 'postgres-15-3.1.18' do
   impact 0.5
   title 'Ensure log_hostname is Configured'
   desc 'Logging hostname helps identify the source of connections.'
@@ -309,7 +317,7 @@ control '3.1.18' do
 end
 
 # Control 3.2: Ensure pgAudit Extension is Enabled
-control '3.2' do
+control 'postgres-15-3.2' do
   impact 1.0
   title 'Ensure the pgAudit Extension is Installed and Configured'
   desc 'pgAudit provides detailed session and object audit logging.'
@@ -326,7 +334,7 @@ end
 # ==============================================================================
 
 # Control 4.1: Ensure Appropriate Superuser Privileges
-control '4.1' do
+control 'postgres-15-4.1' do
   impact 1.0
   title 'Ensure Superuser Privileges are Limited'
   desc 'Only necessary accounts should have superuser privileges.'
@@ -339,7 +347,7 @@ control '4.1' do
 end
 
 # Control 4.2: Ensure Login is Disabled for Default postgres User
-control '4.2' do
+control 'postgres-15-4.2' do
   impact 0.7
   title 'Ensure the postgres Superuser Has Limited Direct Access'
   desc 'Direct login as postgres should be restricted.'
@@ -352,7 +360,7 @@ control '4.2' do
 end
 
 # Control 4.3: Ensure Public Schema Has Limited Privileges
-control '4.3' do
+control 'postgres-15-4.3' do
   impact 1.0
   title 'Ensure public Schema Has Restricted Privileges'
   desc 'The public schema should not grant CREATE to PUBLIC role.'
@@ -365,7 +373,7 @@ control '4.3' do
 end
 
 # Control 4.4: Ensure Default Privileges Are Revoked from PUBLIC
-control '4.4' do
+control 'postgres-15-4.4' do
   impact 1.0
   title 'Ensure CONNECT Has Been Revoked from PUBLIC on Databases'
   desc 'PUBLIC should not have CONNECT privilege on all databases.'
@@ -378,7 +386,7 @@ control '4.4' do
 end
 
 # Control 4.5: Ensure Excessive Function Privileges Are Revoked
-control '4.5' do
+control 'postgres-15-4.5' do
   impact 0.7
   title 'Ensure Excessive Function Privileges Are Revoked'
   desc 'EXECUTE on sensitive functions should be restricted.'
@@ -391,7 +399,7 @@ control '4.5' do
 end
 
 # Control 4.6: Ensure set_user Extension is Installed
-control '4.6' do
+control 'postgres-15-4.6' do
   impact 0.7
   title 'Ensure set_user Extension is Installed'
   desc 'set_user provides additional logging for privilege escalation.'
@@ -404,7 +412,7 @@ control '4.6' do
 end
 
 # Control 4.7: Ensure Row Level Security is Enabled Where Applicable
-control '4.7' do
+control 'postgres-15-4.7' do
   impact 0.7
   title 'Ensure Row Level Security (RLS) is Used Where Appropriate'
   desc 'RLS provides fine-grained access control at the row level.'
@@ -417,7 +425,7 @@ control '4.7' do
 end
 
 # Control 4.8: Ensure Password Complexity is Enforced
-control '4.8' do
+control 'postgres-15-4.8' do
   impact 1.0
   title 'Ensure Password Complexity Requirements Are Enforced'
   desc 'Password validation should enforce complexity requirements.'
@@ -434,7 +442,7 @@ end
 # ==============================================================================
 
 # Control 5.1: Ensure Local UNIX Socket Authentication is Configured
-control '5.1' do
+control 'postgres-15-5.1' do
   impact 1.0
   title 'Ensure Authentication Method for Local Socket is Secure'
   desc 'Local socket connections should use peer or scram-sha-256 authentication.'
@@ -447,7 +455,7 @@ control '5.1' do
 end
 
 # Control 5.2: Ensure Host TCP/IP Authentication is Configured
-control '5.2' do
+control 'postgres-15-5.2' do
   impact 1.0
   title 'Ensure Authentication Method for Host Connections is Secure'
   desc 'Host connections should use scram-sha-256 or certificate authentication.'
@@ -460,7 +468,7 @@ control '5.2' do
 end
 
 # Control 5.3: Ensure SSL is Enabled
-control '5.3' do
+control 'postgres-15-5.3' do
   impact 1.0
   title 'Ensure SSL is Enabled for Client Connections'
   desc 'SSL/TLS should be enabled to encrypt data in transit.'
@@ -473,7 +481,7 @@ control '5.3' do
 end
 
 # Control 5.4: Ensure SSL Certificate is Valid
-control '5.4' do
+control 'postgres-15-5.4' do
   impact 1.0
   title 'Ensure a Valid SSL Certificate is Configured'
   desc 'A valid SSL certificate should be used for server authentication.'
@@ -486,7 +494,7 @@ control '5.4' do
 end
 
 # Control 5.5: Ensure SSL Key File is Protected
-control '5.5' do
+control 'postgres-15-5.5' do
   impact 1.0
   title 'Ensure SSL Key File Has Proper Permissions'
   desc 'SSL private key should be readable only by the PostgreSQL user.'
@@ -499,7 +507,7 @@ control '5.5' do
 end
 
 # Control 5.6: Ensure Strong SSL Ciphers Are Used
-control '5.6' do
+control 'postgres-15-5.6' do
   impact 1.0
   title 'Ensure Strong SSL/TLS Ciphers Are Configured'
   desc 'Weak ciphers should be disabled to prevent cryptographic attacks.'
@@ -512,7 +520,7 @@ control '5.6' do
 end
 
 # Control 5.7: Ensure Minimum TLS Version is Set
-control '5.7' do
+control 'postgres-15-5.7' do
   impact 1.0
   title 'Ensure Minimum TLS Version is TLSv1.2 or Higher'
   desc 'TLS versions below 1.2 have known vulnerabilities.'
@@ -525,7 +533,7 @@ control '5.7' do
 end
 
 # Control 5.8: Ensure Connection Limits Are Set
-control '5.8' do
+control 'postgres-15-5.8' do
   impact 0.7
   title 'Ensure max_connections is Set Appropriately'
   desc 'Connection limits prevent resource exhaustion attacks.'
@@ -538,7 +546,7 @@ control '5.8' do
 end
 
 # Control 5.9: Ensure Authentication Timeout is Set
-control '5.9' do
+control 'postgres-15-5.9' do
   impact 0.7
   title 'Ensure authentication_timeout is Set'
   desc 'Authentication timeout prevents slow connection attacks.'
@@ -551,7 +559,7 @@ control '5.9' do
 end
 
 # Control 5.10: Ensure Superuser Access is Restricted
-control '5.10' do
+control 'postgres-15-5.10' do
   impact 1.0
   title 'Ensure Superuser Cannot Connect Remotely'
   desc 'Superuser should only connect via local socket or trusted networks.'
@@ -568,7 +576,7 @@ end
 # ==============================================================================
 
 # Control 6.1: Ensure listen_addresses is Configured Correctly
-control '6.1' do
+control 'postgres-15-6.1' do
   impact 1.0
   title 'Ensure listen_addresses is Not Set to All Interfaces Unless Required'
   desc 'PostgreSQL should only listen on necessary interfaces.'
@@ -581,7 +589,7 @@ control '6.1' do
 end
 
 # Control 6.2: Ensure Backend Runtime Parameters Are Logged
-control '6.2' do
+control 'postgres-15-6.2' do
   impact 0.7
   title 'Ensure Backend Runtime Parameters Changes Are Logged'
   desc 'Changes to runtime parameters should be logged for audit.'
@@ -594,7 +602,7 @@ control '6.2' do
 end
 
 # Control 6.3: Ensure fsync is Enabled
-control '6.3' do
+control 'postgres-15-6.3' do
   impact 1.0
   title 'Ensure fsync is Enabled'
   desc 'fsync ensures data integrity by flushing data to disk.'
@@ -607,7 +615,7 @@ control '6.3' do
 end
 
 # Control 6.4: Ensure full_page_writes is Enabled
-control '6.4' do
+control 'postgres-15-6.4' do
   impact 1.0
   title 'Ensure full_page_writes is Enabled'
   desc 'Full page writes prevent partial page writes during crashes.'
@@ -620,7 +628,7 @@ control '6.4' do
 end
 
 # Control 6.5: Ensure Dynamic Library Preloading is Controlled
-control '6.5' do
+control 'postgres-15-6.5' do
   impact 0.7
   title 'Ensure shared_preload_libraries is Reviewed'
   desc 'Only authorized libraries should be preloaded.'
@@ -633,7 +641,7 @@ control '6.5' do
 end
 
 # Control 6.6: Ensure log_lock_waits is Enabled
-control '6.6' do
+control 'postgres-15-6.6' do
   impact 0.7
   title 'Ensure log_lock_waits is Enabled'
   desc 'Lock waits should be logged to identify contention issues.'
@@ -646,7 +654,7 @@ control '6.6' do
 end
 
 # Control 6.7: Ensure log_temp_files is Configured
-control '6.7' do
+control 'postgres-15-6.7' do
   impact 0.5
   title 'Ensure log_temp_files is Set to Log All Temp Files'
   desc 'Temporary file usage should be logged for monitoring.'
@@ -659,7 +667,7 @@ control '6.7' do
 end
 
 # Control 6.8: Ensure TCP Keepalives Are Configured
-control '6.8' do
+control 'postgres-15-6.8' do
   impact 0.5
   title 'Ensure TCP Keepalives Are Configured'
   desc 'TCP keepalives detect dead connections.'
@@ -676,7 +684,7 @@ end
 # ==============================================================================
 
 # Control 7.1: Ensure Replication User Has Minimal Privileges
-control '7.1' do
+control 'postgres-15-7.1' do
   impact 1.0
   title 'Ensure Replication User Has Only REPLICATION Privilege'
   desc 'Replication users should not have superuser privileges.'
@@ -689,7 +697,7 @@ control '7.1' do
 end
 
 # Control 7.2: Ensure WAL Archiving is Configured
-control '7.2' do
+control 'postgres-15-7.2' do
   impact 0.7
   title 'Ensure WAL Archiving is Enabled for Recovery'
   desc 'WAL archiving enables point-in-time recovery.'
@@ -702,7 +710,7 @@ control '7.2' do
 end
 
 # Control 7.3: Ensure archive_command is Set
-control '7.3' do
+control 'postgres-15-7.3' do
   impact 0.7
   title 'Ensure archive_command is Configured'
   desc 'Archive command should be set for WAL archiving.'
@@ -715,7 +723,7 @@ control '7.3' do
 end
 
 # Control 7.4: Ensure Streaming Replication Uses SSL
-control '7.4' do
+control 'postgres-15-7.4' do
   impact 1.0
   title 'Ensure Replication Connections Use SSL'
   desc 'Replication traffic should be encrypted.'
@@ -732,7 +740,7 @@ end
 # ==============================================================================
 
 # Control 8.1: Ensure PostgreSQL Subdirectory Locations Are Outside PGDATA
-control '8.1' do
+control 'postgres-15-8.1' do
   impact 0.5
   title 'Ensure pg_stat_tmp and Other Temp Dirs Use Appropriate Locations'
   desc 'Temporary directories should be on appropriate storage.'
@@ -745,7 +753,7 @@ control '8.1' do
 end
 
 # Control 8.2: Ensure Backup Tool is Configured
-control '8.2' do
+control 'postgres-15-8.2' do
   impact 0.7
   title 'Ensure a Backup Solution is in Place'
   desc 'Regular backups should be configured and tested.'
@@ -758,7 +766,7 @@ control '8.2' do
 end
 
 # Control 8.3: Ensure Statement Timeout is Set
-control '8.3' do
+control 'postgres-15-8.3' do
   impact 0.5
   title 'Ensure statement_timeout is Set to Prevent Runaway Queries'
   desc 'Statement timeout prevents long-running queries from consuming resources.'
@@ -771,7 +779,7 @@ control '8.3' do
 end
 
 # Control 8.4: Ensure idle_in_transaction_session_timeout is Set
-control '8.4' do
+control 'postgres-15-8.4' do
   impact 0.7
   title 'Ensure idle_in_transaction_session_timeout is Configured'
   desc 'Idle transactions should be terminated to release locks.'
@@ -784,7 +792,7 @@ control '8.4' do
 end
 
 # Control 8.5: Ensure Cryptographic Extension is Available
-control '8.5' do
+control 'postgres-15-8.5' do
   impact 0.7
   title 'Ensure pgcrypto Extension is Available'
   desc 'pgcrypto provides cryptographic functions for data protection.'
@@ -797,7 +805,7 @@ control '8.5' do
 end
 
 # Control 8.6: Ensure Default Search Path Does Not Include PUBLIC Schema First
-control '8.6' do
+control 'postgres-15-8.6' do
   impact 0.7
   title 'Ensure search_path Does Not Prioritize Public Schema'
   desc 'Public schema should not be first in search path to prevent hijacking.'
