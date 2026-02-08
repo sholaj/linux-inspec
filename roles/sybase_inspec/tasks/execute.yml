@@ -64,7 +64,7 @@
       Execution Target: {{ inspec_execution_target }}
 
       Note: Connectivity will be validated by InSpec's sybase_session resource
-  when: inspec_debug_mode | default(false)
+  when: inspec_debug_mode | default(false) | bool
 
 - name: Execute Sybase InSpec profile via SSH
   shell: |
@@ -134,7 +134,7 @@
       Profile: {{ sybase_profile_path }}
       Exit Code: {{ sybase_final_results.rc }}
       Status: {{ 'PASS' if sybase_final_results.rc == 0 else 'CONTROLS FAILED' if sybase_final_results.rc in [100, 101] else 'ERROR' }}
-  when: inspec_debug_mode | default(false)
+  when: inspec_debug_mode | default(false) | bool
   delegate_to: "{{ inspec_execution_target }}"
 
 - name: Process Sybase InSpec results

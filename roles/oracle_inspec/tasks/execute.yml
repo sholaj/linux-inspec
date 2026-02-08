@@ -128,7 +128,7 @@
   loop_control:
     label: "{{ item.item.path | basename }}"
   when:
-    - inspec_debug_mode | default(false)
+    - inspec_debug_mode | default(false) | bool
   delegate_to: "{{ _delegate_host }}"
 
 - name: Process Oracle InSpec results

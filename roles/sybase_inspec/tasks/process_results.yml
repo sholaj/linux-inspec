@@ -49,6 +49,6 @@
           Error: {{ inspec_result.stderr | default('Unknown error') }}
           Result file: {{ sybase_result_file_name }}.json
       when:
-        - inspec_debug_mode | default(false)
+        - inspec_debug_mode | default(false) | bool
         - (inspec_result.rc | int) not in [0, 100, 101]
   delegate_to: "{{ inspec_execution_target }}"

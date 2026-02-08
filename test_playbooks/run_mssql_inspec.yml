@@ -65,13 +65,13 @@
           Debug mode: {{ enable_debug }}
           Batch size: {{ batch_size | default(5) }}
       run_once: true
-      when: enable_debug
+      when: enable_debug | default(false) | bool
 
   tasks:
     - name: Display current server being scanned
       debug:
         msg: "Scanning {{ mssql_server }}:{{ mssql_port }} (version {{ mssql_version }}) - Server-level scan"
-      when: enable_debug
+      when: enable_debug | default(false) | bool
 
     - name: Execute MSSQL InSpec compliance scan for server
       include_role:

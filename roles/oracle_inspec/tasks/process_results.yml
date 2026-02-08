@@ -34,7 +34,7 @@
     - name: Log successful Oracle execution
       debug:
         msg: "Oracle control {{ oracle_control_file_name }} completed with status: {{ oracle_inspec_status }}"
-      when: inspec_debug_mode | default(false)
+      when: inspec_debug_mode | default(false) | bool
   delegate_to: "{{ _delegate_host }}"
 
 - name: Handle failed Oracle InSpec execution
@@ -56,6 +56,6 @@
           Error: {{ item.stderr | default('Unknown Oracle error') }}
           Result file: {{ oracle_result_file_name }}.json
       when:
-        - inspec_debug_mode | default(false)
+        - inspec_debug_mode | default(false) | bool
         - (item.rc | int) not in [0, 100, 101]
   delegate_to: "{{ _delegate_host }}"

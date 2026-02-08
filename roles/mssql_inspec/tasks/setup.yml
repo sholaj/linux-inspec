@@ -37,7 +37,7 @@
 - name: Display control files count
   debug:
     msg: "Found {{ _control_files_found.files | length }} control file(s) for MSSQL {{ mssql_version }}"
-  when: inspec_debug_mode | default(false)
+  when: inspec_debug_mode | default(false) | bool
 
 # Copy control files to execution host with proper InSpec profile structure
 - name: Create temp directory on execution host
