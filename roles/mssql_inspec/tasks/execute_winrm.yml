@@ -54,7 +54,6 @@
       -t {{ _winrm_target }} \
       --user '{{ winrm_username }}' \
       --password '{{ winrm_password }}' \
-      --no-ssl \
       --reporter=json-min \
       --no-color \
       --chef-license=accept
