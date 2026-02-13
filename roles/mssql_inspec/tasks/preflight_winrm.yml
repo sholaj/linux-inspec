@@ -17,7 +17,7 @@
 # Note: Enterprise InSpec bundles train-winrm as a system plugin, so we must use
 # 'inspec plugin list' instead of 'gem list' which only shows standalone gems
 - name: "[WinRM Preflight] Verify train-winrm plugin installed"
-  shell: inspec plugin list | grep -q train-winrm
+  shell: inspec plugin list 2>/dev/null | grep -q train-winrm
   args:
     executable: /bin/bash
   register: _winrm_plugin_check
