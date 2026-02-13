@@ -142,6 +142,11 @@ A bare username (e.g., `svc_inspec`) will fail with `WinRM::WinRMAuthorizationEr
 
 **Note:** When `use_winrm: true`, InSpec connects directly to `mssql_server` using WinRM (port 5985) with AD credentials. No separate `winrm_host` is needed.
 
+**Command Format:**
+```bash
+inspec exec <profile> -t winrm://<server> --user '<user@domain.com>' --password '<password>'
+```
+
 ### Batch Processing Variables
 
 ```yaml
@@ -355,21 +360,32 @@ gem install inspec-bin -v 5.22.29
 sqlcmd -S server,port -U user -P password -Q "SELECT @@VERSION"
 ```
 
+### WinRM Authorization Error
+
+**Symptom:** `WinRM::WinRMAuthorizationError` despite valid credentials
+
+**Cause:** Username missing domain context
+
+**Solution:** Use UPN format for username:
+```bash
+# Wrong
+--user 'svc_inspec'
+
+# Correct
+--user 'svc_inspec@corp.example.com'
+```
+
 ### WinRM Connection Failed
 
 ```bash
 # Test WinRM connectivity from delegate host
-# Using curl (basic auth)
-curl -v http://sqlserver:5985/wsman
-
-# Using PowerShell (if available)
-Test-WSMan -ComputerName sqlserver
+inspec detect -t winrm://sqlserver --user 'user@domain.com' --password 'pass'
 
 # Common issues:
 # - Firewall blocking port 5985/5986
 # - WinRM service not running on target
 # - AD user not in Remote Management Users group
-# - TrustedHosts not configured on target
+# - Username missing domain (causes WinRMAuthorizationError)
 ```
 
 **WinRM Server Configuration (on Windows SQL Server):**
