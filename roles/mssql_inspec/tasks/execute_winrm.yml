@@ -26,10 +26,10 @@
     _inspec_bin: "{{ _inspec_check.stdout | trim }}"
 
 # Build WinRM connection string - connects directly to mssql_server
-# URL format: winrm://user@host (port 5985 is default, no need to specify)
+# URL format: winrm://host (username passed via --user flag to support UPN format)
 - name: "[WinRM Execute] Build WinRM target URL"
   set_fact:
-    _winrm_target: "winrm://{{ winrm_username }}@{{ mssql_server }}"
+    _winrm_target: "winrm://{{ mssql_server }}"
 
 - name: "[WinRM Execute] Display WinRM execution info"
   debug:
@@ -52,6 +52,7 @@
 
     "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
       -t {{ _winrm_target }} \
+      --user '{{ winrm_username }}' \
       --password '{{ winrm_password }}' \
       --input hostnm='localhost' \
               port='{{ mssql_port }}' \
