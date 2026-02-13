@@ -14,12 +14,8 @@
 #   - winrm_platform_detected: string - platform info from inspec detect
 
 # Step 1: Verify train-winrm plugin is installed
-# Note: Enterprise InSpec bundles train-winrm as a system plugin, so we must use
-# 'inspec plugin list' instead of 'gem list' which only shows standalone gems
-- name: "[WinRM Preflight] Verify train-winrm plugin installed"
-  shell: inspec plugin list | grep -i train-winrm
-  args:
-    executable: /bin/bash
+- name: "[WinRM Preflight] Get InSpec plugins"
+  command: inspec plugin list
   register: _winrm_plugin_check
   changed_when: false
   failed_when: false
@@ -30,7 +26,7 @@
     preflight_passed: false
     preflight_skip_reason: "train-winrm plugin is not installed on {{ _delegate_host }}. Install with: inspec plugin install train-winrm"
     preflight_error_code: "WINRM_PLUGIN_MISSING"
-  when: _winrm_plugin_check.rc != 0
+  when: "'train-winrm' not in _winrm_plugin_check.stdout"
 
 # Step 2: Test WinRM connectivity to SQL Server (only if plugin is installed)
 # Connects directly to mssql_server using AD credentials
@@ -50,7 +46,7 @@
   delegate_to: "{{ _delegate_host }}"
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
   timeout: 60
-  when: _winrm_plugin_check.rc == 0
+  when: "'train-winrm' in _winrm_plugin_check.stdout"
 
 - name: "[WinRM Preflight] Parse WinRM detection result"
   vars:
@@ -76,7 +72,7 @@
       WinRM connection failed to {{ mssql_server }} (exit code: {{ _winrm_detect.rc | default('unknown') }})
       {%- else -%}
       {%- endif -%}
-  when: _winrm_plugin_check.rc == 0
+  when: "'train-winrm' in _winrm_plugin_check.stdout"
 
 - name: "[WinRM Preflight] Set WinRM error details"
   vars:
@@ -99,14 +95,14 @@
       {%- else -%}
       {%- endif -%}
   when:
-    - _winrm_plugin_check.rc == 0
+    - "'train-winrm' in _winrm_plugin_check.stdout"
     - not (_winrm_connection_valid | default(false))
 
 # Step 3: Set final preflight result
 - name: "[WinRM Preflight] Set final preflight status"
   set_fact:
     preflight_passed: "{{ _winrm_connection_valid | default(false) }}"
-  when: _winrm_plugin_check.rc == 0
+  when: "'train-winrm' in _winrm_plugin_check.stdout"
 
 - name: "[WinRM Preflight] Display WinRM detection"
   debug:
