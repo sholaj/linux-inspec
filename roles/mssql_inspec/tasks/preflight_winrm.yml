@@ -34,14 +34,13 @@
 
 # Step 2: Test WinRM connectivity to SQL Server (only if plugin is installed)
 # Connects directly to mssql_server using AD credentials
+# URL format: winrm://user@host (port 5985 is default)
 - name: "[WinRM Preflight] Test WinRM/AD connectivity to SQL Server"
   shell: |
     export CHEF_LICENSE=accept
     inspec detect \
-      -t winrm://{{ winrm_username }}@{{ mssql_server }}:{{ winrm_port }} \
+      -t winrm://{{ winrm_username }}@{{ mssql_server }} \
       --password '{{ winrm_password }}' \
-      {% if winrm_ssl | default(false) | bool %}--ssl{% else %}--no-ssl{% endif %} \
-      {% if not (winrm_ssl_verify | default(true) | bool) %}--self-signed{% endif %} \
       2>&1
   args:
     executable: /bin/bash
@@ -50,7 +49,7 @@
   failed_when: false
   delegate_to: "{{ _delegate_host }}"
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
-  timeout: "{{ winrm_timeout | default(60) }}"
+  timeout: 60
   when: _winrm_plugin_check.rc == 0
 
 - name: "[WinRM Preflight] Parse WinRM detection result"
@@ -61,11 +60,11 @@
       {%- if _winrm_detect is skipped -%}
       train-winrm plugin check failed - skipped WinRM test
       {%- elif _winrm_detect.rc | default(0) == 124 -%}
-      WinRM connection timeout after {{ winrm_timeout | default(60) }}s to {{ mssql_server }}
+      WinRM connection timeout to {{ mssql_server }}
       {%- elif 'Connection refused' in (_winrm_detect.stderr | default('')) -%}
-      WinRM connection refused on {{ mssql_server }}:{{ winrm_port }}
+      WinRM connection refused on {{ mssql_server }}
       {%- elif 'Authentication failed' in (_winrm_detect.stderr | default('')) or 'Access is denied' in (_winrm_detect.stderr | default('')) -%}
-      AD authentication failed for user '{{ winrm_username }}' on {{ mssql_server }}
+      AD authentication failed for user '{{ winrm_username }}' on {{ mssql_server }}. Ensure username includes domain (user@domain.com)
       {%- elif 'getaddrinfo' in (_winrm_detect.stderr | default('')) or 'Name or service not known' in (_winrm_detect.stderr | default('')) -%}
       Cannot resolve hostname '{{ mssql_server }}'
       {%- elif 'Connection timed out' in (_winrm_detect.stderr | default('')) -%}
@@ -108,7 +107,7 @@
   debug:
     msg: |
       WinRM/AD Authentication Successful
-      Target: {{ mssql_server }}:{{ winrm_port }}
+      Target: {{ mssql_server }}
       Platform: {{ winrm_platform_detected }}
   when:
     - preflight_passed | default(false)

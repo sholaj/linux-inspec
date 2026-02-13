@@ -52,7 +52,7 @@
       {%- elif preflight_error_code == 'WINRM_AUTH_FAILED' -%}
       Verify AD credentials and GPO permissions for WinRM access
       {%- elif preflight_error_code == 'WINRM_CONNECTION_FAILED' -%}
-      Check WinRM service status and firewall rules for port {{ winrm_port | default(5985) }}
+      Check WinRM service status and firewall rules (port 5985)
       {%- elif preflight_error_code == 'DATABASE_NOT_FOUND' -%}
       Verify database '{{ mssql_database }}' exists and user has access
       {%- elif preflight_error_code == 'SQLCMD_NOT_FOUND' -%}

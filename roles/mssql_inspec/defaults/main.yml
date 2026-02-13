@@ -27,14 +27,14 @@ use_winrm: false
 # WinRM Configuration (Windows/AD Authentication)
 # ======================
 # Only used when use_winrm: true
-# WinRM connects directly to mssql_server using AD credentials
-# This allows scanning multiple SQL Servers with a single AD account
-winrm_port: 5985                  # WinRM HTTP port (or 5986 for HTTPS)
-winrm_username: ""                # AD username (DOMAIN\user or user@domain)
-winrm_password: ""                # AD password
-winrm_ssl: false                  # Use HTTPS (5986)
-winrm_ssl_verify: true            # Verify SSL certificate
-winrm_timeout: 60                 # Connection timeout (seconds)
+# Target URL format: winrm://hostname (port 5985 is default)
+#
+# IMPORTANT: Username MUST include domain for AD authentication
+# Use UPN format: username@domain.com (recommended)
+# Or down-level format: DOMAIN\\username
+# A bare username will fail with WinRM::WinRMAuthorizationError
+winrm_username: ""
+winrm_password: ""
 
 # ======================
 # Batch Processing
