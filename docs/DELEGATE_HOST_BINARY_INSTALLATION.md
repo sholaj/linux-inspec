@@ -180,15 +180,15 @@ inspec detect -t winrm://[AD_USER]@[WINDOWS_HOST] --password '[AD_PASSWORD]'
 ### Troubleshooting train-winrm
 
 ```bash
-# Check if plugin is installed
-inspec plugin list
+# Check if plugin is installed (correct method - works for both Enterprise and Community InSpec)
+inspec plugin list | grep train-winrm
+
+# NOTE: Do NOT use 'gem list train-winrm' - this only shows standalone gems,
+# not plugins bundled with Enterprise InSpec (shown as "gem (system)")
 
 # Reinstall if needed
 inspec plugin uninstall train-winrm
 inspec plugin install train-winrm
-
-# Check for gem conflicts
-gem list | grep -E '(winrm|train)'
 
 # Verbose connection test
 inspec detect -t winrm://[AD_USER]@[WINDOWS_HOST] --password '[AD_PASSWORD]' -l debug

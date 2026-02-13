@@ -13,12 +13,14 @@
 #   - preflight_error_code: string - error classification code
 #   - winrm_platform_detected: string - platform info from inspec detect
 
-# Step 1: Verify train-winrm gem is installed
-- name: "[WinRM Preflight] Verify train-winrm gem installed"
-  shell: gem list train-winrm | grep -q train-winrm
+# Step 1: Verify train-winrm plugin is installed
+# Note: Enterprise InSpec bundles train-winrm as a system plugin, so we must use
+# 'inspec plugin list' instead of 'gem list' which only shows standalone gems
+- name: "[WinRM Preflight] Verify train-winrm plugin installed"
+  shell: inspec plugin list | grep -q train-winrm
   args:
     executable: /bin/bash
-  register: _winrm_gem_check
+  register: _winrm_plugin_check
   changed_when: false
   failed_when: false
   delegate_to: "{{ _delegate_host }}"
@@ -26,11 +28,11 @@
 - name: "[WinRM Preflight] Fail if train-winrm not installed"
   set_fact:
     preflight_passed: false
-    preflight_skip_reason: "train-winrm gem is not installed on {{ _delegate_host }}. Install with: gem install train-winrm --no-document"
-    preflight_error_code: "WINRM_GEM_MISSING"
-  when: _winrm_gem_check.rc != 0
+    preflight_skip_reason: "train-winrm plugin is not installed on {{ _delegate_host }}. Install with: inspec plugin install train-winrm"
+    preflight_error_code: "WINRM_PLUGIN_MISSING"
+  when: _winrm_plugin_check.rc != 0
 
-# Step 2: Test WinRM connectivity to SQL Server (only if gem is installed)
+# Step 2: Test WinRM connectivity to SQL Server (only if plugin is installed)
 # Connects directly to mssql_server using AD credentials
 - name: "[WinRM Preflight] Test WinRM/AD connectivity to SQL Server"
   shell: |
@@ -49,7 +51,7 @@
   delegate_to: "{{ _delegate_host }}"
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
   timeout: "{{ winrm_timeout | default(60) }}"
-  when: _winrm_gem_check.rc == 0
+  when: _winrm_plugin_check.rc == 0
 
 - name: "[WinRM Preflight] Parse WinRM detection result"
   set_fact:
@@ -57,7 +59,7 @@
     winrm_platform_detected: "{{ _winrm_detect.stdout | default('') }}"
     _winrm_error_msg: >-
       {%- if _winrm_detect is skipped -%}
-      train-winrm gem check failed - skipped WinRM test
+      train-winrm plugin check failed - skipped WinRM test
       {%- elif _winrm_detect.rc | default(0) == 124 -%}
       WinRM connection timeout after {{ winrm_timeout | default(60) }}s to {{ mssql_server }}
       {%- elif 'Connection refused' in (_winrm_detect.stderr | default('')) -%}
@@ -72,7 +74,7 @@
       WinRM connection failed to {{ mssql_server }} (exit code: {{ _winrm_detect.rc | default('unknown') }})
       {%- else -%}
       {%- endif -%}
-  when: _winrm_gem_check.rc == 0
+  when: _winrm_plugin_check.rc == 0
 
 - name: "[WinRM Preflight] Set WinRM error details"
   set_fact:
@@ -93,14 +95,14 @@
       {%- else -%}
       {%- endif -%}
   when:
-    - _winrm_gem_check.rc == 0
+    - _winrm_plugin_check.rc == 0
     - not (_winrm_connection_valid | default(false))
 
 # Step 3: Set final preflight result
 - name: "[WinRM Preflight] Set final preflight status"
   set_fact:
     preflight_passed: "{{ _winrm_connection_valid | default(false) }}"
-  when: _winrm_gem_check.rc == 0
+  when: _winrm_plugin_check.rc == 0
 
 - name: "[WinRM Preflight] Display WinRM detection"
   debug:
