@@ -54,6 +54,7 @@
       -t {{ _winrm_target }} \
       --user '{{ winrm_username }}' \
       --password '{{ winrm_password }}' \
+      --input hostnm='localhost' port='{{ mssql_port }}' \
       --reporter=json-min \
       --no-color \
       --chef-license=accept
