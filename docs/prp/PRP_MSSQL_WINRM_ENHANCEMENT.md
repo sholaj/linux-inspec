@@ -272,11 +272,13 @@ retry_delay: 10
 # WinRM-specific preflight checks
 # Called from preflight.yml when use_winrm is true
 
-- name: "[WinRM Preflight] Verify train-winrm gem installed"
-  shell: gem list train-winrm | grep -q train-winrm
+# Note: Use 'inspec plugin list' instead of 'gem list' because
+# Enterprise InSpec bundles train-winrm as a system plugin
+- name: "[WinRM Preflight] Verify train-winrm plugin installed"
+  shell: inspec plugin list | grep -q train-winrm
   args:
     executable: /bin/bash
-  register: _winrm_gem_check
+  register: _winrm_plugin_check
   changed_when: false
   failed_when: false
   delegate_to: "{{ _delegate_host }}"
@@ -284,9 +286,9 @@ retry_delay: 10
 - name: "[WinRM Preflight] Fail if train-winrm not installed"
   fail:
     msg: |
-      train-winrm gem is not installed on {{ _delegate_host }}.
-      Install with: gem install train-winrm --no-document
-  when: _winrm_gem_check.rc != 0
+      train-winrm plugin is not installed on {{ _delegate_host }}.
+      Install with: inspec plugin install train-winrm
+  when: _winrm_plugin_check.rc != 0
 
 - name: "[WinRM Preflight] Test WinRM connectivity"
   shell: |

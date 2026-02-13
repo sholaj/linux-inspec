@@ -28,18 +28,24 @@ sudo /usr/bin/inspec plugin list
 head -1 $(which /usr/bin/inspec)
 ```
 
-#### Step 2: Check gem installation location
+#### Step 2: Check plugin installation
 
 ```bash
-# Where are gems installed?
+# IMPORTANT: Use 'inspec plugin list' instead of 'gem list'
+# Enterprise InSpec bundles plugins as system plugins that won't appear in gem list
+
+# Check installed plugins (correct method)
+inspec plugin list | grep train
+
+# Example output for Enterprise InSpec:
+# train-winrm  0.2.13  gem (system)  train-1
+# train-aws    0.2.0   gem (system)  train-1
+
+# For comparison, check gem environment
 gem environment
 
-# Look for:
-# - GEM HOME: /home/youruser/.gem/ruby/X.X.X
-# - GEM PATH: /home/youruser/.gem/ruby/X.X.X:/usr/local/lib/ruby/gems/X.X.X
-
-# Check if train-mssql is installed user-specific or system-wide
-gem list | grep train
+# NOTE: 'gem list | grep train' only shows standalone gem installs,
+# NOT plugins bundled with Enterprise InSpec (shown as "gem (system)")
 ```
 
 #### Step 3: Test InSpec execution with explicit paths
@@ -184,13 +190,19 @@ ansible-playbook test_train_plugin.yml -i inventories/production/hosts.yml --lim
 Once you've applied a solution, verify:
 
 ```bash
-# On delegate host
-sudo /usr/bin/inspec plugin list | grep -E "train-mssql|train-oracle|train-sybase"
+# On delegate host - use 'inspec plugin list' (NOT gem list)
+sudo /usr/bin/inspec plugin list | grep -E "train-mssql|train-oracle|train-sybase|train-winrm"
 
-# Expected output:
-# train-mssql, 0.x.x, gem (user)
-# train-oracle, 0.x.x, gem (user)
-# train-sybase, 0.x.x, gem (user)
+# Expected output for Enterprise InSpec (bundled plugins):
+# train-winrm   0.2.13  gem (system)  train-1
+
+# Expected output for Community InSpec (installed plugins):
+# train-mssql   0.x.x   gem (user)
+# train-oracle  0.x.x   gem (user)
+
+# NOTE: Enterprise InSpec shows "gem (system)" for bundled plugins
+# Community InSpec shows "gem (user)" for manually installed plugins
+# Both are detected correctly via 'inspec plugin list'
 
 # Test actual control execution
 sudo /usr/bin/inspec exec /tmp/ansible.*/MSSQL2019_ruby/trusted.rb \

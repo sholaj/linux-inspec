@@ -203,11 +203,18 @@ cat /tmp/compliance_scans/mssql/winrm/*.json | jq '.statistics'
 
 **Solution**:
 ```bash
-# Install on Linux runner
-gem install train-winrm --no-document
+# Check if already installed (correct method for both Enterprise and Community InSpec)
+inspec plugin list | grep train-winrm
+
+# Install on Linux runner if not found
+inspec plugin install train-winrm
 
 # Verify installation
-gem list train-winrm
+inspec plugin list | grep train-winrm
+# Expected output: train-winrm  0.2.13  gem (system)  train-1
+
+# NOTE: Do NOT use 'gem list train-winrm' - Enterprise InSpec bundles
+# train-winrm as a system plugin which won't appear in gem list output
 ```
 
 ### InSpec Profile Errors
