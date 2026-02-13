@@ -55,9 +55,6 @@
       --user '{{ winrm_username }}' \
       --password '{{ winrm_password }}' \
       --no-ssl \
-      --input hostnm='localhost' \
-              port='{{ mssql_port }}' \
-              servicenm='{{ mssql_service | default("") }}' \
       --reporter=json-min \
       --no-color \
       --chef-license=accept
