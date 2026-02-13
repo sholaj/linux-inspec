@@ -8,20 +8,18 @@ version: 1.0.0
 
 inputs:
   - name: usernm
-    description: MSSQL username
-    type: string
+    description: MSSQL username (optional for Windows Auth)
+    required: false
   - name: passwd
-    description: MSSQL password
+    description: MSSQL password (optional for Windows Auth)
     sensitive: true
-    type: string
+    required: false
   - name: hostnm
     description: MSSQL host address
-    type: string
+    value: localhost
   - name: port
     description: MSSQL port
-    type: numeric
     value: 1433
   - name: servicenm
-    description: MSSQL service/instance name
-    type: string
-    value: ""
+    description: MSSQL service/instance name (optional)
+    required: false
