@@ -54,6 +54,7 @@
       -t {{ _winrm_target }} \
       --user '{{ winrm_username }}' \
       --password '{{ winrm_password }}' \
+      --no-ssl \
       --input hostnm='localhost' \
               port='{{ mssql_port }}' \
               servicenm='{{ mssql_service | default("") }}' \

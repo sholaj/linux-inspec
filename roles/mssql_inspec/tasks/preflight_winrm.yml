@@ -38,6 +38,7 @@
       -t winrm://{{ mssql_server }} \
       --user '{{ winrm_username }}' \
       --password '{{ winrm_password }}' \
+      --no-ssl \
       2>&1
   args:
     executable: /bin/bash
