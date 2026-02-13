@@ -30,12 +30,13 @@
 
 # Step 2: Test WinRM connectivity to SQL Server (only if plugin is installed)
 # Connects directly to mssql_server using AD credentials
-# URL format: winrm://user@host (port 5985 is default)
+# URL format: winrm://host (username via --user flag to support UPN format)
 - name: "[WinRM Preflight] Test WinRM/AD connectivity to SQL Server"
   shell: |
     export CHEF_LICENSE=accept
     inspec detect \
-      -t winrm://{{ winrm_username }}@{{ mssql_server }} \
+      -t winrm://{{ mssql_server }} \
+      --user '{{ winrm_username }}' \
       --password '{{ winrm_password }}' \
       2>&1
   args:
