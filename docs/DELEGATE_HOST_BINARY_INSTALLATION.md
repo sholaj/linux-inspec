@@ -557,6 +557,29 @@ export CHEF_LICENSE="accept-silent"
 
 ## Troubleshooting
 
+### WinRM Authorization Error
+
+**Symptom**: `WinRM::WinRMAuthorizationError` despite confirmed network connectivity and valid credentials
+
+**Cause**: Username missing domain context. WinRM Negotiate authentication requires domain-qualified usernames.
+
+**Solution**: Use UPN format: `username@domain.com`
+
+```yaml
+# Wrong - missing domain context
+winrm_username: svc_inspec
+
+# Correct - UPN format (recommended)
+winrm_username: svc_inspec@corp.example.com
+
+# Correct - Down-level format
+winrm_username: "CORP\\svc_inspec"
+```
+
+See [WINRM_PREREQUISITES.md](WINRM_PREREQUISITES.md#winrm-username-format) for complete details.
+
+---
+
 ### "command not found" Errors
 
 ```bash

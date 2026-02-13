@@ -35,8 +35,8 @@ Authentication (Trusted Connection) for SQL Server access. This leverages the
 ```yaml
 use_winrm: true
 mssql_server: "sqlserver.example.com"  # Target SQL Server
-winrm_port: 5985
-winrm_username: "DOMAIN\\svc_inspec"   # AD service account
+# Username MUST include domain - use UPN format (recommended) or down-level
+winrm_username: "svc_inspec@corp.example.com"  # AD service account
 winrm_password: "{{ vault_ad_password }}"
 ```
 
@@ -130,15 +130,17 @@ splunk_hec_token: ""                     # Splunk HEC token
 
 ```yaml
 use_winrm: false                         # Enable WinRM/AD authentication mode
-winrm_port: 5985                         # WinRM HTTP port (5986 for HTTPS)
-winrm_username: ""                       # AD username (DOMAIN\user or user@domain)
+winrm_username: ""                       # AD username - MUST include domain
 winrm_password: ""                       # AD password
-winrm_ssl: false                         # Use HTTPS (port 5986)
-winrm_ssl_verify: true                   # Verify SSL certificate
-winrm_timeout: 60                        # Connection timeout (seconds)
 ```
 
-**Note:** When `use_winrm: true`, InSpec connects directly to `mssql_server` using WinRM with AD credentials. No separate `winrm_host` is needed.
+**Important:** Username MUST include domain context for AD authentication:
+- UPN format (recommended): `svc_inspec@corp.example.com`
+- Down-level format: `CORP\\svc_inspec`
+
+A bare username (e.g., `svc_inspec`) will fail with `WinRM::WinRMAuthorizationError`.
+
+**Note:** When `use_winrm: true`, InSpec connects directly to `mssql_server` using WinRM (port 5985) with AD credentials. No separate `winrm_host` is needed.
 
 ### Batch Processing Variables
 
@@ -294,9 +296,9 @@ all:
       vars:
         # WinRM/AD settings apply to all SQL Servers
         use_winrm: true
-        winrm_username: "CORP\\svc_inspec"  # AD service account
+        # Username MUST include domain (UPN format recommended)
+        winrm_username: "svc_inspec@corp.example.com"
         winrm_password: "{{ vault_ad_password }}"
-        winrm_port: 5985
         inspec_delegate_host: "inspec-runner"
 ```
 

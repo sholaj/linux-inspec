@@ -28,7 +28,7 @@ Error {{ loop.index }}:
 {{ error.error_code }}:
 {% if error.error_code == 'WINRM_CONNECTION_FAILED' %}
   - Verify WinRM is enabled on SQL Server: winrm quickconfig -force
-  - Check firewall rules for port {{ winrm_port | default(5985) }}
+  - Check firewall rules for port 5985
   - Verify AD credentials: winrm_username / winrm_password
   - Test manually: winrs -r:{{ error.mssql_server }} hostname
 {% elif error.error_code == 'WINRM_GEM_MISSING' %}
@@ -40,7 +40,6 @@ Error {{ loop.index }}:
   - Ensure AD account has WinRM access permissions on SQL Server
   - Verify AD account format: DOMAIN\user or user@domain.com
 {% elif error.error_code == 'WINRM_TIMEOUT' %}
-  - Increase winrm_timeout value (current: {{ winrm_timeout | default(60) }}s)
   - Check network latency to SQL Server
   - Verify WinRM service is running on SQL Server
 {% elif error.error_code == 'PORT_UNREACHABLE' %}

@@ -23,6 +23,26 @@ This guide covers the prerequisites and setup for running InSpec compliance scan
 
 **Key Insight**: InSpec runs on the Linux runner (delegate host), connects to Windows via WinRM (port 5985), and the `mssql_session` resource executes on the Windows target using built-in ADO.NET drivers to connect to SQL Server.
 
+## WinRM Username Format
+
+**IMPORTANT:** For Active Directory authentication, the username MUST include domain context. A bare username (e.g., `svc_inspec`) will fail with `WinRM::WinRMAuthorizationError`.
+
+| Format | Example | Notes |
+|--------|---------|-------|
+| **UPN (recommended)** | `svc_inspec@corp.example.com` | User Principal Name - most reliable |
+| **Down-level** | `CORP\\svc_inspec` | Escape backslash in YAML with `\\` |
+
+**Common Error:**
+```
+WinRM::WinRMAuthorizationError: WinRM authentication failed
+```
+
+**Cause:** Username missing domain context (e.g., `p882789` instead of `p882789@domain.com`)
+
+**Solution:** Use UPN format: `username@domain.com`
+
+---
+
 ## Inventory Pattern
 
 This implementation uses the **delegate host pattern** within the existing `mssql_databases` inventory group. Windows SQL Server hosts are identified by `use_winrm: true`:
@@ -41,7 +61,8 @@ mssql_databases:
       use_winrm: true
       winrm_host: 10.0.1.5
       winrm_port: 5985
-      winrm_username: azureadmin
+      # NOTE: Username MUST include domain - use UPN format (user@domain) or down-level (DOMAIN\\user)
+      winrm_username: azureadmin@corp.example.com
       winrm_password: "{{ lookup('env', 'WINDOWS_ADMIN_PASSWORD') }}"
 ```
 
@@ -196,6 +217,26 @@ cat /tmp/compliance_scans/mssql/winrm/*.json | jq '.statistics'
    # Reset SA password
    sqlcmd -S localhost -Q "ALTER LOGIN sa WITH PASSWORD = 'NewP@ssw0rd123!'"
    ```
+
+### WinRM Authorization Error
+
+**Symptom**: `WinRM::WinRMAuthorizationError` despite confirmed network connectivity and valid credentials
+
+**Cause**: Username missing domain context. The WinRM Negotiate authentication requires domain-qualified usernames.
+
+**Solution**: Use UPN format for the username:
+```yaml
+# Wrong - missing domain context
+winrm_username: p882789
+
+# Correct - UPN format (recommended)
+winrm_username: p882789@corp.example.com
+
+# Correct - Down-level format (escape backslash in YAML)
+winrm_username: "CORP\\p882789"
+```
+
+---
 
 ### train-winrm Not Found
 

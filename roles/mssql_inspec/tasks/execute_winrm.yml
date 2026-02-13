@@ -26,18 +26,16 @@
     _inspec_bin: "{{ _inspec_check.stdout | trim }}"
 
 # Build WinRM connection string - connects directly to mssql_server
+# URL format: winrm://user@host (port 5985 is default, no need to specify)
 - name: "[WinRM Execute] Build WinRM target URL"
   set_fact:
-    _winrm_target: "winrm://{{ winrm_username }}@{{ mssql_server }}:{{ winrm_port }}"
-    _winrm_ssl_flag: "{{ '--ssl' if (winrm_ssl | default(false) | bool) else '--no-ssl' }}"
-    _winrm_verify_flag: "{{ '--self-signed' if not (winrm_ssl_verify | default(true) | bool) else '' }}"
+    _winrm_target: "winrm://{{ winrm_username }}@{{ mssql_server }}"
 
 - name: "[WinRM Execute] Display WinRM execution info"
   debug:
     msg: |
       WinRM/AD Execution Configuration:
         Target: {{ _winrm_target }}
-        SSL: {{ winrm_ssl | default(false) }}
         AD User: {{ winrm_username }}
         SQL Server: {{ mssql_server }}:{{ mssql_port }}
         Database: {{ mssql_database }}
@@ -55,8 +53,6 @@
     "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
       -t {{ _winrm_target }} \
       --password '{{ winrm_password }}' \
-      {{ _winrm_ssl_flag }} \
-      {{ _winrm_verify_flag }} \
       --input hostnm='localhost' \
               port='{{ mssql_port }}' \
               servicenm='{{ mssql_service | default("") }}' \
