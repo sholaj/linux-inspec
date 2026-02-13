@@ -53,6 +53,9 @@
   when: _winrm_plugin_check.rc == 0
 
 - name: "[WinRM Preflight] Parse WinRM detection result"
+  vars:
+    # Combine stdout and stderr for error detection (Ruby errors go to stdout)
+    _detect_output: "{{ (_winrm_detect.stdout | default('')) + (_winrm_detect.stderr | default('')) }}"
   set_fact:
     _winrm_connection_valid: "{{ _winrm_detect.rc == 0 if _winrm_detect is defined and _winrm_detect.rc is defined else false }}"
     winrm_platform_detected: "{{ _winrm_detect.stdout | default('') }}"
@@ -61,13 +64,13 @@
       train-winrm plugin check failed - skipped WinRM test
       {%- elif _winrm_detect.rc | default(0) == 124 -%}
       WinRM connection timeout to {{ mssql_server }}
-      {%- elif 'Connection refused' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'Connection refused' in _detect_output -%}
       WinRM connection refused on {{ mssql_server }}
-      {%- elif 'Authentication failed' in (_winrm_detect.stderr | default('')) or 'Access is denied' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'WinRMAuthorizationError' in _detect_output or 'Authentication failed' in _detect_output or 'Access is denied' in _detect_output -%}
       AD authentication failed for user '{{ winrm_username }}' on {{ mssql_server }}. Ensure username includes domain (user@domain.com)
-      {%- elif 'getaddrinfo' in (_winrm_detect.stderr | default('')) or 'Name or service not known' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'getaddrinfo' in _detect_output or 'Name or service not known' in _detect_output -%}
       Cannot resolve hostname '{{ mssql_server }}'
-      {%- elif 'Connection timed out' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'Connection timed out' in _detect_output -%}
       WinRM connection timed out to {{ mssql_server }}
       {%- elif _winrm_detect.rc | default(0) != 0 -%}
       WinRM connection failed to {{ mssql_server }} (exit code: {{ _winrm_detect.rc | default('unknown') }})
@@ -76,18 +79,20 @@
   when: _winrm_plugin_check.rc == 0
 
 - name: "[WinRM Preflight] Set WinRM error details"
+  vars:
+    _detect_output: "{{ (_winrm_detect.stdout | default('')) + (_winrm_detect.stderr | default('')) }}"
   set_fact:
     preflight_skip_reason: "{{ _winrm_error_msg }}"
     preflight_error_code: >-
       {%- if _winrm_detect.rc | default(0) == 124 -%}
       WINRM_TIMEOUT
-      {%- elif 'Connection refused' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'Connection refused' in _detect_output -%}
       WINRM_CONNECTION_REFUSED
-      {%- elif 'Authentication failed' in (_winrm_detect.stderr | default('')) or 'Access is denied' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'WinRMAuthorizationError' in _detect_output or 'Authentication failed' in _detect_output or 'Access is denied' in _detect_output -%}
       WINRM_AUTH_FAILED
-      {%- elif 'getaddrinfo' in (_winrm_detect.stderr | default('')) or 'Name or service not known' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'getaddrinfo' in _detect_output or 'Name or service not known' in _detect_output -%}
       WINRM_HOST_UNREACHABLE
-      {%- elif 'Connection timed out' in (_winrm_detect.stderr | default('')) -%}
+      {%- elif 'Connection timed out' in _detect_output -%}
       WINRM_CONNECTION_TIMEOUT
       {%- elif _winrm_detect.rc | default(0) != 0 -%}
       WINRM_CONNECTION_FAILED
