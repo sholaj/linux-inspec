@@ -1,6 +1,13 @@
 ---
 # Setup tasks for MSSQL InSpec role
-# Control files are always copied to the execution host (_delegate_host)
+# Control files are copied ONCE per version to a fixed path, then reused
+# This avoids redundant copies when scanning multiple hosts
+
+# Set fixed paths (deterministic, not temp)
+- name: Set control paths
+  set_fact:
+    _local_controls_path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+    _remote_controls_path: "/tmp/inspec_mssql_{{ mssql_version }}"
 
 # Create results directory on execution host
 - name: Create results directory
@@ -10,77 +17,62 @@
     mode: "0755"
   delegate_to: "{{ _delegate_host }}"
 
-# Find control files on Ansible controller
-- name: Set local controls path
-  set_fact:
-    _local_controls_path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
-
-- name: Find control files for MSSQL version
-  find:
-    paths: "{{ _local_controls_path }}"
-    patterns: "*.rb"
-    recurse: true
-  register: _control_files_found
-  delegate_to: localhost
-
-- name: Check for inspec.yml profile metadata
+# Check if controls already exist on delegate (skip copy if present)
+- name: Check if controls already copied
   stat:
-    path: "{{ _local_controls_path }}/inspec.yml"
-  register: _inspec_yml_stat
-  delegate_to: localhost
+    path: "{{ _remote_controls_path }}/inspec.yml"
+  register: _controls_exist
+  delegate_to: "{{ _delegate_host }}"
 
-- name: Validate control files exist
-  fail:
-    msg: "No control files found in {{ _local_controls_path }}"
-  when: _control_files_found.files | length == 0
+# Only copy controls if not already present
+- name: Copy controls to delegate (once per version)
+  when: not _controls_exist.stat.exists
+  block:
+    - name: Find control files for MSSQL version
+      find:
+        paths: "{{ _local_controls_path }}"
+        patterns: "*.rb"
+        recurse: true
+      register: _control_files_found
+      delegate_to: localhost
 
-- name: Display control files count
+    - name: Validate control files exist
+      fail:
+        msg: "No control files found in {{ _local_controls_path }}"
+      when: _control_files_found.files | length == 0
+
+    - name: Create controls directory on delegate
+      file:
+        path: "{{ _remote_controls_path }}/controls"
+        state: directory
+        mode: "0755"
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Copy inspec.yml profile metadata
+      copy:
+        src: "{{ _local_controls_path }}/inspec.yml"
+        dest: "{{ _remote_controls_path }}/inspec.yml"
+        mode: "0644"
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Copy control files to delegate
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ _remote_controls_path }}/controls/"
+        mode: "0644"
+      loop: "{{ _control_files_found.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Display setup info
+      debug:
+        msg: "Copied {{ _control_files_found.files | length }} control(s) to {{ _remote_controls_path }}"
+      when: inspec_debug_mode | default(false) | bool
+
+- name: Display reuse info
   debug:
-    msg: "Found {{ _control_files_found.files | length }} control file(s) for MSSQL {{ mssql_version }}"
-  when: inspec_debug_mode | default(false) | bool
-
-# Copy control files to execution host with proper InSpec profile structure
-- name: Create temp directory on execution host
-  tempfile:
-    state: directory
-    prefix: inspec_controls_
-  register: _remote_dir
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Create controls subdirectory for InSpec profile structure
-  file:
-    path: "{{ _remote_dir.path }}/controls"
-    state: directory
-    mode: "0755"
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Copy inspec.yml profile metadata
-  copy:
-    src: "{{ _local_controls_path }}/inspec.yml"
-    dest: "{{ _remote_dir.path }}/inspec.yml"
-    mode: "0644"
-  delegate_to: "{{ _delegate_host }}"
-  when: _inspec_yml_stat.stat.exists
-
-- name: Copy control files to execution host
-  copy:
-    src: "{{ item.path }}"
-    dest: "{{ _remote_dir.path }}/controls/"
-    mode: "0644"
-  loop: "{{ _control_files_found.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Build remote control files list
-  set_fact:
-    _remote_files_list: "{{ _remote_files_list | default([]) + [{'path': _remote_dir.path + '/controls/' + (item.path | basename)}] }}"
-  loop: "{{ _control_files_found.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-
-- name: Set control files with remote paths
-  set_fact:
-    control_files:
-      files: "{{ _remote_files_list }}"
-    _remote_controls_path: "{{ _remote_dir.path }}"
+    msg: "Reusing existing controls at {{ _remote_controls_path }}"
+  when:
+    - _controls_exist.stat.exists
+    - inspec_debug_mode | default(false) | bool
