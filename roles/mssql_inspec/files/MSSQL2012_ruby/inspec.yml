@@ -1,35 +1,30 @@
 name: mssql2012-compliance
-title: MSSQL 2012 NIST Compliance
+title: MSSQL 2012 CIS Compliance
 maintainer: DevOps Team
 copyright: Internal
 license: Proprietary
-summary: MSSQL 2012 NIST compliance controls
-version: 1.0.0
+summary: MSSQL 2012 CIS Benchmark compliance controls
+version: 3.0.0
 inspec_version: ">= 5.0"
 
 inputs:
-  - name: hostnm
-    description: MSSQL server hostname or IP address
-    type: String
-    required: true
-
-  - name: port
-    description: MSSQL server port
-    type: Numeric
-    value: 1433
-
   - name: usernm
-    description: MSSQL username for authentication
-    type: String
-    required: true
+    description: MSSQL username (optional for Windows Auth)
+    required: false
 
   - name: passwd
-    description: MSSQL password for authentication
-    type: String
-    required: true
+    description: MSSQL password (optional for Windows Auth)
     sensitive: true
+    required: false
+
+  - name: hostnm
+    description: MSSQL host address
+    value: localhost
+
+  - name: port
+    description: MSSQL port
+    value: 1433
 
   - name: servicenm
-    description: MSSQL named instance (leave empty for default instance)
-    type: String
-    value: ""
+    description: MSSQL service/instance name (optional)
+    required: false
