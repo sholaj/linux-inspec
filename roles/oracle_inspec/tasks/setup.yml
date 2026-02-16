@@ -1,6 +1,13 @@
 ---
 # Setup tasks for Oracle InSpec execution
-# Control files are always copied to the execution host (_delegate_host)
+# Control files are copied ONCE per version to a fixed path, then reused
+
+# Set fixed paths (deterministic, not temp)
+- name: Set control paths
+  set_fact:
+    _local_controls_path: "{{ role_path }}/files/ORACLE{{ oracle_version }}_ruby"
+    oracle_controls_base_dir: "/tmp/inspec_oracle_{{ oracle_version }}"
+  cacheable: yes
 
 - name: Create Oracle results directory
   file:
@@ -9,70 +16,58 @@
     mode: "0755"
   delegate_to: "{{ _delegate_host }}"
 
-# Find control files on Ansible controller
-- name: Set local controls path
-  set_fact:
-    _local_controls_path: "{{ role_path }}/files/ORACLE{{ oracle_version }}_ruby"
+# Check if controls already exist on delegate (skip copy if present)
+- name: Check if controls already copied
+  stat:
+    path: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby/inspec.yml"
+  register: _controls_exist
+  delegate_to: "{{ _delegate_host }}"
 
-- name: Find control files for Oracle version
-  find:
-    paths: "{{ _local_controls_path }}"
-    patterns: "*.rb"
-    recurse: true
-  register: oracle_control_files
-  delegate_to: localhost
+# Only copy controls if not already present
+- name: Copy controls to delegate (once per version)
+  when: not _controls_exist.stat.exists
+  block:
+    - name: Find control files for Oracle version
+      find:
+        paths: "{{ _local_controls_path }}"
+        patterns: "*.rb,*.yml"
+        recurse: true
+      register: oracle_control_files
+      delegate_to: localhost
 
-- name: Validate control files exist
-  fail:
-    msg: "No control files found in {{ _local_controls_path }}"
-  when: oracle_control_files.files | length == 0
+    - name: Validate control files exist
+      fail:
+        msg: "No control files found in {{ _local_controls_path }}"
+      when: oracle_control_files.files | length == 0
 
-- name: Display control files count
+    - name: Create Oracle controls directory on delegate
+      file:
+        path: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
+        state: directory
+        mode: "0755"
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Copy Oracle control files to delegate
+      copy:
+        src: "{{ item.path }}"
+        dest: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby/"
+        mode: "0644"
+      loop: "{{ oracle_control_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      delegate_to: "{{ _delegate_host }}"
+
+    - name: Display setup info
+      debug:
+        msg: "Copied {{ oracle_control_files.files | length }} control(s) to {{ oracle_controls_base_dir }}"
+      when: inspec_debug_mode | default(false) | bool
+
+- name: Display reuse info
   debug:
-    msg: "Found {{ oracle_control_files.files | length }} control file(s) for Oracle {{ oracle_version }}"
-  when: inspec_debug_mode | default(false) | bool
-
-# Copy control files to execution host
-- name: Create temp directory on execution host
-  tempfile:
-    state: directory
-    prefix: inspec_oracle_
-    suffix: _controls
-  register: oracle_temp_dir
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Create Oracle subdirectory for control structure
-  file:
-    path: "{{ oracle_temp_dir.path }}/ORACLE{{ oracle_version }}_ruby"
-    state: directory
-    mode: "0755"
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Copy Oracle control files to execution host
-  copy:
-    src: "{{ item.path }}"
-    dest: "{{ oracle_temp_dir.path }}/ORACLE{{ oracle_version }}_ruby/"
-    mode: "0644"
-  loop: "{{ oracle_control_files.files }}"
-  loop_control:
-    label: "{{ item.path | basename }}"
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Set oracle_controls_base_dir for execution
-  set_fact:
-    oracle_controls_base_dir: "{{ oracle_temp_dir.path }}"
-    cacheable: yes
-
-- name: Display Oracle control files to be executed
-  debug:
-    msg: |
-      Oracle {{ oracle_version }} controls to execute:
-      {% for file in oracle_control_files.files %}
-      - {{ file.path | basename }}
-      {% endfor %}
-      Total controls: {{ oracle_control_files.files | length }}
-      Location: {{ oracle_controls_base_dir }}
-  when: inspec_debug_mode | default(false) | bool
+    msg: "Reusing existing controls at {{ oracle_controls_base_dir }}"
+  when:
+    - _controls_exist.stat.exists
+    - inspec_debug_mode | default(false) | bool
 
 # TNS Configuration Support
 - name: Setup TNS configuration (when oracle_use_tns is enabled)
