@@ -49,9 +49,10 @@ winrm_password: ""
 #   - Timeout: 3600 (1 hour per slice)
 #   - Instance Groups: Multiple execution nodes
 #
-# Throttle controls max concurrent scans from this role
-# Set lower than forks to prevent delegate host overload
-scan_throttle: 10                 # Max concurrent scans (0 = unlimited)
+# Concurrency is controlled at playbook level via 'serial' setting
+# For AAP2, use Job Slicing for large-scale parallel execution
+# scan_throttle is kept for reference but not used at role level
+scan_throttle: 10                 # Reference value for playbook serial setting
 
 # ======================
 # Batch Processing

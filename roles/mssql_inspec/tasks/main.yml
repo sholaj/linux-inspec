@@ -118,11 +118,9 @@
   tags: setup
 
 # Step 6: Execute InSpec scans (only if preflight passed)
-# Throttle controls max concurrent scans to prevent delegate host overload
 - name: Execute InSpec compliance scans
   include_tasks: execute.yml
   when: preflight_passed
-  throttle: "{{ scan_throttle | default(10) }}"
   tags: execute
 
 # Step 7: Cleanup and reporting (always runs - reports skipped databases too)
