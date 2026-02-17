@@ -96,7 +96,6 @@ Minimum database permissions for InSpec compliance scanning.
 - Oracle: SELECT_CATALOG_ROLE, SELECT ANY DICTIONARY
 - SQL Server: VIEW SERVER STATE, VIEW ANY DATABASE, VIEW ANY DEFINITION
 - Sybase ASE: SELECT on system tables (no administrative roles)
-- PostgreSQL: pg_read_all_settings (or basic login)
 - Security best practices for service accounts
 - Permission verification scripts
 - CIS benchmark references
