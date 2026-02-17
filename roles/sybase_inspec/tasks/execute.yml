@@ -16,30 +16,30 @@
 # Note: _delegate_host is set in main.yml - do not duplicate here
 
 - name: Gather environment facts from execution target
-  setup:
+  ansible.builtin.setup:
     gather_subset:
       - env
   delegate_to: "{{ _delegate_host }}"
   delegate_facts: true
 
 - name: Set target environment from execution host
-  set_fact:
+  ansible.builtin.set_fact:
     _target_env: "{{ hostvars[_delegate_host].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
 
 - name: Get system PATH from delegate host if not available in facts
-  shell: echo "$PATH"
+  ansible.builtin.shell: echo "$PATH"
   register: delegate_system_path
   changed_when: false
   delegate_to: "{{ _delegate_host }}"
   when: not (_target_env.PATH | default('')) or (_target_env.PATH | default('')) == ''
 
 - name: Update target environment with system PATH
-  set_fact:
+  ansible.builtin.set_fact:
     _target_env: "{{ _target_env | combine({'PATH': delegate_system_path.stdout}) }}"
   when: delegate_system_path.stdout is defined
 
 - name: Build environment variables
-  set_fact:
+  ansible.builtin.set_fact:
     sybase_environment:
       PATH: "{{ sybase_environment_base.PATH }}{% if _target_env.PATH | default('') %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}{% if _target_env.LD_LIBRARY_PATH | default('') %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
@@ -48,7 +48,7 @@
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
 
 - name: Display execution info
-  debug:
+  ansible.builtin.debug:
     msg: |
       Sybase InSpec Execution Configuration
       =====================================
@@ -62,7 +62,7 @@
   when: inspec_debug_mode | default(false) | bool
 
 - name: Execute Sybase InSpec profile via SSH
-  shell: |
+  ansible.builtin.shell: |
     # Source Sybase environment
     source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
 
@@ -86,7 +86,7 @@
   when: sybase_use_ssh | default(true)
 
 - name: Execute InSpec profile (direct mode)
-  shell: |
+  ansible.builtin.shell: |
     # Source Sybase environment
     source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
 
@@ -108,11 +108,11 @@
   when: not (sybase_use_ssh | default(true))
 
 - name: Set results variable for processing
-  set_fact:
+  ansible.builtin.set_fact:
     sybase_final_results: "{{ (sybase_use_ssh | default(true)) | ternary(sybase_inspec_results | default({}), sybase_inspec_results_direct | default({})) }}"
 
 - name: Display execution summary (debug mode only)
-  debug:
+  ansible.builtin.debug:
     msg:
       - "Sybase InSpec Execution Summary"
       - "==============================="
@@ -128,7 +128,7 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Process Sybase InSpec results
-  include_tasks: process_results.yml
+  ansible.builtin.include_tasks: process_results.yml
   vars:
     inspec_result: "{{ sybase_final_results }}"
     profile_name: "sybase-16-cis"

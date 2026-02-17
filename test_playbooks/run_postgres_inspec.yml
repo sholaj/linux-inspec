@@ -25,7 +25,7 @@
 
   pre_tasks:
     - name: Gather controller facts for timestamps
-      setup:
+      ansible.builtin.setup:
         gather_subset:
           - min
           - hardware
@@ -37,12 +37,12 @@
       register: controller_facts
 
     - name: Set controller time fact
-      set_fact:
+      ansible.builtin.set_fact:
         controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
       run_once: true
 
     - name: Ensure base results directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ base_results_dir }}"
         state: directory
         mode: "0755"
@@ -50,7 +50,7 @@
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Display PostgreSQL scan configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           PostgreSQL InSpec Compliance Scans Starting
           ============================================
@@ -64,12 +64,12 @@
 
   tasks:
     - name: Display current PostgreSQL database being scanned
-      debug:
+      ansible.builtin.debug:
         msg: "Scanning PostgreSQL {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }} (version {{ postgres_version }})"
       when: enable_debug | bool
 
     - name: Execute PostgreSQL InSpec compliance scan for database
-      include_role:
+      ansible.builtin.include_role:
         name: postgres_inspec
       vars:
         inspec_results_dir: "{{ base_results_dir }}/{{ postgres_server | replace('.', '_') }}_{{ postgres_database }}_{{ scan_timestamp }}"
@@ -81,7 +81,7 @@
     - name: Generate PostgreSQL consolidated report
       block:
         - name: Find all PostgreSQL JSON result files
-          find:
+          ansible.builtin.find:
             paths: "{{ base_results_dir }}"
             patterns: "POSTGRES_NIST_*.json"
             recurse: yes
@@ -90,7 +90,7 @@
           run_once: true
 
         - name: Display PostgreSQL scan completion summary
-          debug:
+          ansible.builtin.debug:
             msg: |
               =====================================
               PostgreSQL Compliance Scan Complete

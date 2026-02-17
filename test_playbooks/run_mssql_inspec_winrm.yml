@@ -40,37 +40,37 @@
       when: not (use_winrm | default(false) | bool)
 
     - name: Display delegate host info
-      debug:
+      ansible.builtin.debug:
         msg: "Will delegate InSpec execution to: {{ inspec_delegate_host }}"
 
     - name: Verify InSpec is installed on delegate
-      command: inspec version
+      ansible.builtin.command: inspec version
       register: inspec_version_check
       changed_when: false
       failed_when: inspec_version_check.rc != 0
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Display InSpec version
-      debug:
+      ansible.builtin.debug:
         msg: "InSpec version on {{ inspec_delegate_host }}: {{ inspec_version_check.stdout }}"
       when: enable_debug
 
     - name: Ensure results directory exists on delegate
-      file:
+      ansible.builtin.file:
         path: "{{ delegate_results_dir }}"
         state: directory
         mode: "0755"
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Verify InSpec profile exists on delegate
-      stat:
+      ansible.builtin.stat:
         path: "{{ delegate_profile_path }}/inspec.yml"
       register: profile_check
       delegate_to: "{{ inspec_delegate_host }}"
       failed_when: not profile_check.stat.exists
 
     - name: Display scan configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           =====================================
           Starting WinRM MSSQL Compliance Scan
@@ -89,7 +89,7 @@
 
   tasks:
     - name: Test WinRM connectivity from delegate host
-      command: >
+      ansible.builtin.command: >
         inspec detect
         -t winrm://{{ winrm_username }}@{{ winrm_host }}:{{ winrm_port }}
         --password '{{ winrm_password }}'
@@ -101,20 +101,20 @@
       no_log: true
 
     - name: Display WinRM detection results
-      debug:
+      ansible.builtin.debug:
         msg: |
           WinRM Detection from {{ inspec_delegate_host }}:
           {{ winrm_detect.stdout }}
       when: enable_debug
 
     - name: Set result file paths
-      set_fact:
+      ansible.builtin.set_fact:
         json_results_file: "{{ delegate_results_dir }}/{{ inventory_hostname }}_{{ scan_timestamp }}.json"
         html_results_file: "{{ delegate_results_dir }}/{{ inventory_hostname }}_{{ scan_timestamp }}.html"
         cli_results_file: "{{ delegate_results_dir }}/{{ inventory_hostname }}_{{ scan_timestamp }}.txt"
 
     - name: Execute InSpec MSSQL compliance scan via WinRM from delegate
-      shell: |
+      ansible.builtin.shell: |
         export CHEF_LICENSE=accept
 
         # Set MSSQL connection environment variables for InSpec
@@ -153,7 +153,7 @@
       no_log: false
 
     - name: Display InSpec execution results
-      debug:
+      ansible.builtin.debug:
         msg: |
           InSpec Execution Results (from {{ inspec_delegate_host }}):
           {{ inspec_result.stdout_lines | default([]) | join('\n') }}
@@ -161,7 +161,7 @@
 
   post_tasks:
     - name: Check if JSON results file exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ json_results_file }}"
       register: json_file_check
       delegate_to: "{{ inspec_delegate_host }}"
@@ -169,17 +169,17 @@
     - name: Parse InSpec results
       block:
         - name: Read JSON results
-          slurp:
+          ansible.builtin.slurp:
             src: "{{ json_results_file }}"
           register: json_content
           delegate_to: "{{ inspec_delegate_host }}"
 
         - name: Parse JSON content
-          set_fact:
+          ansible.builtin.set_fact:
             inspec_results: "{{ json_content.content | b64decode | from_json }}"
 
         - name: Display scan summary
-          debug:
+          ansible.builtin.debug:
             msg: |
               =====================================
               WinRM MSSQL Compliance Scan Complete
@@ -204,14 +204,14 @@
       when: json_file_check.stat.exists
 
     - name: List all result files on delegate
-      find:
+      ansible.builtin.find:
         paths: "{{ delegate_results_dir }}"
         patterns: "*{{ scan_timestamp }}*"
       register: result_files
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Display result files
-      debug:
+      ansible.builtin.debug:
         msg: |
           Generated result files on {{ inspec_delegate_host }}:
           {% for f in result_files.files %}

@@ -22,7 +22,7 @@
     timestamp: "{{ lookup('pipe', 'date +%Y%m%d_%H%M%S') }}"
   tasks:
     - name: Display execution parameters
-      debug:
+      ansible.builtin.debug:
         msg: |
           ╔══════════════════════════════════════════════════════════════╗
           ║         DATABASE COMPLIANCE SCANNING - {{ execution_mode | upper }}
@@ -33,7 +33,7 @@
           ╚══════════════════════════════════════════════════════════════╝
 
     - name: Create results directories
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         mode: '0755'
@@ -44,10 +44,9 @@
       delegate_to: "{{ 'inspec-runner' if execution_mode == 'delegate' else 'localhost' }}"
 
     - name: Set execution facts
-      set_fact:
+      ansible.builtin.set_fact:
         scan_timestamp: "{{ timestamp }}"
         scan_mode: "{{ execution_mode }}"
-      cacheable: yes
 
 # =====================================================
 # MSSQL COMPLIANCE SCAN
@@ -62,7 +61,7 @@
 
   pre_tasks:
     - name: "[MSSQL] Validate credentials"
-      assert:
+      ansible.builtin.assert:
         that:
           - mssql_server is defined and mssql_server | length > 0
           - mssql_username is defined
@@ -71,7 +70,7 @@
         quiet: yes
 
     - name: "[MSSQL] Test network connectivity"
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ mssql_server }}"
         port: "{{ mssql_port }}"
         timeout: 10
@@ -80,7 +79,7 @@
       delegate_to: "{{ inspec_delegate_host if inspec_delegate_host != 'localhost' else omit }}"
 
     - name: "[MSSQL] Display status"
-      debug:
+      ansible.builtin.debug:
         msg: "MSSQL {{ mssql_server }}:{{ mssql_port }} - {{ 'REACHABLE' if mssql_network is succeeded else 'UNREACHABLE' }}"
 
   roles:
@@ -89,7 +88,7 @@
 
   post_tasks:
     - name: "[MSSQL] Scan complete"
-      debug:
+      ansible.builtin.debug:
         msg: "MSSQL scan completed for {{ mssql_server }}"
       when: mssql_network is succeeded
 
@@ -106,7 +105,7 @@
 
   pre_tasks:
     - name: "[ORACLE] Validate credentials"
-      assert:
+      ansible.builtin.assert:
         that:
           - oracle_server is defined and oracle_server | length > 0
           - oracle_username is defined
@@ -115,7 +114,7 @@
         quiet: yes
 
     - name: "[ORACLE] Test network connectivity"
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ oracle_server }}"
         port: "{{ oracle_port }}"
         timeout: 10
@@ -124,7 +123,7 @@
       delegate_to: "{{ inspec_delegate_host if inspec_delegate_host != 'localhost' else omit }}"
 
     - name: "[ORACLE] Display status"
-      debug:
+      ansible.builtin.debug:
         msg: "Oracle {{ oracle_server }}:{{ oracle_port }} - {{ 'REACHABLE' if oracle_network is succeeded else 'UNREACHABLE' }}"
 
   roles:
@@ -133,7 +132,7 @@
 
   post_tasks:
     - name: "[ORACLE] Scan complete"
-      debug:
+      ansible.builtin.debug:
         msg: "Oracle scan completed for {{ oracle_server }}"
       when: oracle_network is succeeded
 
@@ -150,7 +149,7 @@
 
   pre_tasks:
     - name: "[SYBASE] Validate credentials"
-      assert:
+      ansible.builtin.assert:
         that:
           - sybase_server is defined and sybase_server | length > 0
           - sybase_username is defined
@@ -159,7 +158,7 @@
         quiet: yes
 
     - name: "[SYBASE] Test network connectivity"
-      wait_for:
+      ansible.builtin.wait_for:
         host: "{{ sybase_server }}"
         port: "{{ sybase_port }}"
         timeout: 10
@@ -168,7 +167,7 @@
       delegate_to: "{{ inspec_delegate_host if inspec_delegate_host != 'localhost' else omit }}"
 
     - name: "[SYBASE] Display status"
-      debug:
+      ansible.builtin.debug:
         msg: "Sybase {{ sybase_server }}:{{ sybase_port }} - {{ 'REACHABLE' if sybase_network is succeeded else 'UNREACHABLE' }}"
 
   roles:
@@ -177,7 +176,7 @@
 
   post_tasks:
     - name: "[SYBASE] Scan complete"
-      debug:
+      ansible.builtin.debug:
         msg: "Sybase scan completed for {{ sybase_server }}"
       when: sybase_network is succeeded
 
@@ -191,7 +190,7 @@
     execution_mode: "{{ execution_mode | default('localhost') }}"
   tasks:
     - name: Collect results from delegate host
-      find:
+      ansible.builtin.find:
         paths: /tmp/compliance_scans
         patterns: "*.json"
         recurse: yes
@@ -199,7 +198,7 @@
       delegate_to: "{{ 'inspec-runner' if execution_mode == 'delegate' else omit }}"
 
     - name: Display summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           ╔══════════════════════════════════════════════════════════════╗
           ║                    SCAN SUMMARY                              ║
@@ -210,7 +209,7 @@
           ╚══════════════════════════════════════════════════════════════╝
 
     - name: List result files
-      debug:
+      ansible.builtin.debug:
         msg: "{{ item.path }}"
       loop: "{{ result_files.files }}"
       loop_control:

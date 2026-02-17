@@ -7,7 +7,7 @@
 
 # Ensure results directory exists (needed for both scan and skip reports)
 - name: Ensure results directory exists
-  file:
+  ansible.builtin.file:
     path: "{{ inspec_results_dir }}"
     state: directory
     mode: "0755"
@@ -17,14 +17,14 @@
 - name: Generate skip report for failed preflight
   block:
     - name: Create skip report
-      template:
+      ansible.builtin.template:
         src: skip_report.j2
         dest: "{{ inspec_results_dir }}/SKIPPED_{{ sybase_server | replace('.', '_') }}_{{ sybase_database }}_{{ ansible_date_time.epoch }}.json"
         mode: "0644"
       delegate_to: "{{ _delegate_host }}"
 
     - name: Display skip summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           ═══════════════════════════════════════════════════════════════════
            DATABASE SKIPPED - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }}
@@ -41,18 +41,18 @@
 - name: Generate and display Sybase summary report
   block:
     - name: Generate Sybase summary report
-      template:
+      ansible.builtin.template:
         src: sybase_summary_report.j2
         dest: "{{ inspec_results_dir }}/sybase_summary_{{ ansible_date_time.epoch }}.txt"
       register: sybase_summary_report_result
 
     - name: Read Sybase summary report content
-      slurp:
+      ansible.builtin.slurp:
         src: "{{ sybase_summary_report_result.dest }}"
       register: sybase_summary_content
 
     - name: Display Sybase summary report
-      debug:
+      ansible.builtin.debug:
         msg: "{{ sybase_summary_content.content | b64decode }}"
   when:
     - preflight_passed | default(true)
@@ -63,7 +63,7 @@
 
 # Splunk integration - send scan results (only for successful scans)
 - name: Send Sybase results to Splunk (if enabled)
-  include_tasks: splunk_integration.yml
+  ansible.builtin.include_tasks: splunk_integration.yml
   vars:
     inspec_result_json: "{{ sybase_final_results.stdout | default('') }}"
   when:
@@ -75,7 +75,7 @@
 
 # Splunk integration - send skip notification
 - name: Send skip notification to Splunk
-  uri:
+  ansible.builtin.uri:
     url: "{{ splunk_hec_url }}"
     method: POST
     headers:
@@ -108,7 +108,7 @@
 
 # Clean up SSH private key (only for successful scans or when SSH was used)
 - name: Clean up SSH private key
-  file:
+  ansible.builtin.file:
     path: "{{ sybase_ssh_key_path }}"
     state: absent
   when:
@@ -120,7 +120,7 @@
 
 # Clean up temporary files (only for successful scans)
 - name: Clean up Sybase temporary files
-  file:
+  ansible.builtin.file:
     path: "{{ sybase_temp_dir.path }}"
     state: absent
   when:
@@ -130,7 +130,7 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Clean up Sybase control files directory (remote delegate only)
-  file:
+  ansible.builtin.file:
     path: "{{ delegate_controls_dir.path }}"
     state: absent
   when:
@@ -142,7 +142,7 @@
 
 # Display completion summary (only for successful scans)
 - name: Display Sybase scan completion summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       Sybase {{ sybase_version }} compliance scan completed
       ====================================================

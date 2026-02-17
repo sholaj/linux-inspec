@@ -9,7 +9,7 @@
 
 # Step 0: Determine execution mode (set once, use everywhere)
 - name: Determine execution mode
-  set_fact:
+  ansible.builtin.set_fact:
     # Use delegate if a remote host is specified (not empty, not 'localhost', not inventory_hostname)
     _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
     # Delegate host: remote host if specified, otherwise run on inventory host
@@ -18,13 +18,13 @@
   tags: always
 
 - name: Display execution mode
-  debug:
+  ansible.builtin.debug:
     msg: "Execution mode: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate else 'LOCALHOST (target host)' }}"
   when: inspec_debug_mode | default(false) | bool
   tags: always
 
 - name: Sybase InSpec Compliance Scan Starting
-  debug:
+  ansible.builtin.debug:
     msg: |
       Sybase InSpec Compliance Scan
       ===============================
@@ -40,11 +40,11 @@
       Note: This role includes SSH tunnel support.
 
 - name: Validate Sybase connection parameters and environment
-  include_tasks: validate.yml
+  ansible.builtin.include_tasks: validate.yml
 
 # Step 1: Pre-flight connectivity checks
 - name: Run pre-flight connectivity checks
-  include_tasks: preflight.yml
+  ansible.builtin.include_tasks: preflight.yml
   when: preflight_enabled | default(true)
   tags: [preflight, always]
 
@@ -52,7 +52,7 @@
 - name: Handle preflight failure
   block:
     - name: Display skip notification
-      debug:
+      ansible.builtin.debug:
         msg: |
           ╔══════════════════════════════════════════════════════════════════╗
           ║  SKIPPING DATABASE - Pre-flight check failed                     ║
@@ -65,13 +65,13 @@
           ╚══════════════════════════════════════════════════════════════════╝
 
     - name: Fail if continue_on_failure is disabled
-      fail:
+      ansible.builtin.fail:
         msg: "Pre-flight check failed: {{ preflight_skip_reason }} [{{ preflight_error_code }}]. Set preflight_continue_on_failure=true to skip and continue."
       when: not (preflight_continue_on_failure | default(true))
 
     # Generate skip report and cleanup even when skipping
     - name: Generate skip report and cleanup
-      include_tasks: cleanup.yml
+      ansible.builtin.include_tasks: cleanup.yml
   when:
     - preflight_enabled | default(true)
     - not preflight_passed
@@ -79,7 +79,7 @@
 
 # Step 3: Setup SSH connection for Sybase (if enabled, only if preflight passed)
 - name: Setup SSH connection for Sybase (if enabled)
-  include_tasks: ssh_setup.yml
+  ansible.builtin.include_tasks: ssh_setup.yml
   when:
     - preflight_passed | default(true)
     - sybase_use_ssh | default(true)
@@ -87,23 +87,23 @@
 
 # Step 4: Setup - prepare directories and control files (only if preflight passed)
 - name: Setup directories and find Sybase control files
-  include_tasks: setup.yml
+  ansible.builtin.include_tasks: setup.yml
   when: preflight_passed | default(true)
   tags: setup
 
 # Step 5: Execute InSpec scans (only if preflight passed)
 - name: Execute Sybase InSpec controls and process results
-  include_tasks: execute.yml
+  ansible.builtin.include_tasks: execute.yml
   when: preflight_passed | default(true)
   tags: execute
 
 # Step 6: Cleanup and reporting (always runs - reports skipped databases too)
 - name: Generate reports and cleanup
-  include_tasks: cleanup.yml
+  ansible.builtin.include_tasks: cleanup.yml
   tags: cleanup
 
 - name: Sybase InSpec Compliance Scan Complete
-  debug:
+  ansible.builtin.debug:
     msg: |
       [OK] Sybase InSpec scan completed successfully!
       Results directory: {{ inspec_results_dir }}

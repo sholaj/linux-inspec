@@ -2,18 +2,18 @@
 # Oracle result processing tasks
 
 - name: Set Oracle result file names (matching original script pattern)
-  set_fact:
+  ansible.builtin.set_fact:
     oracle_control_file_name: "{{ oracle_control_files.files[idx].path | basename | regex_replace('\\.rb$', '') }}"
     oracle_timestamp: "{{ ansible_date_time.epoch }}"
     oracle_process_id: "{{ ansible_process_id | default(ansible_date_time.epoch) }}"
     oracle_platform: "ORACLE"
 
 - name: Set Oracle result file name
-  set_fact:
+  ansible.builtin.set_fact:
     oracle_result_file_name: "{{ oracle_platform }}_NIST_{{ oracle_process_id }}_{{ oracle_server }}_{{ oracle_database }}_{{ oracle_version }}_{{ oracle_timestamp }}_{{ oracle_control_file_name }}"
 
 - name: Parse Oracle InSpec result status (matching original script logic)
-  set_fact:
+  ansible.builtin.set_fact:
     # regex_search returns a list, so we take first element or default to 'unknown'
     oracle_inspec_status: "{{ (item.stdout | regex_search('\"status\":\"([^\"]+)\"', '\\1') | first) | default('unknown') }}"
   ignore_errors: true
@@ -21,7 +21,7 @@
 - name: Handle successful Oracle InSpec execution
   block:
     - name: Save successful Oracle results to JSON file
-      copy:
+      ansible.builtin.copy:
         # Handle both string and dict stdout (json-min output)
         content: "{{ item.stdout if item.stdout is string else (item.stdout | to_json) }}"
         dest: "{{ inspec_results_dir }}/{{ oracle_result_file_name }}.json"
@@ -32,7 +32,7 @@
         - item.stdout is defined
 
     - name: Log successful Oracle execution
-      debug:
+      ansible.builtin.debug:
         msg: "Oracle control {{ oracle_control_file_name }} completed with status: {{ oracle_inspec_status }}"
       when: inspec_debug_mode | default(false) | bool
   delegate_to: "{{ _delegate_host }}"
@@ -40,7 +40,7 @@
 - name: Handle failed Oracle InSpec execution
   block:
     - name: Create Oracle error report matching original script format
-      copy:
+      ansible.builtin.copy:
         content: |
           {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to Oracle database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect to Oracle","statistics":{"duration":0},"version":"N/A"}]}
         dest: "{{ inspec_results_dir }}/{{ oracle_result_file_name }}.json"
@@ -50,7 +50,7 @@
         - (item.rc | int) not in [0, 100, 101]
 
     - name: Log Oracle connection error
-      debug:
+      ansible.builtin.debug:
         msg: |
           Oracle control {{ oracle_control_file_name }} failed to execute.
           Error: {{ item.stderr | default('Unknown Oracle error') }}

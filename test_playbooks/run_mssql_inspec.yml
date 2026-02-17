@@ -28,7 +28,7 @@
 
   pre_tasks:
     - name: Gather controller facts for timestamps
-      setup:
+      ansible.builtin.setup:
         gather_subset:
           - min
           - hardware
@@ -40,12 +40,12 @@
       register: controller_facts
 
     - name: Set controller time fact
-      set_fact:
+      ansible.builtin.set_fact:
         controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
       run_once: true
 
     - name: Ensure base results directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ base_results_dir }}"
         state: directory
         mode: "0755"
@@ -53,7 +53,7 @@
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Display scan configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           Starting MSSQL Compliance Scans
           ================================
@@ -67,12 +67,12 @@
 
   tasks:
     - name: Display current server being scanned
-      debug:
+      ansible.builtin.debug:
         msg: "Scanning {{ mssql_server }}:{{ mssql_port }} (version {{ mssql_version }}) - Server-level scan"
       when: enable_debug | default(false) | bool
 
     - name: Execute MSSQL InSpec compliance scan for server
-      include_role:
+      ansible.builtin.include_role:
         name: mssql_inspec
       vars:
         # Pass all server-specific variables from inventory host
@@ -88,7 +88,7 @@
     - name: Generate consolidated report
       block:
         - name: Find all JSON result files
-          find:
+          ansible.builtin.find:
             paths: "{{ base_results_dir }}"
             patterns: "*.json"
             recurse: yes
@@ -97,7 +97,7 @@
           run_once: true
 
         - name: Display scan completion summary
-          debug:
+          ansible.builtin.debug:
             msg: |
               =====================================
               MSSQL Compliance Scan Complete
@@ -114,7 +114,7 @@
       when: not ansible_check_mode
 
     - name: Archive scan results (optional)
-      archive:
+      ansible.builtin.archive:
         path: "{{ base_results_dir }}"
         dest: "{{ base_results_dir }}_{{ scan_timestamp }}.tar.gz"
         format: gz
@@ -125,7 +125,7 @@
       run_once: true
 
     - name: Send notification (optional)
-      mail:
+      ansible.builtin.mail:
         to: "{{ notification_email }}"
         subject: "MSSQL Compliance Scan Complete - {{ controller_time.date | default(ansible_date_time.date) }}"
         body: |
@@ -143,7 +143,7 @@
       run_once: true
 
     - name: Send results to Splunk (optional)
-      uri:
+      ansible.builtin.uri:
         url: "{{ splunk_hec_url }}/services/collector"
         method: POST
         headers:

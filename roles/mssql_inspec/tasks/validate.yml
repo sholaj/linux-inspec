@@ -2,7 +2,7 @@
 # Validation tasks for MSSQL InSpec role
 
 - name: Validate required connection parameters
-  assert:
+  ansible.builtin.assert:
     that:
       - mssql_server | length > 0
       - mssql_port | int > 0
@@ -13,7 +13,7 @@
   no_log: true
 
 - name: Validate MSSQL version
-  assert:
+  ansible.builtin.assert:
     that:
       - mssql_version in supported_mssql_versions
     fail_msg: "Unsupported MSSQL version '{{ mssql_version }}'. Supported: {{ supported_mssql_versions | join(', ') }}"

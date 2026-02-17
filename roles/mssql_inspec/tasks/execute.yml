@@ -11,11 +11,11 @@
 
 # Determine connection mode
 - name: "[Execute] Determine connection mode"
-  set_fact:
+  ansible.builtin.set_fact:
     _connection_mode: "{{ 'winrm' if (use_winrm | default(false) | bool) else 'direct' }}"
 
 - name: "[Execute] Display execution mode"
-  debug:
+  ansible.builtin.debug:
     msg: |
       Execution Mode: {{ _connection_mode | upper }}
       Delegate Host: {{ _delegate_host }}
@@ -25,18 +25,18 @@
 
 # Route to appropriate execution based on mode
 - name: "[Execute] Run WinRM-based execution"
-  include_tasks: execute_winrm.yml
+  ansible.builtin.include_tasks: execute_winrm.yml
   when: _connection_mode == 'winrm'
 
 - name: "[Execute] Run direct execution"
-  include_tasks: execute_direct.yml
+  ansible.builtin.include_tasks: execute_direct.yml
   when: _connection_mode == 'direct'
 
 # Common post-execution tasks
 # Parse and display results
 # Note: stdout may already be parsed as dict by Jinja2, or may be a string
 - name: "[Execute] Parse InSpec results"
-  set_fact:
+  ansible.builtin.set_fact:
     _parsed_results: "{{ _parsed_results | default([]) + [item.stdout if item.stdout is mapping else (item.stdout | from_json)] }}"
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
@@ -45,7 +45,7 @@
   no_log: true
 
 - name: "[Execute] Display scan summary"
-  debug:
+  ansible.builtin.debug:
     msg: |
       ═══════════════════════════════════════════════════════════════════
        MSSQL InSpec Compliance Scan Results
@@ -70,7 +70,7 @@
 
 # Process results for file output
 - name: "[Execute] Process InSpec results"
-  include_tasks: process_results.yml
+  ansible.builtin.include_tasks: process_results.yml
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
     index_var: _result_idx

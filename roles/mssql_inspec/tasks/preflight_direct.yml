@@ -11,7 +11,7 @@
 
 # Step 1: TCP Port Connectivity Check
 - name: "[Direct Preflight] Test TCP port connectivity"
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ mssql_server }}"
     port: "{{ mssql_port }}"
     timeout: "{{ preflight_port_timeout | default(5) }}"
@@ -21,14 +21,14 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: "[Direct Preflight] Set port connectivity result"
-  set_fact:
+  ansible.builtin.set_fact:
     _preflight_port_open: "{{ _port_check is succeeded }}"
     preflight_skip_reason: "{{ 'Connection timeout - port ' ~ mssql_port ~ ' unreachable on ' ~ mssql_server if _port_check is failed else '' }}"
     preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
 
 # Step 2: Authentication Check (only if port is open)
 - name: "[Direct Preflight] Test database authentication"
-  shell: |
+  ansible.builtin.shell: |
     export PATH="{{ mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
 
     # Find sqlcmd
@@ -57,7 +57,7 @@
   when: _preflight_port_open
 
 - name: "[Direct Preflight] Parse authentication result"
-  set_fact:
+  ansible.builtin.set_fact:
     _preflight_auth_valid: "{{ _auth_check.rc == 0 if _auth_check is defined and _auth_check.rc is defined else false }}"
     _auth_error_msg: >-
       {%- if _auth_check is skipped -%}
@@ -77,7 +77,7 @@
   when: _preflight_port_open
 
 - name: "[Direct Preflight] Set authentication error details"
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_skip_reason: "{{ _auth_error_msg }}"
     preflight_error_code: >-
       {%- if _auth_check.rc | default(0) == 127 -%}
@@ -98,5 +98,5 @@
 
 # Step 3: Set final preflight result
 - name: "[Direct Preflight] Set final preflight status"
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_passed: "{{ _preflight_port_open and _preflight_auth_valid }}"

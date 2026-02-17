@@ -4,7 +4,7 @@
 - name: Handle sensitive Sybase connection parameters
   block:
     - name: Set Sybase database connection parameters
-      set_fact:
+      ansible.builtin.set_fact:
         sybase_connection:
           server: "{{ sybase_server }}"
           port: "{{ sybase_port }}"
@@ -17,7 +17,7 @@
           ssh_user: "{{ sybase_ssh_user | default('oracle') }}"
 
     - name: Validate required Sybase parameters
-      assert:
+      ansible.builtin.assert:
         that:
           - sybase_server is defined and sybase_server | length > 0
           - sybase_port is defined and sybase_port | int > 0
@@ -29,7 +29,7 @@
         success_msg: "All Sybase parameters validated successfully"
 
     - name: Validate SSH parameters (when SSH is enabled)
-      assert:
+      ansible.builtin.assert:
         that:
           - sybase_ssh_user is defined and sybase_ssh_user | length > 0
           - sybase_ssh_password is defined and sybase_ssh_password | length > 0

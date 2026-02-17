@@ -13,7 +13,7 @@
 
 # Verify InSpec is available on delegate
 - name: "[WinRM Execute] Verify InSpec binary"
-  shell: command -v inspec
+  ansible.builtin.shell: command -v inspec
   args:
     executable: /bin/bash
   register: _inspec_check
@@ -22,17 +22,17 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: "[WinRM Execute] Set InSpec path"
-  set_fact:
+  ansible.builtin.set_fact:
     _inspec_bin: "{{ _inspec_check.stdout | trim }}"
 
 # Build WinRM connection string - connects directly to mssql_server
 # URL format: winrm://host (username passed via --user flag to support UPN format)
 - name: "[WinRM Execute] Build WinRM target URL"
-  set_fact:
+  ansible.builtin.set_fact:
     _winrm_target: "winrm://{{ mssql_server }}"
 
 - name: "[WinRM Execute] Display WinRM execution info"
-  debug:
+  ansible.builtin.debug:
     msg: |
       WinRM/AD Execution Configuration:
         Target: {{ _winrm_target }}
@@ -47,7 +47,7 @@
 # omits credentials from mssql_session, triggering Windows Authentication.
 # The WinRM user's Windows identity is used for SQL Server authentication.
 - name: "[WinRM Execute] Execute InSpec profile via WinRM/AD"
-  shell: |
+  ansible.builtin.shell: |
     export CHEF_LICENSE=accept
 
     "{{ _inspec_bin }}" exec "{{ _remote_controls_path }}" \
@@ -69,7 +69,7 @@
 
 # Convert single result to list for compatibility with downstream tasks
 - name: "[WinRM Execute] Wrap InSpec result for processing"
-  set_fact:
+  ansible.builtin.set_fact:
     inspec_results:
       results:
         - stdout: "{{ _inspec_profile_result.stdout }}"
