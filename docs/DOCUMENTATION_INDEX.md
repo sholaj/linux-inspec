@@ -91,6 +91,16 @@ Delegate vs. Local execution modes.
 - Credential separation
 - Troubleshooting
 
+### 14. **DATABASE_SCANNING_PERMISSIONS_GUIDE.md**
+Minimum database permissions for InSpec compliance scanning.
+- Oracle: SELECT_CATALOG_ROLE, SELECT ANY DICTIONARY
+- SQL Server: VIEW SERVER STATE, VIEW ANY DATABASE, VIEW ANY DEFINITION
+- Sybase ASE: SELECT on system tables (no administrative roles)
+- PostgreSQL: pg_read_all_settings (or basic login)
+- Security best practices for service accounts
+- Permission verification scripts
+- CIS benchmark references
+
 ---
 
 ## Test Files and Playbooks
@@ -217,6 +227,12 @@ Delegate vs. Local execution modes.
 - Delegate host vs AAP Mesh comparison
 - When to use each approach
 
+### For DBA Service Account Setup
+- Read: **DATABASE_SCANNING_PERMISSIONS_GUIDE.md**
+- Minimum permissions per database platform
+- SQL scripts for account creation
+- Permission verification queries
+
 ---
 
 ## Directory Structure Reference
@@ -236,7 +252,8 @@ linux-inspec/
 │   ├── SECURITY_PASSWORD_HANDLING.md
 │   ├── DELEGATE_HOST_BINARY_INSTALLATION.md
 │   ├── ANSIBLE_EXECUTION_ENVIRONMENT.md
-│   └── DELEGATE_EXECUTION_CONFLUENCE.md
+│   ├── DELEGATE_EXECUTION_CONFLUENCE.md
+│   └── DATABASE_SCANNING_PERMISSIONS_GUIDE.md
 ├── test_playbooks/                 # All test and production playbooks
 │   ├── README.md
 │   ├── run_compliance_scans.yml    # Primary production playbook
@@ -321,8 +338,8 @@ Check git history for changes and rationale.
 
 ---
 
-**Last Updated**: 2026-02-05
-**Total Documentation Files**: 13 core docs + 1 index = 14 files
+**Last Updated**: 2026-02-17
+**Total Documentation Files**: 14 core docs + 1 index = 15 files
 **Status**: Updated and Consolidated ✓
 **Project Structure**: Aligned with test_playbooks/ directory
 **Variables**: Using correct `ansible_password` (not deprecated `ansible_ssh_pass`)
