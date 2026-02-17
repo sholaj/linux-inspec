@@ -3,7 +3,7 @@
 
 - name: Set Oracle result file names (matching original script pattern)
   ansible.builtin.set_fact:
-    oracle_control_file_name: "{{ oracle_control_files.files[idx].path | basename | regex_replace('\\.rb$', '') }}"
+    oracle_control_file_name: "{{ item.item.path | basename | regex_replace('\\.rb$', '') }}"
     oracle_timestamp: "{{ ansible_date_time.epoch }}"
     oracle_process_id: "{{ ansible_process_id | default(ansible_date_time.epoch) }}"
     oracle_platform: "ORACLE"
