@@ -61,30 +61,40 @@
     - not preflight_passed
   tags: [preflight]
 
-# Step 3: Execute scan only if preflight passed (or disabled)
-- name: Execute Sybase InSpec scan
-  block:
-    - name: Setup SSH connection for Sybase (if enabled)
-      include_tasks: ssh_setup.yml
-      when: sybase_use_ssh | default(true)
+# Step 3: Setup SSH connection for Sybase (if enabled, only if preflight passed)
+- name: Setup SSH connection for Sybase (if enabled)
+  include_tasks: ssh_setup.yml
+  when:
+    - preflight_passed | default(true)
+    - sybase_use_ssh | default(true)
+  tags: setup
 
-    - name: Setup directories and find Sybase control files
-      include_tasks: setup.yml
+# Step 4: Setup - prepare directories and control files (only if preflight passed)
+- name: Setup directories and find Sybase control files
+  include_tasks: setup.yml
+  when: preflight_passed | default(true)
+  tags: setup
 
-    - name: Execute Sybase InSpec controls and process results
-      include_tasks: execute.yml
-      throttle: "{{ scan_throttle | default(8) }}"
+# Step 5: Execute InSpec scans (only if preflight passed)
+# Throttle controls max concurrent scans to prevent delegate host overload
+- name: Execute Sybase InSpec controls and process results
+  include_tasks: execute.yml
+  when: preflight_passed | default(true)
+  throttle: "{{ scan_throttle | default(8) }}"
+  tags: execute
 
-    - name: Generate reports and cleanup
-      include_tasks: cleanup.yml
+# Step 6: Cleanup and reporting (always runs - reports skipped databases too)
+- name: Generate reports and cleanup
+  include_tasks: cleanup.yml
+  tags: cleanup
 
-    - name: Sybase InSpec Compliance Scan Complete
-      debug:
-        msg: |
-          [OK] Sybase InSpec scan completed successfully!
-          Results directory: {{ inspec_results_dir }}
-          Platform: SYBASE
-          Database: {{ sybase_database }}
-          Version: {{ sybase_version }}
-          SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Disabled') }}
+- name: Sybase InSpec Compliance Scan Complete
+  debug:
+    msg: |
+      [OK] Sybase InSpec scan completed successfully!
+      Results directory: {{ inspec_results_dir }}
+      Platform: SYBASE
+      Database: {{ sybase_database }}
+      Version: {{ sybase_version }}
+      SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Disabled') }}
   when: preflight_passed | default(true)

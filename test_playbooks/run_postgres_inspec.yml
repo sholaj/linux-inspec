@@ -1,28 +1,121 @@
 ---
-# PostgreSQL InSpec Compliance Scan Playbook
-# Run CIS PostgreSQL 15 Benchmark controls against a PostgreSQL database
-
-- name: Run PostgreSQL InSpec Compliance Scan
-  hosts: localhost
-  gather_facts: true
+# PostgreSQL InSpec Compliance Scanning Playbook
+# Compatible with Ansible Automation Platform (AAP)
+- name: Execute InSpec PostgreSQL Compliance Scans
+  hosts: postgres_databases
+  gather_facts: false
   connection: local
+  strategy: "{{ execution_strategy | default('linear') }}"
+  serial: "{{ batch_size | default(5) }}"
 
   vars:
-    # PostgreSQL Connection (override via inventory or command line)
-    postgres_server: "{{ hostvars[inventory_hostname].postgres_server | default('10.0.2.4') }}"
-    postgres_port: "{{ hostvars[inventory_hostname].postgres_port | default(5432) }}"
-    postgres_database: "{{ hostvars[inventory_hostname].postgres_database | default('testdb') }}"
-    postgres_username: "{{ hostvars[inventory_hostname].postgres_username | default('postgres') }}"
-    postgres_password: "{{ hostvars[inventory_hostname].postgres_password | default('PostgresPass123') }}"
-    postgres_version: "{{ hostvars[inventory_hostname].postgres_version | default('15') }}"
+    # Global settings - can be overridden by AAP extra vars
+    scan_timestamp: "{{ controller_time.epoch | default(ansible_date_time.epoch) }}"
+    enable_debug: false
+    # Timeout settings for lengthy scans
+    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"
+    async_timeout: "{{ async_scan_timeout | default(3600) }}"
+    poll_interval: "{{ async_poll_interval | default(30) }}"
+    # AAP compatibility
+    job_id: "{{ tower_job_id | default('local') }}"
+    project_name: "{{ project_name | default('postgres_compliance') }}"
+    # Splunk integration
+    send_to_splunk: "{{ splunk_enabled | default(false) }}"
+    splunk_hec_url: "{{ splunk_hec_url | default('') }}"
+    splunk_hec_token: "{{ splunk_hec_token | default('') }}"
+    splunk_index: "{{ splunk_index | default('compliance_scans') }}"
 
-    # Execution mode - localhost for running on runner
-    inspec_delegate_host: ""
+  pre_tasks:
+    - name: Gather controller facts for timestamps
+      setup:
+        gather_subset:
+          - min
+          - hardware
+          - network
+          - virtual
+          - env
+      delegate_to: localhost
+      run_once: true
+      register: controller_facts
 
-    # Results
-    inspec_results_dir: "/tmp/compliance_scans"
-    generate_summary_report: true
-    inspec_debug_mode: true
+    - name: Set controller time fact
+      set_fact:
+        controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
+      run_once: true
 
-  roles:
-    - postgres_inspec
+    - name: Ensure base results directory exists
+      file:
+        path: "{{ base_results_dir }}"
+        state: directory
+        mode: "0755"
+      run_once: true
+      delegate_to: "{{ inspec_delegate_host }}"
+
+    - name: Display PostgreSQL scan configuration
+      debug:
+        msg: |
+          PostgreSQL InSpec Compliance Scans Starting
+          ============================================
+          Total PostgreSQL hosts: {{ groups['postgres_databases'] | length }}
+          Results directory: {{ base_results_dir }}
+          Timestamp: {{ scan_timestamp }}
+          Debug mode: {{ enable_debug }}
+          Batch size: {{ batch_size | default(5) }}
+      run_once: true
+      when: enable_debug | bool
+
+  tasks:
+    - name: Display current PostgreSQL database being scanned
+      debug:
+        msg: "Scanning PostgreSQL {{ postgres_server }}:{{ postgres_port }}/{{ postgres_database }} (version {{ postgres_version }})"
+      when: enable_debug | bool
+
+    - name: Execute PostgreSQL InSpec compliance scan for database
+      include_role:
+        name: postgres_inspec
+      vars:
+        inspec_results_dir: "{{ base_results_dir }}/{{ postgres_server | replace('.', '_') }}_{{ postgres_database }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+
+  post_tasks:
+    - name: Generate PostgreSQL consolidated report
+      block:
+        - name: Find all PostgreSQL JSON result files
+          find:
+            paths: "{{ base_results_dir }}"
+            patterns: "POSTGRES_NIST_*.json"
+            recurse: yes
+          register: postgres_json_files
+          delegate_to: "{{ inspec_delegate_host }}"
+          run_once: true
+
+        - name: Display PostgreSQL scan completion summary
+          debug:
+            msg: |
+              =====================================
+              PostgreSQL Compliance Scan Complete
+              =====================================
+              Total PostgreSQL databases scanned: {{ groups['postgres_databases'] | length }}
+              Result files generated: {{ postgres_json_files.files | length }}
+              Results location: {{ base_results_dir }}
+
+              To view PostgreSQL results:
+              find {{ base_results_dir }}/ -name "POSTGRES_NIST_*.json"
+              =====================================
+          run_once: true
+          delegate_to: "{{ inspec_delegate_host }}"
+      when: not ansible_check_mode
+# Example usage:
+# POC Mode:
+# ansible-playbook -i postgres_inventory.yml run_postgres_inspec.yml -e @postgres_vault.yml --vault-password-file .vaultpass
+#
+# AAP Mode (configure in AAP):
+# - Upload postgres_inventory.yml as inventory
+# - Add postgres_vault.yml as encrypted extra vars
+# - Add vault password as credential
+#
+# Additional examples:
+# ansible-playbook -i postgres_inventory.yml run_postgres_inspec.yml --limit "pgserver01_*"
+# ansible-playbook -i postgres_inventory.yml run_postgres_inspec.yml --extra-vars "enable_debug=true"

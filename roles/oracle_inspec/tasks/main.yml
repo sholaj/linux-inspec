@@ -64,25 +64,31 @@
     - not preflight_passed
   tags: [preflight]
 
-# Step 3: Execute scan only if preflight passed (or disabled)
-- name: Execute Oracle InSpec scan
-  block:
-    - name: Setup execution environment
-      include_tasks: setup.yml
+# Step 3: Setup - prepare directories and control files (only if preflight passed)
+- name: Setup execution environment
+  include_tasks: setup.yml
+  when: preflight_passed | default(true)
+  tags: setup
 
-    - name: Execute Oracle InSpec controls
-      include_tasks: execute.yml
-      throttle: "{{ scan_throttle | default(10) }}"
+# Step 4: Execute InSpec scans (only if preflight passed)
+# Throttle controls max concurrent scans to prevent delegate host overload
+- name: Execute Oracle InSpec controls
+  include_tasks: execute.yml
+  when: preflight_passed | default(true)
+  throttle: "{{ scan_throttle | default(10) }}"
+  tags: execute
 
-    - name: Process results and cleanup
-      include_tasks: cleanup.yml
+# Step 5: Cleanup and reporting (always runs - reports skipped databases too)
+- name: Process results and cleanup
+  include_tasks: cleanup.yml
+  tags: cleanup
 
-    - name: Oracle InSpec Compliance Scan Complete
-      debug:
-        msg: |
-          [OK] Oracle InSpec scan completed successfully!
-          Results directory: {{ inspec_results_dir }}
-          Platform: ORACLE
-          Database: {{ oracle_database }}
-          Version: {{ oracle_version }}
+- name: Oracle InSpec Compliance Scan Complete
+  debug:
+    msg: |
+      [OK] Oracle InSpec scan completed successfully!
+      Results directory: {{ inspec_results_dir }}
+      Platform: ORACLE
+      Database: {{ oracle_database }}
+      Version: {{ oracle_version }}
   when: preflight_passed | default(true)
