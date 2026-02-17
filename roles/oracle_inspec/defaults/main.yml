@@ -42,13 +42,11 @@ preflight_auth_timeout: 10           # Database auth check timeout (seconds)
 preflight_continue_on_failure: true  # Continue to next DB if preflight fails (vs fail role)
 
 # ======================
-# Batch Processing
+# Execution Timeout
 # ======================
-batch_size: 0                     # 0 = no batching (use AAP2 slicing instead)
-batch_delay: 0                    # Seconds between batches (0 for parallel)
-scan_timeout: 600                 # Per-host timeout (seconds)
-# Concurrency is controlled at playbook level via 'serial' setting
-scan_throttle: 10                 # Reference value for playbook serial setting
+# Per-host InSpec command timeout (seconds)
+# Note: Batch/concurrency controlled at playbook level (serial) and AAP2 (Job Slicing, Forks)
+scan_timeout: 600
 
 # Splunk integration
 send_to_splunk: false

@@ -62,6 +62,7 @@
       --no-color
   args:
     executable: /bin/bash
+  timeout: "{{ scan_timeout | default(600) }}"
   register: _inspec_profile_result
   changed_when: false
   failed_when: _inspec_profile_result.rc not in [0, 100, 101]

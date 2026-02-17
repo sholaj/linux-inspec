@@ -18,8 +18,6 @@
     enable_debug: false
     # Timeout settings for lengthy scans (higher for SSH)
     inspec_timeout: "{{ inspec_scan_timeout | default(2400) }}" # Default 40 minutes per control (SSH overhead)
-    async_timeout: "{{ async_scan_timeout | default(4800) }}" # Default 80 minutes for async execution
-    poll_interval: "{{ async_poll_interval | default(45) }}" # Check status every 45 seconds
     # AAP compatibility
     job_id: "{{ tower_job_id | default('local') }}"
     project_name: "{{ project_name | default('sybase_compliance') }}"
