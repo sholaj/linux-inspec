@@ -112,28 +112,21 @@
 
 - name: Set results variable for processing
   set_fact:
-    sybase_final_results: "{{
-      (sybase_use_ssh | default(true))
-        | ternary(sybase_inspec_results | default({}), sybase_inspec_results_direct | default({}))
-    }}"
+    sybase_final_results: "{{ (sybase_use_ssh | default(true)) | ternary(sybase_inspec_results | default({}), sybase_inspec_results_direct | default({})) }}"
 
 - name: Display execution summary (debug mode only)
   debug:
-    msg: |
-      Sybase InSpec Execution Summary
-      ===============================
-      Database: {{ sybase_server }}:{{ sybase_port }}
-      Service: {{ sybase_service | default('N/A') }}
-      SSH Mode: {{ sybase_use_ssh | default(true) }}
-      {% if sybase_use_ssh | default(true) %}
-      SSH User: {{ sybase_ssh_user }}
-      SSH Password: [PROTECTED]
-      {% endif %}
-      DB Username: {{ sybase_username }}
-      DB Password: [PROTECTED]
-      Profile: {{ sybase_profile_path }}
-      Exit Code: {{ sybase_final_results.rc }}
-      Status: {{ 'PASS' if sybase_final_results.rc == 0 else 'CONTROLS FAILED' if sybase_final_results.rc in [100, 101] else 'ERROR' }}
+    msg:
+      - "Sybase InSpec Execution Summary"
+      - "==============================="
+      - "Database: {{ sybase_server }}:{{ sybase_port }}"
+      - "Service: {{ sybase_service | default('N/A') }}"
+      - "SSH Mode: {{ sybase_use_ssh | default(true) }}"
+      - "SSH User: {{ sybase_ssh_user | default('N/A') }}"
+      - "DB Username: {{ sybase_username }}"
+      - "Profile: {{ sybase_profile_path }}"
+      - "Exit Code: {{ sybase_final_results.rc }}"
+      - "Status: {{ 'PASS' if sybase_final_results.rc == 0 else 'CONTROLS FAILED' if sybase_final_results.rc in [100, 101] else 'ERROR' }}"
   when: inspec_debug_mode | default(false) | bool
   delegate_to: "{{ inspec_execution_target }}"
 
