@@ -26,7 +26,7 @@
 
   pre_tasks:
     - name: Ensure base results directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ base_results_dir }}"
         state: directory
         mode: '0755'
@@ -34,7 +34,7 @@
       delegate_to: localhost
 
     - name: Display scan configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           🚀 Multi-Platform Database Compliance Scans Starting
           ===================================================
@@ -50,14 +50,14 @@
       when: enable_debug
 
     - name: Check if InSpec is installed
-      command: which inspec
+      ansible.builtin.command: which inspec
       register: inspec_check
       changed_when: false
       failed_when: false
       delegate_to: localhost
 
     - name: Fail if InSpec is not installed
-      fail:
+      ansible.builtin.fail:
         msg: |
           InSpec is not installed on this system.
           Please install InSpec before running this playbook.
@@ -66,7 +66,7 @@
 
   tasks:
     - name: Display current database being scanned
-      debug:
+      ansible.builtin.debug:
         msg: |
           🔍 Scanning Database:
           Platform: {{ database_platform | upper }}
@@ -90,7 +90,7 @@
 
     # MSSQL Server Scanning (server-level, not database-level)
     - name: Execute MSSQL InSpec compliance scan
-      include_role:
+      ansible.builtin.include_role:
         name: mssql_inspec
       vars:
         inspec_results_dir: "{{ base_results_dir }}/{{ mssql_server | replace('.', '_') }}_{{ mssql_port }}_{{ scan_timestamp }}"
@@ -101,7 +101,7 @@
 
     # Oracle Database Scanning
     - name: Execute Oracle InSpec compliance scan
-      include_role:
+      ansible.builtin.include_role:
         name: oracle_inspec
       vars:
         inspec_results_dir: "{{ base_results_dir }}/{{ oracle_server | replace('.', '_') }}_{{ oracle_database }}_{{ scan_timestamp }}"
@@ -112,7 +112,7 @@
 
     # Sybase Database Scanning
     - name: Execute Sybase InSpec compliance scan
-      include_role:
+      ansible.builtin.include_role:
         name: sybase_inspec
       vars:
         inspec_results_dir: "{{ base_results_dir }}/{{ sybase_server | replace('.', '_') }}_{{ sybase_database }}_{{ scan_timestamp }}"
@@ -125,7 +125,7 @@
     - name: Generate consolidated report
       block:
         - name: Find all JSON result files
-          find:
+          ansible.builtin.find:
             paths: "{{ base_results_dir }}"
             patterns: "*.json"
             recurse: yes
@@ -134,7 +134,7 @@
           run_once: true
 
         - name: Generate platform summary
-          set_fact:
+          ansible.builtin.set_fact:
             platform_summary:
               mssql_count: "{{ groups.get('mssql_databases', []) | length }}"
               oracle_count: "{{ groups.get('oracle_databases', []) | length }}"
@@ -144,7 +144,7 @@
           run_once: true
 
         - name: Display scan completion summary
-          debug:
+          ansible.builtin.debug:
             msg: |
               =====================================
               Multi-Platform Compliance Scan Complete
@@ -171,7 +171,7 @@
       when: not ansible_check_mode
 
     - name: Send consolidated results to Splunk (optional)
-      uri:
+      ansible.builtin.uri:
         url: "{{ splunk_hec_url }}/services/collector"
         method: POST
         headers:

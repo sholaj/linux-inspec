@@ -6,14 +6,14 @@
 
 # Build PATH with MSSQL tools directories
 - name: "[Direct Execute] Build execution environment"
-  set_fact:
+  ansible.builtin.set_fact:
     _mssql_env:
       PATH: "{{ mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
       CHEF_LICENSE: "accept"
 
 # Verify sqlcmd is available
 - name: "[Direct Execute] Verify sqlcmd binary"
-  shell: |
+  ansible.builtin.shell: |
     export PATH="{{ _mssql_env.PATH }}"
     command -v sqlcmd
   args:
@@ -24,12 +24,12 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: "[Direct Execute] Set sqlcmd path"
-  set_fact:
+  ansible.builtin.set_fact:
     _sqlcmd_bin: "{{ _sqlcmd_check.stdout | trim }}"
 
 # Verify InSpec is available
 - name: "[Direct Execute] Verify InSpec binary"
-  shell: |
+  ansible.builtin.shell: |
     export PATH="{{ _mssql_env.PATH }}"
     command -v inspec
   args:
@@ -40,12 +40,12 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: "[Direct Execute] Set InSpec path"
-  set_fact:
+  ansible.builtin.set_fact:
     _inspec_bin: "{{ _inspec_check.stdout | trim }}"
 
 # Execute InSpec profile (contains all controls)
 - name: "[Direct Execute] Execute InSpec profile"
-  shell: |
+  ansible.builtin.shell: |
     export PATH="{{ _mssql_env.PATH }}"
     export CHEF_LICENSE=accept
 
@@ -68,7 +68,7 @@
 
 # Convert single result to list for compatibility with downstream tasks
 - name: "[Direct Execute] Wrap InSpec result for processing"
-  set_fact:
+  ansible.builtin.set_fact:
     inspec_results:
       results:
         - stdout: "{{ _inspec_profile_result.stdout }}"

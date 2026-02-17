@@ -4,11 +4,11 @@
 # Index variable: _result_idx
 
 - name: Set result file name
-  set_fact:
+  ansible.builtin.set_fact:
     _result_file: "POSTGRES_{{ postgres_server }}_{{ postgres_database }}_{{ postgres_version }}_{{ _timestamp }}_{{ control_files.files[_result_idx].path | basename | regex_replace('\\.rb$', '') }}.json"
 
 - name: Save successful result
-  copy:
+  ansible.builtin.copy:
     # Handle both string and dict stdout (json-min output)
     content: "{{ item.stdout if item.stdout is string else (item.stdout | to_json) }}"
     dest: "{{ inspec_results_dir }}/{{ _result_file }}"
@@ -20,7 +20,7 @@
     - (item.rc | int) in [0, 100, 101]
 
 - name: Save error result
-  copy:
+  ansible.builtin.copy:
     content: |
       {
         "controls": [{

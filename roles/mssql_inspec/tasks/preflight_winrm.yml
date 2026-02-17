@@ -15,14 +15,14 @@
 
 # Step 1: Verify train-winrm plugin is installed
 - name: "[WinRM Preflight] Get InSpec plugins"
-  command: inspec plugin list
+  ansible.builtin.command: inspec plugin list
   register: _winrm_plugin_check
   changed_when: false
   failed_when: false
   delegate_to: "{{ _delegate_host }}"
 
 - name: "[WinRM Preflight] Fail if train-winrm not installed"
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_passed: false
     preflight_skip_reason: "train-winrm plugin is not installed on {{ _delegate_host }}. Install with: inspec plugin install train-winrm"
     preflight_error_code: "WINRM_PLUGIN_MISSING"
@@ -32,7 +32,7 @@
 # Connects directly to mssql_server using AD credentials
 # URL format: winrm://host (username via --user flag to support UPN format)
 - name: "[WinRM Preflight] Test WinRM/AD connectivity to SQL Server"
-  shell: |
+  ansible.builtin.shell: |
     export CHEF_LICENSE=accept
     inspec detect \
       -t winrm://{{ mssql_server }} \
@@ -53,7 +53,7 @@
   vars:
     # Combine stdout and stderr for error detection (Ruby errors go to stdout)
     _detect_output: "{{ (_winrm_detect.stdout | default('')) + (_winrm_detect.stderr | default('')) }}"
-  set_fact:
+  ansible.builtin.set_fact:
     _winrm_connection_valid: "{{ _winrm_detect.rc == 0 if _winrm_detect is defined and _winrm_detect.rc is defined else false }}"
     winrm_platform_detected: "{{ _winrm_detect.stdout | default('') }}"
     _winrm_error_msg: >-
@@ -78,7 +78,7 @@
 - name: "[WinRM Preflight] Set WinRM error details"
   vars:
     _detect_output: "{{ (_winrm_detect.stdout | default('')) + (_winrm_detect.stderr | default('')) }}"
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_skip_reason: "{{ _winrm_error_msg }}"
     preflight_error_code: >-
       {%- if _winrm_detect.rc | default(0) == 124 -%}
@@ -101,12 +101,12 @@
 
 # Step 3: Set final preflight result
 - name: "[WinRM Preflight] Set final preflight status"
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_passed: "{{ _winrm_connection_valid | default(false) }}"
   when: "'train-winrm' in _winrm_plugin_check.stdout"
 
 - name: "[WinRM Preflight] Display WinRM detection"
-  debug:
+  ansible.builtin.debug:
     msg: |
       WinRM/AD Authentication Successful
       Target: {{ mssql_server }}

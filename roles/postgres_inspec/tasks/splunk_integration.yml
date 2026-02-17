@@ -2,7 +2,7 @@
 # Splunk HEC integration for PostgreSQL InSpec results
 
 - name: Send InSpec result to Splunk HEC
-  uri:
+  ansible.builtin.uri:
     url: "{{ splunk_hec_url }}"
     method: POST
     headers:

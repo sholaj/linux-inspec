@@ -8,7 +8,7 @@
 
 # Ensure results directory exists (for skip reports too)
 - name: Ensure results directory exists
-  file:
+  ansible.builtin.file:
     path: "{{ inspec_results_dir }}"
     state: directory
     mode: "0755"
@@ -18,14 +18,14 @@
 - name: Generate skip report for failed preflight
   block:
     - name: Create skip report
-      template:
+      ansible.builtin.template:
         src: skip_report.j2
         dest: "{{ inspec_results_dir }}/SKIPPED_{{ mssql_server | replace('.', '_') }}_{{ mssql_database }}_{{ _timestamp }}.json"
         mode: "0644"
       delegate_to: "{{ _delegate_host }}"
 
     - name: Display skip summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           ═══════════════════════════════════════════════════════════════════
            DATABASE SKIPPED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
@@ -42,20 +42,20 @@
 - name: Generate summary report
   block:
     - name: Create summary report
-      template:
+      ansible.builtin.template:
         src: summary_report.j2
         dest: "{{ inspec_results_dir }}/summary_{{ _timestamp }}.txt"
         mode: "0644"
       delegate_to: "{{ _delegate_host }}"
 
     - name: Read summary
-      slurp:
+      ansible.builtin.slurp:
         src: "{{ inspec_results_dir }}/summary_{{ _timestamp }}.txt"
       register: _summary
       delegate_to: "{{ _delegate_host }}"
 
     - name: Show summary report
-      debug:
+      ansible.builtin.debug:
         msg: "{{ _summary.content | b64decode }}"
   when:
     - preflight_passed
@@ -64,7 +64,7 @@
 
 # Clean up copied control files
 - name: Clean up control files
-  file:
+  ansible.builtin.file:
     path: "{{ _remote_controls_path }}"
     state: absent
   delegate_to: "{{ _delegate_host }}"
@@ -75,7 +75,7 @@
 
 # Splunk integration (optional) - send scan results
 - name: Send results to Splunk
-  include_tasks: splunk_integration.yml
+  ansible.builtin.include_tasks: splunk_integration.yml
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
     loop_var: _splunk_item
@@ -90,7 +90,7 @@
 
 # Splunk integration (optional) - send skip notification
 - name: Send skip notification to Splunk
-  uri:
+  ansible.builtin.uri:
     url: "{{ splunk_hec_url }}"
     method: POST
     headers:

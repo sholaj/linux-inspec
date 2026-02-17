@@ -4,7 +4,7 @@
 
 # Build PATH with PostgreSQL tools directories
 - name: Build execution environment
-  set_fact:
+  ansible.builtin.set_fact:
     _postgres_env:
       PATH: "{{ postgres_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
       CHEF_LICENSE: "accept"
@@ -12,7 +12,7 @@
 
 # Verify psql is available
 - name: Verify psql binary
-  shell: |
+  ansible.builtin.shell: |
     export PATH="{{ _postgres_env.PATH }}"
     command -v psql
   args:
@@ -23,7 +23,7 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Set psql path
-  set_fact:
+  ansible.builtin.set_fact:
     _psql_bin: "{{ _psql_check.stdout | trim }}"
 
 # Note: Database connectivity is validated in preflight.yml
@@ -31,7 +31,7 @@
 
 # Verify InSpec is available
 - name: Verify InSpec binary
-  shell: |
+  ansible.builtin.shell: |
     export PATH="{{ _postgres_env.PATH }}"
     command -v inspec
   args:
@@ -42,12 +42,12 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Set InSpec path
-  set_fact:
+  ansible.builtin.set_fact:
     _inspec_bin: "{{ _inspec_check.stdout | trim }}"
 
 # Execute InSpec profile (contains all controls)
 - name: Execute InSpec profile
-  shell: |
+  ansible.builtin.shell: |
     export PATH="{{ _postgres_env.PATH }}"
     export CHEF_LICENSE=accept
     export PGPASSWORD='{{ postgres_password }}'
@@ -71,7 +71,7 @@
 
 # Convert single result to list for compatibility with downstream tasks
 - name: Wrap InSpec result for processing
-  set_fact:
+  ansible.builtin.set_fact:
     inspec_results:
       results:
         - stdout: "{{ _inspec_profile_result.stdout }}"
@@ -82,7 +82,7 @@
 # Parse and display results
 # Note: stdout may already be parsed as dict by Jinja2, or may be a string
 - name: Parse InSpec results
-  set_fact:
+  ansible.builtin.set_fact:
     _parsed_results: "{{ _parsed_results | default([]) + [item.stdout if item.stdout is mapping else (item.stdout | from_json)] }}"
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
@@ -91,7 +91,7 @@
   no_log: true
 
 - name: Display scan summary
-  debug:
+  ansible.builtin.debug:
     msg: |
       ═══════════════════════════════════════════════════════════════════
        PostgreSQL InSpec Compliance Scan Results
@@ -114,7 +114,7 @@
 
 # Process results for file output
 - name: Process InSpec results
-  include_tasks: process_results.yml
+  ansible.builtin.include_tasks: process_results.yml
   loop: "{{ inspec_results.results | default([]) }}"
   loop_control:
     index_var: _result_idx

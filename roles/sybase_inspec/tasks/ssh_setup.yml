@@ -3,12 +3,12 @@
 # Based on original script SSH logic: --ssh://oracle:edcp!cv0576@ -o oracle/.ssh/authorized_keys
 
 - name: Gather facts from delegate host for SSH setup
-  setup:
+  ansible.builtin.setup:
   delegate_to: "{{ _delegate_host }}"
   delegate_facts: true
 
 - name: Build Sybase environment variables using delegate host facts
-  set_fact:
+  ansible.builtin.set_fact:
     sybase_environment:
       PATH: "{{ sybase_environment_base.PATH }}:{{ hostvars[_delegate_host].ansible_env.PATH | default('') }}"
       LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
@@ -17,7 +17,7 @@
       SSH_AUTH_SOCK: "{{ hostvars[_delegate_host].ansible_env.SSH_AUTH_SOCK | default('') }}"
 
 - name: Ensure SSH key directory exists
-  file:
+  ansible.builtin.file:
     path: "{{ sybase_ssh_key_path | dirname }}"
     state: directory
     mode: '0700'
@@ -25,7 +25,7 @@
   when: sybase_ssh_key_path | dirname != '/tmp'
 
 - name: Deploy SSH private key for Sybase access (from vault)
-  copy:
+  ansible.builtin.copy:
     content: "{{ vault_sybase_ssh_private_key | default('# SSH key not provided in vault') }}"
     dest: "{{ sybase_ssh_key_path }}"
     mode: '0600'
@@ -34,7 +34,7 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Test SSH connectivity to Sybase host
-  shell: |
+  ansible.builtin.shell: |
     ssh -o ConnectTimeout=10 \
         -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
@@ -56,7 +56,7 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Display SSH connection test results
-  debug:
+  ansible.builtin.debug:
     msg: |
       SSH Connection Test for Sybase:
       Target: {{ sybase_ssh_user }}@{{ sybase_server }}:{{ sybase_ssh_port }}

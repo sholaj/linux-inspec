@@ -15,7 +15,7 @@
 
 # Initialize error tracking (run once per playbook execution)
 - name: "[Error] Initialize error tracking"
-  set_fact:
+  ansible.builtin.set_fact:
     _scan_errors: "{{ _scan_errors | default([]) }}"
     _failed_hosts: "{{ _failed_hosts | default([]) }}"
   run_once: true
@@ -23,7 +23,7 @@
 
 # Record scan failure if preflight failed
 - name: "[Error] Record scan failure"
-  set_fact:
+  ansible.builtin.set_fact:
     _scan_errors: "{{ _scan_errors + [_error_record] }}"
     _failed_hosts: "{{ _failed_hosts + [_failed_host_record] }}"
   vars:
@@ -68,7 +68,7 @@
 
 # Generate error summary report (run once at end of batch)
 - name: "[Error] Generate error summary report"
-  template:
+  ansible.builtin.template:
     src: error_summary.j2
     dest: "{{ inspec_results_dir }}/error_summary_{{ ansible_date_time.epoch }}.txt"
   delegate_to: localhost
@@ -77,7 +77,7 @@
 
 # Export failed hosts as JSON for downstream processing
 - name: "[Error] Export failed hosts JSON"
-  copy:
+  ansible.builtin.copy:
     content: |
       {
         "scan_timestamp": "{{ ansible_date_time.iso8601 }}",
@@ -108,7 +108,7 @@
 
 # Set failed_hosts fact for downstream pipeline integration
 - name: "[Error] Set failed_hosts fact for pipeline integration"
-  set_fact:
+  ansible.builtin.set_fact:
     failed_hosts_list: "{{ _failed_hosts | default([]) }}"
     failed_hosts_count: "{{ _failed_hosts | default([]) | length }}"
     scan_errors: "{{ _scan_errors | default([]) }}"
@@ -118,7 +118,7 @@
 
 # Display error summary with remediation hints
 - name: "[Error] Display error summary with remediation"
-  debug:
+  ansible.builtin.debug:
     msg: |
       ═══════════════════════════════════════════════════════════════════════════
        MSSQL SCAN ERROR SUMMARY
@@ -163,7 +163,7 @@
 
 # Send notification if configured (Slack/Email webhook)
 - name: "[Error] Send error notification webhook"
-  uri:
+  ansible.builtin.uri:
     url: "{{ notification_webhook_url }}"
     method: POST
     headers:

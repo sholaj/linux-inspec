@@ -14,30 +14,30 @@
 # These are DIFFERENT execution paths based on infrastructure setup
 
 - name: Gather environment facts from execution target
-  setup:
+  ansible.builtin.setup:
     gather_subset:
       - env
   delegate_to: "{{ _delegate_host }}"
   delegate_facts: true
 
 - name: Set target environment from execution host
-  set_fact:
+  ansible.builtin.set_fact:
     _target_env: "{{ hostvars[_delegate_host].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
 
 - name: Get system PATH from delegate host if not available in facts
-  shell: echo "$PATH"
+  ansible.builtin.shell: echo "$PATH"
   register: delegate_system_path
   changed_when: false
   delegate_to: "{{ _delegate_host }}"
   when: not (_target_env.PATH | default('')) or (_target_env.PATH | default('')) == ''
 
 - name: Update target environment with system PATH
-  set_fact:
+  ansible.builtin.set_fact:
     _target_env: "{{ _target_env | combine({'PATH': delegate_system_path.stdout}) }}"
   when: delegate_system_path.stdout is defined
 
 - name: Build environment variables
-  set_fact:
+  ansible.builtin.set_fact:
     oracle_environment:
       PATH: "{{ oracle_extra_path }}:{{ ORACLE_HOME }}/bin{% if _target_env.PATH | default('') %}:{{ _target_env.PATH }}{% endif %}"
       LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib{% if _target_env.LD_LIBRARY_PATH | default('') %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
@@ -46,7 +46,7 @@
       NLS_LANG: "{{ NLS_LANG }}"
 
 - name: Set connection parameters based on TNS mode
-  set_fact:
+  ansible.builtin.set_fact:
     oracle_connection_host: "{{ oracle_tns_alias | default(oracle_service | default('ORCL')) | upper if oracle_use_tns | default(false) | bool else oracle_server }}"
     oracle_connection_service: "{{ '' if oracle_use_tns | default(false) | bool else oracle_service | default('') }}"
     oracle_connection_port: "{{ '' if oracle_use_tns | default(false) | bool else oracle_port }}"
@@ -55,7 +55,7 @@
 # If we reach here, preflight_passed is true and database is reachable
 
 - name: Execute InSpec controls (TNS mode)
-  shell: |
+  ansible.builtin.shell: |
     # TNS mode: Use TNS alias for connection
     inspec exec {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby/{{ item.path | basename }} \
       --input usernm='{{ oracle_username }}' \
@@ -86,7 +86,7 @@
   when: oracle_use_tns | default(false) | bool
 
 - name: Execute InSpec controls (Direct mode)
-  shell: |
+  ansible.builtin.shell: |
     inspec exec {{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby/{{ item.path | basename }} \
       --input usernm='{{ oracle_username }}' \
               passwd='{{ oracle_password }}' \
@@ -115,7 +115,7 @@
   when: not (oracle_use_tns | default(false) | bool)
 
 - name: Display sanitized execution summary (debug mode only)
-  debug:
+  ansible.builtin.debug:
     msg: |
       Oracle InSpec Execution Summary
       ===============================
@@ -134,7 +134,7 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Process Oracle InSpec results
-  include_tasks: process_results.yml
+  ansible.builtin.include_tasks: process_results.yml
   loop: "{{ oracle_inspec_results.results | default([]) }}"
   loop_control:
     index_var: idx

@@ -21,7 +21,7 @@
 
   pre_tasks:
     - name: Display test configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           ╔═══════════════════════════════════════════════════════╗
           ║  Sybase Connectivity Test Suite                       ║
@@ -42,7 +42,7 @@
     - name: "TEST 1: SSH Connectivity to Runner"
       block:
         - name: Test SSH connectivity
-          command: >
+          ansible.builtin.command: >
             ssh -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10
             -i "{{ runner_ssh_key }}"
             "{{ runner_user }}@{{ runner_host }}"
@@ -52,7 +52,7 @@
           failed_when: false
 
         - name: Display SSH connectivity result
-          debug:
+          ansible.builtin.debug:
             msg: |
               ┌─────────────────────────────────────────┐
               │ SSH Connectivity Test                   │
@@ -65,7 +65,7 @@
     - name: "TEST 2: Sybase - Telnet Port Connectivity"
       block:
         - name: Test Sybase port connectivity
-          command: >
+          ansible.builtin.command: >
             ssh -o StrictHostKeyChecking=accept-new
             -i "{{ runner_ssh_key }}"
             "{{ runner_user }}@{{ runner_host }}"
@@ -74,7 +74,7 @@
           changed_when: false
 
         - name: Display Sybase telnet result
-          debug:
+          ansible.builtin.debug:
             msg: |
               ┌─────────────────────────────────────────┐
               │ Sybase Telnet Test                      │
@@ -88,7 +88,7 @@
     - name: "TEST 3: Sybase - Database Credential Validation"
       block:
         - name: Test Sybase credentials
-          shell: |
+          ansible.builtin.shell: |
             source /opt/sap/SYBASE.sh 2>/dev/null || true
             export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
 
@@ -109,7 +109,7 @@
             ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
 
         - name: Display Sybase credentials result
-          debug:
+          ansible.builtin.debug:
             msg: |
               ┌─────────────────────────────────────────┐
               │ Sybase Credentials Test                 │
@@ -123,7 +123,7 @@
     - name: "TEST 4: Sybase - Basic InSpec Control Execution"
       block:
         - name: Create Sybase test InSpec profile
-          copy:
+          ansible.builtin.copy:
             content: |
               control 'sybase-version-check' do
                 impact 1.0
@@ -149,7 +149,7 @@
             ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
 
         - name: Execute Sybase InSpec control
-          shell: |
+          ansible.builtin.shell: |
             source /opt/sap/SYBASE.sh 2>/dev/null || true
             export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
 
@@ -165,7 +165,7 @@
             ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
 
         - name: Display Sybase InSpec result
-          debug:
+          ansible.builtin.debug:
             msg: |
               ┌──────────────────────────────────────────────┐
               │ Sybase InSpec Control Execution              │
@@ -180,7 +180,7 @@
 
   post_tasks:
     - name: Test Summary
-      debug:
+      ansible.builtin.debug:
         msg: |
           ╔════════════════════════════════════════════════════════════╗
           ║  SYBASE TEST SUMMARY                                       ║

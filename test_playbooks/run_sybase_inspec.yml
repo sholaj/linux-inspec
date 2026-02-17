@@ -29,7 +29,7 @@
 
   pre_tasks:
     - name: Gather controller facts for timestamps
-      setup:
+      ansible.builtin.setup:
         gather_subset:
           - min
           - hardware
@@ -41,12 +41,12 @@
       register: controller_facts
 
     - name: Set controller time fact
-      set_fact:
+      ansible.builtin.set_fact:
         controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
       run_once: true
 
     - name: Ensure base results directory exists
-      file:
+      ansible.builtin.file:
         path: "{{ base_results_dir }}"
         state: directory
         mode: "0755"
@@ -54,7 +54,7 @@
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Display Sybase scan configuration
-      debug:
+      ansible.builtin.debug:
         msg: |
           Sybase InSpec Compliance Scans Starting
           ==========================================
@@ -71,7 +71,7 @@
       when: enable_debug | bool
 
     - name: Check SSH connectivity (Sybase specific requirement)
-      shell: ssh -o ConnectTimeout=5 -o BatchMode=yes {{ sybase_ssh_user | default('oracle') }}@{{ sybase_server }} "echo 'SSH test'"
+      ansible.builtin.shell: ssh -o ConnectTimeout=5 -o BatchMode=yes {{ sybase_ssh_user | default('oracle') }}@{{ sybase_server }} "echo 'SSH test'"
       args:
         executable: /bin/bash
       register: ssh_connectivity_test
@@ -81,7 +81,7 @@
       delegate_to: "{{ inspec_delegate_host }}"
 
     - name: Display SSH connectivity status
-      debug:
+      ansible.builtin.debug:
         msg: |
           SSH Connectivity Test Results:
           {% for host in ansible_play_hosts %}
@@ -94,12 +94,12 @@
 
   tasks:
     - name: Display current Sybase database being scanned
-      debug:
+      ansible.builtin.debug:
         msg: "🔍 Scanning Sybase {{ sybase_server }}:{{ sybase_port }}/{{ sybase_database }} (version {{ sybase_version }}) via SSH"
       when: enable_debug | bool
 
     - name: Execute Sybase InSpec compliance scan for database
-      include_role:
+      ansible.builtin.include_role:
         name: sybase_inspec
       vars:
         # Pass all database-specific variables from inventory host
@@ -116,7 +116,7 @@
     - name: Generate Sybase consolidated report
       block:
         - name: Find all Sybase JSON result files
-          find:
+          ansible.builtin.find:
             paths: "{{ base_results_dir }}"
             patterns: "SYBASE_NIST_*.json"
             recurse: yes
@@ -125,7 +125,7 @@
           run_once: true
 
         - name: Display Sybase scan completion summary
-          debug:
+          ansible.builtin.debug:
             msg: |
               =====================================
               Sybase Compliance Scan Complete

@@ -10,7 +10,7 @@
 #   - preflight_error_code: string - error classification code
 
 - name: "[Preflight] Initialize preflight results"
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_passed: false
     preflight_skip_reason: ""
     preflight_error_code: ""
@@ -19,26 +19,26 @@
 
 # Determine connection mode
 - name: "[Preflight] Determine connection mode"
-  set_fact:
+  ansible.builtin.set_fact:
     _connection_mode: "{{ 'winrm' if (use_winrm | default(false) | bool) else 'direct' }}"
 
 - name: "[Preflight] Display connection mode"
-  debug:
+  ansible.builtin.debug:
     msg: "Connection mode: {{ _connection_mode | upper }}"
   when: inspec_debug_mode | default(false) | bool
 
 # Route to appropriate preflight based on mode
 - name: "[Preflight] Run WinRM preflight checks"
-  include_tasks: preflight_winrm.yml
+  ansible.builtin.include_tasks: preflight_winrm.yml
   when: _connection_mode == 'winrm'
 
 - name: "[Preflight] Run direct connection preflight checks"
-  include_tasks: preflight_direct.yml
+  ansible.builtin.include_tasks: preflight_direct.yml
   when: _connection_mode == 'direct'
 
 # Common post-preflight logging
 - name: "[Preflight] Log preflight success"
-  debug:
+  ansible.builtin.debug:
     msg: |
       Preflight PASSED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
       Mode: {{ _connection_mode | upper }}
@@ -48,7 +48,7 @@
     - inspec_debug_mode | default(false) | bool
 
 - name: "[Preflight] Log preflight failure"
-  debug:
+  ansible.builtin.debug:
     msg: |
       Preflight FAILED - {{ mssql_server }}:{{ mssql_port }}/{{ mssql_database }}
       Mode: {{ _connection_mode | upper }}
@@ -61,7 +61,7 @@
 
 # Register this database in the scan results tracker
 - name: "[Preflight] Register database scan attempt"
-  set_fact:
+  ansible.builtin.set_fact:
     _db_scan_record:
       host: "{{ mssql_server }}"
       port: "{{ mssql_port }}"

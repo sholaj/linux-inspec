@@ -2,7 +2,7 @@
 # Oracle Splunk integration tasks
 
 - name: Send Oracle compliance results to Splunk HEC
-  uri:
+  ansible.builtin.uri:
     url: "{{ splunk_hec_url }}/services/collector"
     method: POST
     headers:
@@ -30,7 +30,7 @@
   register: splunk_response
 
 - name: Log Splunk submission status
-  debug:
+  ansible.builtin.debug:
     msg: "Splunk submission {{ 'successful' if splunk_response is defined and not splunk_response.failed | default(false) else 'failed' }} for {{ oracle_server }}/{{ oracle_database }}"
   when:
     - send_to_splunk | default(false) | bool

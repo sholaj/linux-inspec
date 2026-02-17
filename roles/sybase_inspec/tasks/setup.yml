@@ -3,20 +3,20 @@
 # Control files are copied ONCE per version to a fixed path, then reused
 
 - name: Set control paths for setup
-  set_fact:
+  ansible.builtin.set_fact:
     _local_controls_path: "{{ role_path }}/files/SYBASE{{ sybase_version }}_ruby"
     sybase_controls_base_dir: "/tmp/inspec_sybase_{{ sybase_version }}"
 
 - name: Setup Sybase InSpec environment
   block:
     - name: Create Sybase results directory
-      file:
+      ansible.builtin.file:
         path: "{{ inspec_results_dir }}"
         state: directory
         mode: "0755"
 
     - name: Create SAP ASE directory structure
-      file:
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         mode: "0755"
@@ -27,14 +27,14 @@
       become: true
 
     - name: Deploy SYBASE.sh environment script
-      template:
+      ansible.builtin.template:
         src: SYBASE.sh.j2
         dest: "{{ sybase_environment_base.SYBASE }}/SYBASE.sh"
         mode: "0755"
       become: true
 
     - name: Deploy Sybase interfaces file
-      template:
+      ansible.builtin.template:
         src: interfaces.j2
         dest: "{{ sybase_environment_base.SYBASE }}/interfaces"
         mode: "0644"
@@ -42,7 +42,7 @@
 
     # Check if controls already exist (skip copy if present)
     - name: Check if controls already copied
-      stat:
+      ansible.builtin.stat:
         path: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby/inspec.yml"
       register: _controls_exist
 
@@ -51,34 +51,34 @@
       when: not _controls_exist.stat.exists
       block:
         - name: Create Sybase controls directory
-          file:
+          ansible.builtin.file:
             path: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
             state: directory
             mode: "0755"
 
         - name: Copy Sybase control files
-          copy:
+          ansible.builtin.copy:
             src: "{{ _local_controls_path }}/"
             dest: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby/"
             mode: "0644"
 
         - name: Display setup info
-          debug:
+          ansible.builtin.debug:
             msg: "Copied controls to {{ sybase_controls_base_dir }}"
           when: inspec_debug_mode | default(false) | bool
 
     - name: Set Sybase InSpec profile path
-      set_fact:
+      ansible.builtin.set_fact:
         sybase_profile_path: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
         cacheable: yes
 
     - name: Verify Sybase InSpec profile exists
-      stat:
+      ansible.builtin.stat:
         path: "{{ sybase_profile_path }}/inspec.yml"
       register: sybase_profile_check
 
     - name: Display Sybase profile to be executed
-      debug:
+      ansible.builtin.debug:
         msg: |
           Sybase {{ sybase_version }} InSpec Profile
           =========================================
@@ -87,7 +87,7 @@
       when: inspec_debug_mode | default(false) | bool
 
     - name: Fail if Sybase InSpec profile not found
-      fail:
+      ansible.builtin.fail:
         msg: "Sybase InSpec profile not found at {{ sybase_profile_path }}"
       when: not sybase_profile_check.stat.exists
   delegate_to: "{{ _delegate_host }}"

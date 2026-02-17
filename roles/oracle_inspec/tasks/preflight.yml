@@ -5,7 +5,7 @@
 # Sets facts to skip execution if database is unreachable or auth fails.
 
 - name: Initialize preflight results
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_passed: false
     preflight_skip_reason: ""
     preflight_error_code: ""
@@ -14,7 +14,7 @@
 
 # Step 1: TCP Port Connectivity Check for Oracle InSpec role
 - name: Test TCP port connectivity
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ oracle_server }}"
     port: "{{ oracle_port }}"
     timeout: "{{ preflight_port_timeout | default(5) }}"
@@ -24,7 +24,7 @@
   delegate_to: "{{ _delegate_host }}"
 
 - name: Set port connectivity result
-  set_fact:
+  ansible.builtin.set_fact:
     _preflight_port_open: "{{ _port_check is succeeded }}"
     preflight_skip_reason: "{{ 'Connection timeout - port ' ~ oracle_port ~ ' unreachable on ' ~ oracle_server if _port_check is failed else '' }}"
     preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
@@ -32,7 +32,7 @@
 # Step 2: Authentication Check (only if port is open)
 # DEBUG: Verify we're actually on the delegate host
 - name: Debug - Verify execution host and environment
-  set_fact:
+  ansible.builtin.set_fact:
     _debug_info:
       "Delegate host setting": "{{ inspec_delegate_host | default('NOT SET') }}"
       "Inventory hostname": "{{ inventory_hostname }}"
@@ -41,12 +41,12 @@
   when: _preflight_port_open
 
 - name: Display execution context
-  debug:
+  ansible.builtin.debug:
     var: _debug_info
   when: _preflight_port_open
 
 - name: Debug - Check ORACLE_HOME and sqlplus existence
-  shell: |
+  ansible.builtin.shell: |
     echo "=== ORACLE_HOME: {{ ORACLE_HOME }} ==="
     echo "=== Checking if directory exists ==="
     [ -d "{{ ORACLE_HOME }}/bin/" ] && echo "✓ Directory EXISTS" || echo "✗ Directory DOES NOT exist"
@@ -63,14 +63,14 @@
   when: _preflight_port_open
 
 - name: Display debug info
-  debug:
+  ansible.builtin.debug:
     var: _oracle_debug.stdout_lines
   when:
     - _preflight_port_open
     - _oracle_debug is defined
 
 - name: Test database authentication
-  shell: |
+  ansible.builtin.shell: |
     # Test connection with sqlplus using full path
     echo "SELECT 'PREFLIGHT_OK' FROM DUAL;" | \
     timeout {{ preflight_auth_timeout | default(10) }} \
@@ -90,7 +90,7 @@
   when: _preflight_port_open
 
 - name: Parse authentication result
-  set_fact:
+  ansible.builtin.set_fact:
     _preflight_auth_valid: "{{ _auth_check.rc == 0 and 'PREFLIGHT_OK' in (_auth_check.stdout | default('')) if _auth_check is defined else false }}"
     _auth_error_msg: >-
       {%- if _auth_check is skipped -%}
@@ -118,7 +118,7 @@
   when: _preflight_port_open
 
 - name: Set authentication error details
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_skip_reason: "{{ _auth_error_msg }}"
     preflight_error_code: >-
       {%- if _auth_check.rc | default(0) == 127 -%}
@@ -143,18 +143,18 @@
 
 # Step 3: Set final preflight result
 - name: Set final preflight status
-  set_fact:
+  ansible.builtin.set_fact:
     preflight_passed: "{{ _preflight_port_open and _preflight_auth_valid }}"
 
 - name: Log preflight success
-  debug:
+  ansible.builtin.debug:
     msg: "Preflight PASSED - {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }} is reachable and authenticated"
   when:
     - preflight_passed
     - inspec_debug_mode | default(false) | bool
 
 - name: Log preflight failure
-  debug:
+  ansible.builtin.debug:
     msg: "Preflight FAILED - {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
   when:
     - not preflight_passed
@@ -162,7 +162,7 @@
 
 # Step 4: Register this database in the scan results tracker
 - name: Register database scan attempt
-  set_fact:
+  ansible.builtin.set_fact:
     _db_scan_record:
       host: "{{ oracle_server }}"
       port: "{{ oracle_port }}"

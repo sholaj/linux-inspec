@@ -4,13 +4,13 @@
 
 # Set fixed paths (deterministic, not temp)
 - name: Set control paths
-  set_fact:
+  ansible.builtin.set_fact:
     _local_controls_path: "{{ role_path }}/files/POSTGRES{{ postgres_version }}_ruby"
     _remote_controls_path: "/tmp/inspec_postgres_{{ postgres_version }}"
 
 # Create results directory on execution host
 - name: Create results directory
-  file:
+  ansible.builtin.file:
     path: "{{ inspec_results_dir }}"
     state: directory
     mode: "0755"
@@ -18,7 +18,7 @@
 
 # Check if controls already exist on delegate (skip copy if present)
 - name: Check if controls already copied
-  stat:
+  ansible.builtin.stat:
     path: "{{ _remote_controls_path }}/inspec.yml"
   register: _controls_exist
   delegate_to: "{{ _delegate_host }}"
@@ -28,7 +28,7 @@
   when: not _controls_exist.stat.exists
   block:
     - name: Find control files for PostgreSQL version
-      find:
+      ansible.builtin.find:
         paths: "{{ _local_controls_path }}"
         patterns: "*.rb"
         recurse: true
@@ -36,26 +36,26 @@
       delegate_to: localhost
 
     - name: Validate control files exist
-      fail:
+      ansible.builtin.fail:
         msg: "No control files found in {{ _local_controls_path }}"
       when: _control_files_found.files | length == 0
 
     - name: Create controls directory on delegate
-      file:
+      ansible.builtin.file:
         path: "{{ _remote_controls_path }}/controls"
         state: directory
         mode: "0755"
       delegate_to: "{{ _delegate_host }}"
 
     - name: Copy inspec.yml profile metadata
-      copy:
+      ansible.builtin.copy:
         src: "{{ _local_controls_path }}/inspec.yml"
         dest: "{{ _remote_controls_path }}/inspec.yml"
         mode: "0644"
       delegate_to: "{{ _delegate_host }}"
 
     - name: Copy control files to delegate
-      copy:
+      ansible.builtin.copy:
         src: "{{ item.path }}"
         dest: "{{ _remote_controls_path }}/controls/"
         mode: "0644"
@@ -65,12 +65,12 @@
       delegate_to: "{{ _delegate_host }}"
 
     - name: Display setup info
-      debug:
+      ansible.builtin.debug:
         msg: "Copied {{ _control_files_found.files | length }} control(s) to {{ _remote_controls_path }}"
       when: inspec_debug_mode | default(false) | bool
 
 - name: Display reuse info
-  debug:
+  ansible.builtin.debug:
     msg: "Reusing existing controls at {{ _remote_controls_path }}"
   when:
     - _controls_exist.stat.exists
