@@ -72,6 +72,7 @@
 
     - name: Execute Oracle InSpec controls
       include_tasks: execute.yml
+      throttle: "{{ scan_throttle | default(10) }}"
 
     - name: Process results and cleanup
       include_tasks: cleanup.yml

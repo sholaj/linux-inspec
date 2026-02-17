@@ -46,6 +46,14 @@ preflight_port_timeout: 5            # TCP port check timeout (seconds)
 preflight_auth_timeout: 10           # Database auth check timeout (seconds)
 preflight_continue_on_failure: true  # Continue to next DB if preflight fails (vs fail role)
 
+# ======================
+# Batch Processing
+# ======================
+batch_size: 0                     # 0 = no batching (use AAP2 slicing instead)
+batch_delay: 0                    # Seconds between batches (0 for parallel)
+scan_timeout: 600                 # Per-host timeout (seconds)
+scan_throttle: 8                  # Max concurrent scans (lower than MSSQL/Oracle due to SSH overhead)
+
 # Splunk integration
 send_to_splunk: false
 splunk_hec_url: ""
