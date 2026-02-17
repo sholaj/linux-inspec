@@ -7,6 +7,22 @@
 # 2. If preflight fails → generate skip report, skip scan
 # 3. If preflight passes → execute InSpec controls
 
+# Step 0: Determine execution mode (set once, use everywhere)
+- name: Determine execution mode
+  set_fact:
+    # Use delegate if a remote host is specified (not empty, not 'localhost', not inventory_hostname)
+    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
+    # Delegate host: remote host if specified, otherwise run on inventory host
+    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] else inventory_hostname }}"
+    _timestamp: "{{ ansible_date_time.epoch }}"
+  tags: always
+
+- name: Display execution mode
+  debug:
+    msg: "Execution mode: {{ 'DELEGATE (' + _delegate_host + ')' if _use_delegate else 'LOCALHOST (target host)' }}"
+  when: inspec_debug_mode | default(false) | bool
+  tags: always
+
 - name: Sybase InSpec Compliance Scan Starting
   debug:
     msg: |

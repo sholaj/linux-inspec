@@ -2,10 +2,8 @@
 # Setup tasks for Sybase InSpec execution
 # Control files are copied ONCE per version to a fixed path, then reused
 
-- name: Determine execution mode for setup
+- name: Set control paths for setup
   set_fact:
-    use_delegate_host: "{{ inspec_delegate_host is defined and inspec_delegate_host | length > 0 and inspec_delegate_host != 'localhost' }}"
-    inspec_execution_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
     _local_controls_path: "{{ role_path }}/files/SYBASE{{ sybase_version }}_ruby"
     sybase_controls_base_dir: "/tmp/inspec_sybase_{{ sybase_version }}"
 
@@ -92,4 +90,4 @@
       fail:
         msg: "Sybase InSpec profile not found at {{ sybase_profile_path }}"
       when: not sybase_profile_check.stat.exists
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"

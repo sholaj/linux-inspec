@@ -13,11 +13,6 @@
     _preflight_port_open: false
     _preflight_auth_valid: false
 
-# Determine execution host (same logic as execute.yml)
-- name: Determine preflight execution target
-  set_fact:
-    _preflight_target: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
-
 # Step 1: TCP Port Connectivity Check
 - name: Test TCP port connectivity
   wait_for:
@@ -27,7 +22,7 @@
     state: started
   register: _port_check
   ignore_errors: true
-  delegate_to: "{{ _preflight_target }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Set port connectivity result
   set_fact:
@@ -63,7 +58,7 @@
   register: _auth_check
   ignore_errors: true
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
-  delegate_to: "{{ _preflight_target }}"
+  delegate_to: "{{ _delegate_host }}"
   when: _preflight_port_open
 
 - name: Parse authentication result

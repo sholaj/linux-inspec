@@ -4,24 +4,24 @@
 
 - name: Gather facts from delegate host for SSH setup
   setup:
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ _delegate_host }}"
   delegate_facts: true
 
 - name: Build Sybase environment variables using delegate host facts
   set_fact:
     sybase_environment:
-      PATH: "{{ sybase_environment_base.PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.PATH | default('') }}"
-      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[inspec_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
+      PATH: "{{ sybase_environment_base.PATH }}:{{ hostvars[_delegate_host].ansible_env.PATH | default('') }}"
+      LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH }}:{{ hostvars[_delegate_host].ansible_env.LD_LIBRARY_PATH | default('') }}"
       SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
-      SSH_AUTH_SOCK: "{{ hostvars[inspec_delegate_host].ansible_env.SSH_AUTH_SOCK | default('') }}"
+      SSH_AUTH_SOCK: "{{ hostvars[_delegate_host].ansible_env.SSH_AUTH_SOCK | default('') }}"
 
 - name: Ensure SSH key directory exists
   file:
     path: "{{ sybase_ssh_key_path | dirname }}"
     state: directory
     mode: '0700'
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ _delegate_host }}"
   when: sybase_ssh_key_path | dirname != '/tmp'
 
 - name: Deploy SSH private key for Sybase access (from vault)
@@ -31,7 +31,7 @@
     mode: '0600'
   no_log: true
   when: vault_sybase_ssh_private_key is defined
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Test SSH connectivity to Sybase host
   shell: |
@@ -53,7 +53,7 @@
   changed_when: false
   failed_when: false
   when: sybase_use_ssh | default(true)
-  delegate_to: "{{ inspec_delegate_host }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Display SSH connection test results
   debug:
