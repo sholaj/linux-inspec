@@ -17,8 +17,6 @@
     enable_debug: false
     # Timeout settings for lengthy scans
     inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}" # Default 30 minutes per control
-    async_timeout: "{{ async_scan_timeout | default(3600) }}" # Default 1 hour for async execution
-    poll_interval: "{{ async_poll_interval | default(30) }}" # Check status every 30 seconds
     # AAP compatibility
     job_id: "{{ tower_job_id | default('local') }}"
     project_name: "{{ project_name | default('mssql_compliance') }}"

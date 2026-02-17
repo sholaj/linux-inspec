@@ -14,8 +14,6 @@
     enable_debug: false
     # Timeout settings for lengthy scans
     inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"
-    async_timeout: "{{ async_scan_timeout | default(3600) }}"
-    poll_interval: "{{ async_poll_interval | default(30) }}"
     # AAP compatibility
     job_id: "{{ tower_job_id | default('local') }}"
     project_name: "{{ project_name | default('postgres_compliance') }}"

@@ -4,7 +4,7 @@
 
 # Set fixed paths (deterministic, not temp)
 - name: Set control paths
-  set_fact:
+  ansible.builtin.set_fact:
     _local_controls_path: "{{ role_path }}/files/ORACLE{{ oracle_version }}_ruby"
     oracle_controls_base_dir: "/tmp/inspec_oracle_{{ oracle_version }}"
   cacheable: yes
@@ -102,6 +102,6 @@
       when: inspec_debug_mode | default(false) | bool
 
     - name: Update oracle_tns_admin fact for execute tasks
-      set_fact:
+      ansible.builtin.set_fact:
         oracle_tns_admin: "{{ oracle_tns_admin_dir }}"
-        cacheable: yes
+      cacheable: yes

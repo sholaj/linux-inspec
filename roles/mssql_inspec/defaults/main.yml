@@ -37,29 +37,11 @@ winrm_username: ""
 winrm_password: ""
 
 # ======================
-# AAP2 Parallel Execution
+# Execution Timeout
 # ======================
-# For large-scale scanning (300+ hosts), use AAP2 Job Slicing:
-#   Job Template → Job Slicing: 10 (runs 10 parallel jobs)
-#   Combined with forks: 20 = 200 hosts scanned simultaneously
-#
-# Recommended AAP2 Job Template Settings:
-#   - Forks: 20-30
-#   - Job Slicing: 10
-#   - Timeout: 3600 (1 hour per slice)
-#   - Instance Groups: Multiple execution nodes
-#
-# Concurrency is controlled at playbook level via 'serial' setting
-# For AAP2, use Job Slicing for large-scale parallel execution
-# scan_throttle is kept for reference but not used at role level
-scan_throttle: 10                 # Reference value for playbook serial setting
-
-# ======================
-# Batch Processing
-# ======================
-batch_size: 0                     # 0 = no batching (use AAP2 slicing instead)
-batch_delay: 0                    # Seconds between batches (0 for parallel)
-scan_timeout: 600                 # Per-host timeout (seconds) - increased for safety
+# Per-host InSpec command timeout (seconds)
+# Note: Batch/concurrency controlled at playbook level (serial) and AAP2 (Job Slicing, Forks)
+scan_timeout: 600
 
 # ======================
 # Error Handling

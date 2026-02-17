@@ -74,6 +74,7 @@
     NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
   args:
     executable: /bin/bash
+  timeout: "{{ scan_timeout | default(600) }}"
   register: oracle_inspec_results
   loop: "{{ oracle_control_files.files }}"
   loop_control:
@@ -102,6 +103,7 @@
     NLS_LANG: "{{ oracle_environment.NLS_LANG }}"
   args:
     executable: /bin/bash
+  timeout: "{{ scan_timeout | default(600) }}"
   register: oracle_inspec_results
   loop: "{{ oracle_control_files.files }}"
   loop_control:
