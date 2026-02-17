@@ -5,7 +5,7 @@
 
 - name: Set result file name
   ansible.builtin.set_fact:
-    _result_file: "POSTGRES_{{ postgres_server }}_{{ postgres_database }}_{{ postgres_version }}_{{ _timestamp }}_{{ control_files.files[_result_idx].path | basename | regex_replace('\\.rb$', '') }}.json"
+    _result_file: "POSTGRES_{{ postgres_server }}_{{ postgres_database }}_{{ postgres_version }}_{{ _timestamp }}_{{ item.item.path | basename | regex_replace('\\.rb$', '') }}.json"
 
 - name: Save successful result
   ansible.builtin.copy:
