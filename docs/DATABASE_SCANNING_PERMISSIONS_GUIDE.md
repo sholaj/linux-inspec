@@ -10,10 +10,9 @@ This document specifies the minimum database permissions required to execute InS
 2. [Oracle Database](#oracle-database)
 3. [Microsoft SQL Server](#microsoft-sql-server)
 4. [SAP Sybase ASE](#sap-sybase-ase)
-5. [PostgreSQL](#postgresql)
-6. [Security Best Practices](#security-best-practices)
-7. [Permission Verification Scripts](#permission-verification-scripts)
-8. [References](#references)
+5. [Security Best Practices](#security-best-practices)
+6. [Permission Verification Scripts](#permission-verification-scripts)
+7. [References](#references)
 
 ---
 
@@ -34,7 +33,6 @@ This guide defines the **minimum database privileges** required for compliance s
 | Oracle Database | 11g, 12c, 18c, 19c |
 | Microsoft SQL Server | 2008, 2012, 2014, 2016, 2017, 2018, 2019, 2022 |
 | SAP Sybase ASE | 15.x, 16.x |
-| PostgreSQL | 14, 15, 16, 17 |
 
 ### Principle: Least Privilege
 
@@ -480,152 +478,6 @@ GO
 
 ---
 
-## PostgreSQL
-
-### Supported Versions
-
-PostgreSQL 14, 15, 16, 17
-
-### Minimum Required Permissions
-
-```sql
--- ============================================================================
--- PostgreSQL Scanning Account Setup
--- CIS PostgreSQL 15 Benchmark v1.0.0
--- ============================================================================
-
--- Step 1: Create dedicated scan role
-CREATE ROLE inspec_scan WITH
-    LOGIN
-    PASSWORD '<strong_password>'
-    NOSUPERUSER
-    NOCREATEDB
-    NOCREATEROLE
-    NOREPLICATION;
-
--- Step 2: Grant connection to target database(s)
-GRANT CONNECT ON DATABASE postgres TO inspec_scan;
--- Repeat for each database to scan:
--- GRANT CONNECT ON DATABASE <database_name> TO inspec_scan;
-
--- Step 3 (Recommended): Grant pg_read_all_settings for comprehensive access
--- This allows reading all configuration settings
-GRANT pg_read_all_settings TO inspec_scan;
-
--- Step 4 (Optional): Grant pg_monitor for statistics views
--- This provides read access to various statistics and monitoring views
-GRANT pg_monitor TO inspec_scan;
-
--- Step 5 (Alternative): If predefined roles are too broad,
--- PostgreSQL system catalogs are publicly readable by default,
--- so a basic login role can execute most compliance checks.
-```
-
-### Objects Accessed (Read-Only)
-
-The InSpec controls query the following objects:
-
-#### System Catalogs
-
-| Catalog | Purpose | Controls Using |
-|---------|---------|---------------|
-| `pg_database` | Database information | 1.3 |
-| `pg_extension` | Installed extensions | 1.5, 3.2, 4.6, 8.5 |
-| `pg_settings` | Configuration parameters | 2.1-2.2, 3.1.x, 5.8-5.9, 6.7-6.8 |
-| `pg_roles` | Role definitions | 4.1-4.2, 5.10, 7.1 |
-| `pg_namespace` | Schema information | 4.3 |
-| `pg_proc` | Function definitions | 4.5 |
-| `pg_class` | Relation/table info | 4.7 |
-| `pg_stat_archiver` | Archive statistics | 8.2 |
-| `pg_available_extensions` | Available extensions | 8.5 |
-
-#### SHOW Commands / current_setting()
-
-| Setting | Purpose | Controls Using |
-|---------|---------|---------------|
-| `data_directory` | Data location | 2.1-2.2 |
-| `log_destination` | Log output | 3.1.2 |
-| `logging_collector` | Log collection | 3.1.3 |
-| `log_directory` | Log location | 3.1.4 |
-| `log_filename` | Log naming | 3.1.5 |
-| `log_file_mode` | Log permissions | 3.1.6 |
-| `log_connections` | Connection logging | 3.1.10 |
-| `log_disconnections` | Disconnection logging | 3.1.11 |
-| `log_statement` | Statement logging | 3.1.14 |
-| `password_encryption` | Auth method | 5.1-5.2 |
-| `ssl` | SSL status | 5.3, 7.4 |
-| `ssl_cert_file` | Certificate file | 5.4 |
-| `ssl_key_file` | Key file | 5.5 |
-| `ssl_ciphers` | Cipher suites | 5.6 |
-| `ssl_min_protocol_version` | TLS version | 5.7 |
-| `listen_addresses` | Network interfaces | 6.1 |
-| `fsync` | Data sync | 6.3 |
-| `full_page_writes` | Page writes | 6.4 |
-| `shared_preload_libraries` | Loaded libraries | 4.8, 6.5 |
-| `archive_mode` | WAL archiving | 7.2 |
-| `archive_command` | Archive command | 7.3 |
-| `search_path` | Schema search path | 8.6 |
-
-### Important Notes
-
-1. **System Catalogs Are Public**: PostgreSQL system catalogs (`pg_catalog.*`) are **publicly readable by default**. A regular login user can execute most compliance checks without additional grants.
-
-2. **Predefined Roles**: PostgreSQL 14+ provides predefined roles:
-   - `pg_read_all_settings` - Read all configuration parameters
-   - `pg_read_all_stats` - Read all statistics views
-   - `pg_monitor` - Combination of monitoring-related roles
-
-3. **No Superuser Required**: A regular user with CONNECT privilege can run all compliance controls.
-
-4. **pgAudit Extension**: For comprehensive audit logging, the `pgaudit` extension is recommended but not required for scanning.
-
-### What NOT to Grant
-
-| Privilege | Risk |
-|-----------|------|
-| `SUPERUSER` | Full database control |
-| `CREATEROLE` | Create/modify roles |
-| `CREATEDB` | Create databases |
-| `REPLICATION` | Streaming replication |
-| `BYPASSRLS` | Bypass row-level security |
-
-### Verification Query
-
-```sql
--- Verify scan account privileges
-SELECT
-    rolname,
-    rolsuper,
-    rolcreaterole,
-    rolcreatedb,
-    rolcanlogin,
-    rolreplication
-FROM pg_roles
-WHERE rolname = 'inspec_scan';
-
--- Verify granted roles
-SELECT
-    r.rolname AS role,
-    m.rolname AS member
-FROM pg_auth_members am
-JOIN pg_roles r ON am.roleid = r.oid
-JOIN pg_roles m ON am.member = m.oid
-WHERE m.rolname = 'inspec_scan';
-
--- Test configuration access
-SELECT current_setting('ssl');
-SELECT current_setting('log_connections');
-
--- Expected: inspec_scan should have:
--- rolsuper = false
--- rolcreaterole = false
--- rolcreatedb = false
--- rolcanlogin = true
--- rolreplication = false
-```
-
----
-
 ## Security Best Practices
 
 ### Service Account Guidelines
@@ -640,13 +492,11 @@ SELECT current_setting('log_connections');
    - Oracle: Use `CREATE PROFILE` with `PASSWORD_VERIFY_FUNCTION`
    - SQL Server: Use login triggers or endpoint restrictions
    - Sybase: Use `sp_configure 'allow remote access'` restrictions
-   - PostgreSQL: Use `pg_hba.conf` host restrictions
 
 5. **Audit Trail**: Enable auditing of scan account activities:
    - Oracle: Enable unified auditing for the scan user
    - SQL Server: Include in server audit specification
    - Sybase: Enable login/logout auditing
-   - PostgreSQL: Enable `log_connections` and `log_disconnections`
 
 6. **No Interactive Login**: Where possible, configure the account to only allow connections from automated scanning systems, not interactive sessions.
 
@@ -657,7 +507,6 @@ SELECT current_setting('log_connections');
 | **Oracle** | `DBA`, `SYSDBA`, `SYSOPER`, `SELECT ANY TABLE`, `CREATE/ALTER/DROP` privileges, `GRANT ANY PRIVILEGE` |
 | **SQL Server** | `sysadmin`, `db_owner`, `CONTROL SERVER`, `ALTER ANY LOGIN`, `ALTER ANY DATABASE` |
 | **Sybase ASE** | `sa_role`, `sso_role`, `oper_role`, `replication_role`, `CREATE/ALTER/DROP` permissions |
-| **PostgreSQL** | `SUPERUSER`, `CREATEROLE`, `CREATEDB`, `REPLICATION`, `BYPASSRLS` |
 
 ### Account Naming Convention
 
@@ -811,63 +660,6 @@ ORDER BY o.name
 GO
 ```
 
-### PostgreSQL: Verify Scan Account Permissions
-
-```sql
--- ============================================================================
--- PostgreSQL Permission Verification Script
--- Run as postgres superuser to verify inspec_scan account configuration
--- ============================================================================
-
--- Role attributes
-\echo '===== Role Attributes ====='
-SELECT
-    rolname,
-    rolsuper,
-    rolcreaterole,
-    rolcreatedb,
-    rolcanlogin,
-    rolreplication,
-    rolbypassrls
-FROM pg_roles
-WHERE rolname = 'inspec_scan';
-
--- Granted roles
-\echo '===== Granted Roles ====='
-SELECT
-    r.rolname AS role,
-    m.rolname AS member,
-    am.admin_option
-FROM pg_auth_members am
-JOIN pg_roles r ON am.roleid = r.oid
-JOIN pg_roles m ON am.member = m.oid
-WHERE m.rolname = 'inspec_scan';
-
--- Verify NO superuser
-\echo '===== Verify NO Superuser ====='
-SELECT
-    'WARNING: Superuser privilege detected' AS status,
-    rolname
-FROM pg_roles
-WHERE rolname = 'inspec_scan'
-  AND rolsuper = true;
-
--- Expected: No rows returned (not a superuser)
-
--- Database connection privileges
-\echo '===== Database Connect Privileges ====='
-SELECT
-    datname,
-    has_database_privilege('inspec_scan', datname, 'CONNECT') AS can_connect
-FROM pg_database
-WHERE datallowconn = true;
-
--- Test configuration access (run as inspec_scan)
-\echo '===== Test Configuration Access ====='
-SELECT current_setting('ssl') AS ssl_setting;
-SELECT current_setting('log_connections') AS log_connections;
-```
-
 ---
 
 ## References
@@ -879,7 +671,6 @@ SELECT current_setting('log_connections') AS log_connections;
 | Oracle | CIS Oracle Database 19c Benchmark v1.1.0 | [cisecurity.org/benchmark/oracle_database](https://www.cisecurity.org/benchmark/oracle_database) |
 | SQL Server | CIS Microsoft SQL Server 2019 Benchmark v1.3.0 | [cisecurity.org/benchmark/microsoft_sql_server](https://www.cisecurity.org/benchmark/microsoft_sql_server) |
 | Sybase ASE | CIS SAP ASE 16.0 Benchmark v1.1.0 | [cisecurity.org/benchmark/sap_ase](https://www.cisecurity.org/benchmark/sap_ase) |
-| PostgreSQL | CIS PostgreSQL 15 Benchmark v1.0.0 | [cisecurity.org/benchmark/postgresql](https://www.cisecurity.org/benchmark/postgresql) |
 
 ### NIST Checklists
 
@@ -904,13 +695,6 @@ SELECT current_setting('log_connections') AS log_connections;
 - [Sybase ASE Security Administration Guide](https://help.sap.com/docs/SAP_ASE)
 - [System Tables Reference](https://help.sap.com/docs/SAP_ASE/e0d4c0e5a4c94a20a2c4ec0f2f6a0eed/a87eb48484f21015b0b0f5c4a2c4b1a0.html)
 - [Tenable Nessus Sybase Compliance Checks](https://www.tenable.com/audits/sybase)
-
-#### PostgreSQL
-- [PostgreSQL Client Authentication](https://www.postgresql.org/docs/current/client-authentication.html)
-- [System Catalogs](https://www.postgresql.org/docs/current/catalogs.html)
-- [Predefined Roles](https://www.postgresql.org/docs/current/predefined-roles.html)
-- [pgAudit Extension](https://github.com/pgaudit/pgaudit)
-- [PGDSAT - PostgreSQL Database Security Assessment Tool](https://github.com/HexaCorp/PGDSAT)
 
 ---
 
