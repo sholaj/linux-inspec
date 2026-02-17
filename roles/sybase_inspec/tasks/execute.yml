@@ -111,21 +111,35 @@
   ansible.builtin.set_fact:
     sybase_final_results: "{{ (sybase_use_ssh | default(true)) | ternary(sybase_inspec_results | default({}), sybase_inspec_results_direct | default({})) }}"
 
-- name: Display execution summary (debug mode only)
+# Parse results for display
+- name: Parse Sybase InSpec results
+  ansible.builtin.set_fact:
+    _parsed_results: "{{ [sybase_final_results.stdout if sybase_final_results.stdout is mapping else (sybase_final_results.stdout | from_json)] }}"
+  when: sybase_final_results.stdout is defined and sybase_final_results.stdout != ''
+  no_log: true
+
+- name: Display scan summary
   ansible.builtin.debug:
-    msg:
-      - "Sybase InSpec Execution Summary"
-      - "==============================="
-      - "Database: {{ sybase_server }}:{{ sybase_port }}"
-      - "Service: {{ sybase_service | default('N/A') }}"
-      - "SSH Mode: {{ sybase_use_ssh | default(true) }}"
-      - "SSH User: {{ sybase_ssh_user | default('N/A') }}"
-      - "DB Username: {{ sybase_username }}"
-      - "Profile: {{ sybase_profile_path }}"
-      - "Exit Code: {{ sybase_final_results.rc }}"
-      - "Status: {{ 'PASS' if sybase_final_results.rc == 0 else 'CONTROLS FAILED' if sybase_final_results.rc in [100, 101] else 'ERROR' }}"
-  when: inspec_debug_mode | default(false) | bool
-  delegate_to: "{{ _delegate_host }}"
+    msg: |
+      ═══════════════════════════════════════════════════════════════════
+       Sybase InSpec Compliance Scan Results
+       Database: {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service | default('N/A') }}
+       Version: {{ sybase_version }}
+      ═══════════════════════════════════════════════════════════════════
+      {% set ns = namespace(passed=0, failed=0, total=0) %}
+      {% for result in _parsed_results | default([]) %}
+      {% for control in result.controls | default([]) %}
+      {% set res = control.results | default([]) %}
+      {% set status = res[0].status | default(control.status | default('unknown')) %}
+      {% set ns.total = ns.total + 1 %}
+      {% if status == 'passed' %}{% set ns.passed = ns.passed + 1 %}{% elif status == 'failed' %}{% set ns.failed = ns.failed + 1 %}{% endif %}
+      {{ control.id }}: {{ status | upper }} - {{ control.title | default('N/A') | truncate(60) }}
+      {% endfor %}
+      {% endfor %}
+      ───────────────────────────────────────────────────────────────────
+       Total: {{ ns.total }} | Passed: {{ ns.passed }} | Failed: {{ ns.failed }}
+      ═══════════════════════════════════════════════════════════════════
+  when: _parsed_results is defined and (_parsed_results | length) > 0
 
 - name: Process Sybase InSpec results
   ansible.builtin.include_tasks: process_results.yml
