@@ -1,6 +1,7 @@
 ---
 # Process single line from flat file
-# Format: PLATFORM SERVER DATABASE SERVICE PORT VERSION
+# Format: PLATFORM SERVER DATABASE SERVICE PORT VERSION [CONNECTION]
+# CONNECTION is optional (7th column): WINRM or DIRECT (default: DIRECT)
 
 - name: Parse line
   set_fact:
@@ -8,11 +9,11 @@
 
 - name: Skip invalid lines
   debug:
-    msg: "Skipping line {{ idx + 1 }}: expected 6 fields, got {{ parts | length }}"
-  when: parts | length != 6
+    msg: "Skipping line {{ idx + 1 }}: expected 6-7 fields, got {{ parts | length }}"
+  when: parts | length < 6 or parts | length > 7
 
 - name: Process valid entry
-  when: parts | length == 6
+  when: parts | length >= 6 and parts | length <= 7
   block:
     - name: Extract fields
       set_fact:
@@ -22,6 +23,12 @@
         service: "{{ parts[3] }}"
         port: "{{ parts[4] }}"
         version: "{{ parts[5] }}"
+        # Use explicit column value if present, otherwise use platform default
+        connection_mode: "{{ (parts[6] | upper) if parts | length == 7 else (mssql_default_connection | upper) if parts[0] | upper == 'MSSQL' else 'DIRECT' }}"
+
+    - name: Determine WinRM usage
+      set_fact:
+        use_winrm: "{{ connection_mode == 'WINRM' }}"
 
     - name: Create host ID
       set_fact:
@@ -41,7 +48,8 @@
                         'mssql_server': server,
                         'mssql_port': port | int,
                         'mssql_version': version,
-                        'database_platform': 'mssql'
+                        'database_platform': 'mssql',
+                        'use_winrm': use_winrm
                       }
                     })
                   }
@@ -50,6 +58,9 @@
             }, recursive=true) }}"
         - set_fact:
             platform_counts: "{{ platform_counts | combine({'mssql': platform_counts.mssql + 1}) }}"
+        - set_fact:
+            winrm_counts: "{{ winrm_counts | combine({'mssql': winrm_counts.mssql + (1 if use_winrm else 0)}) }}"
+          when: winrm_counts is defined
 
     - name: Skip duplicate MSSQL
       when: platform == 'MSSQL' and host_id in inventory_data.all.children.mssql_databases.hosts

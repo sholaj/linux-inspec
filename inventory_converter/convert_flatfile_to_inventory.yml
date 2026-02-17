@@ -1,6 +1,16 @@
 ---
 # Flat File to Ansible Inventory Converter
 # Produces host metadata only - credentials handled by AAP2
+#
+# Input Format: PLATFORM SERVER DATABASE SERVICE PORT VERSION [CONNECTION]
+#   CONNECTION (optional, 7th column): WINRM or DIRECT (default: DIRECT)
+#
+# WinRM Support:
+#   - When CONNECTION=WINRM, sets use_winrm: true on the host
+#   - Default mode: -e "mssql_connection_mode=winrm" (no need to add WINRM to every line)
+#   - Per-line CONNECTION column overrides the default
+#   - WinRM credentials (winrm_username) injected by AAP2 Custom Credential
+#   - See docs/WINRM_PREREQUISITES.md for setup details
 
 - name: Convert Flat File to Inventory
   hosts: localhost
@@ -14,6 +24,11 @@
     delegate_host: "{{ inspec_delegate | default('') }}"
     delegate_address: "{{ inspec_delegate_address | default('') }}"
     delegate_user: "{{ inspec_delegate_user | default('ansible_svc') }}"
+
+    # Default connection mode for MSSQL when not specified in flat file
+    # Set to 'winrm' if all/most Windows SQL Servers use WinRM
+    # Per-line CONNECTION column overrides this default
+    mssql_default_connection: "{{ mssql_connection_mode | default('direct') }}"
 
     # Inventory structure with group vars
     inventory_data:
@@ -43,6 +58,10 @@
       oracle: 0
       sybase: 0
       postgres: 0
+
+    # Track WinRM hosts per platform
+    winrm_counts:
+      mssql: 0
 
   tasks:
     - name: Check input file exists
@@ -187,6 +206,11 @@
           #   inspec_delegate_host: "" = Run on target host
           #   inspec_delegate_host: "<hostname>" = Delegate to remote host
           #
+          # Connection modes (per-host):
+          #   use_winrm: false = Direct database connection (sqlcmd -S)
+          #   use_winrm: true = WinRM to Windows host, then local sqlcmd
+          #   WinRM credentials (winrm_username) injected by AAP2
+          #
           # Generated: {{ ansible_date_time.iso8601 }}
 
           {{ inventory_data | to_nice_yaml(indent=2) }}
@@ -196,11 +220,12 @@
       debug:
         msg: |
           Conversion complete: {{ output_file }}
-          - MSSQL: {{ platform_counts.mssql }} hosts
+          - MSSQL: {{ platform_counts.mssql }} hosts ({{ winrm_counts.mssql }} WinRM)
           - Oracle: {{ platform_counts.oracle }} hosts
           - Sybase: {{ platform_counts.sybase }} hosts
           - PostgreSQL: {{ platform_counts.postgres }} hosts
           - Total: {{ platform_counts.mssql + platform_counts.oracle + platform_counts.sybase + platform_counts.postgres }} hosts
+          - MSSQL Default Connection: {{ mssql_default_connection | upper }}
           {% if delegate_host | length > 0 %}
           - Delegate Host: {{ delegate_host }} ({{ delegate_address }})
           {% else %}
