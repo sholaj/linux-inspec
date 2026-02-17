@@ -70,7 +70,6 @@
     - name: Set Sybase InSpec profile path
       ansible.builtin.set_fact:
         sybase_profile_path: "{{ sybase_controls_base_dir }}/SYBASE{{ sybase_version }}_ruby"
-        cacheable: yes
 
     - name: Verify Sybase InSpec profile exists
       ansible.builtin.stat:
