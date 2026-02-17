@@ -508,16 +508,6 @@ GO
 | **SQL Server** | `sysadmin`, `db_owner`, `CONTROL SERVER`, `ALTER ANY LOGIN`, `ALTER ANY DATABASE` |
 | **Sybase ASE** | `sa_role`, `sso_role`, `oper_role`, `replication_role`, `CREATE/ALTER/DROP` permissions |
 
-### Account Naming Convention
-
-Use a consistent naming convention across all databases:
-
-| Environment | Suggested Account Name |
-|-------------|----------------------|
-| Production | `inspec_scan_prod` |
-| UAT | `inspec_scan_uat` |
-| Development | `inspec_scan_dev` |
-
 ---
 
 ## Permission Verification Scripts
