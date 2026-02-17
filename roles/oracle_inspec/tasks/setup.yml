@@ -68,6 +68,15 @@
     - _controls_exist.stat.exists
     - inspec_debug_mode | default(false) | bool
 
+# Always find control files on delegate (needed for execute.yml loop)
+- name: Find control files on delegate for execution
+  ansible.builtin.find:
+    paths: "{{ oracle_controls_base_dir }}/ORACLE{{ oracle_version }}_ruby"
+    patterns: "*.rb"
+    recurse: false
+  register: oracle_control_files
+  delegate_to: "{{ _delegate_host }}"
+
 # TNS Configuration Support
 - name: Setup TNS configuration (when oracle_use_tns is enabled)
   when: oracle_use_tns | default(false) | bool
