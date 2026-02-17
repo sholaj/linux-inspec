@@ -29,7 +29,7 @@
     - name: Log successful Sybase execution
       debug:
         msg: "Sybase profile {{ profile_name }} completed with status: {{ sybase_inspec_status }} (exit code: {{ inspec_result.rc }})"
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
 
 - name: Handle failed Sybase InSpec execution
   block:
@@ -51,4 +51,4 @@
       when:
         - inspec_debug_mode | default(false) | bool
         - (inspec_result.rc | int) not in [0, 100, 101]
-  delegate_to: "{{ inspec_execution_target }}"
+  delegate_to: "{{ _delegate_host }}"
