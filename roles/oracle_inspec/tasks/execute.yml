@@ -114,24 +114,38 @@
   delegate_to: "{{ _delegate_host }}"
   when: not (oracle_use_tns | default(false) | bool)
 
-- name: Display sanitized execution summary (debug mode only)
-  ansible.builtin.debug:
-    msg: |
-      Oracle InSpec Execution Summary
-      ===============================
-      Database: {{ oracle_server }}:{{ oracle_port }}
-      Service: {{ oracle_service | default('N/A') }}
-      Username: {{ oracle_username }}
-      Password: [PROTECTED - passed via environment variable]
-      Control: {{ item.item.path | basename }}
-      Status: {{ 'PASS' if item.rc == 0 else 'FAIL' }}
-      Exit Code: {{ item.rc }}
+# Parse results for display
+- name: Parse Oracle InSpec results
+  ansible.builtin.set_fact:
+    _parsed_results: "{{ _parsed_results | default([]) + [item.stdout if item.stdout is mapping else (item.stdout | from_json)] }}"
   loop: "{{ oracle_inspec_results.results | default([]) }}"
   loop_control:
     label: "{{ item.item.path | basename }}"
-  when:
-    - inspec_debug_mode | default(false) | bool
-  delegate_to: "{{ _delegate_host }}"
+  when: item.stdout is defined and item.stdout != ''
+  no_log: true
+
+- name: Display scan summary
+  ansible.builtin.debug:
+    msg: |
+      ═══════════════════════════════════════════════════════════════════
+       Oracle InSpec Compliance Scan Results
+       Database: {{ oracle_server }}:{{ oracle_port }}/{{ oracle_service | default('N/A') }}
+       Version: {{ oracle_version }}
+      ═══════════════════════════════════════════════════════════════════
+      {% set ns = namespace(passed=0, failed=0, total=0) %}
+      {% for result in _parsed_results | default([]) %}
+      {% for control in result.controls | default([]) %}
+      {% set res = control.results | default([]) %}
+      {% set status = res[0].status | default(control.status | default('unknown')) %}
+      {% set ns.total = ns.total + 1 %}
+      {% if status == 'passed' %}{% set ns.passed = ns.passed + 1 %}{% elif status == 'failed' %}{% set ns.failed = ns.failed + 1 %}{% endif %}
+      {{ control.id }}: {{ status | upper }} - {{ control.title | default('N/A') | truncate(60) }}
+      {% endfor %}
+      {% endfor %}
+      ───────────────────────────────────────────────────────────────────
+       Total: {{ ns.total }} | Passed: {{ ns.passed }} | Failed: {{ ns.failed }}
+      ═══════════════════════════════════════════════════════════════════
+  when: _parsed_results is defined and (_parsed_results | length) > 0
 
 - name: Process Oracle InSpec results
   ansible.builtin.include_tasks: process_results.yml
