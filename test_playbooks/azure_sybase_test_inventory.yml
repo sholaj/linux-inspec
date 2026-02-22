@@ -24,25 +24,23 @@ all:
     delegate_hosts:
       hosts:
         runner_vm:
-          ansible_host: 20.106.154.159
+          ansible_host: 127.0.0.1
           ansible_user: azureuser
-          ansible_ssh_private_key_file: "~/.ssh/inspec_azure"
-          ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
           ansible_python_interpreter: /usr/bin/python3.9
-          ansible_connection: ssh
+          ansible_connection: local
 
     # Sybase databases to scan
     sybase_databases:
       hosts:
         sybase_azure_test:
           # Connection parameters
-          sybase_server: 10.0.2.6
+          sybase_server: 10.0.2.5
           sybase_port: 5000
           sybase_database: master
-          sybase_service: SYBASE
+          sybase_service: MYSYBASE
           sybase_version: "16"
           sybase_username: sa
-          sybase_password: "SybasePass123!"
+          sybase_password: "myPassword"
 
           # SSH settings - disable for direct connection testing
           sybase_use_ssh: false
