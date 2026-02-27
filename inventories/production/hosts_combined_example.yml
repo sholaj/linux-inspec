@@ -1,0 +1,106 @@
+---
+# Production Inventory - COMBINED MODE Example
+# Mixes delegate and localhost execution in a single inventory.
+#
+# How it works:
+#   inspec_delegate_host: "inspec-runner"  → Delegate mode (runs on bastion)
+#   inspec_delegate_host: ""               → Localhost mode (runs on AAP2 execution node)
+#
+# You can set this at group level (all hosts in that group use the same mode)
+# or override at host level (mix modes within a single group).
+
+all:
+  hosts:
+    # Delegate/bastion host - only needed if any group uses delegate mode
+    inspec-runner:
+      ansible_host: jumphost.example.com
+      ansible_connection: ssh
+      ansible_user: ansible_svc
+      ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
+
+  children:
+    # ---------------------------------------------------------------
+    # MSSQL: Delegate mode (all scans run via bastion host)
+    # ---------------------------------------------------------------
+    mssql_databases:
+      hosts:
+        SQLPROD01_1433:
+          mssql_server: sqlprod01.example.com
+          mssql_port: 1433
+          mssql_version: "2019"
+
+        SQLPROD02_1433:
+          mssql_server: sqlprod02.example.com
+          mssql_port: 1433
+          mssql_version: "2017"
+
+      vars:
+        inspec_delegate_host: "inspec-runner"  # Delegate mode
+        mssql_username: nist_scan_user
+        # mssql_password: injected by AAP2 Custom Credential
+        inspec_results_dir: /tmp/inspec_mssql_results
+        inspec_debug_mode: false
+        generate_summary_report: true
+
+    # ---------------------------------------------------------------
+    # Oracle: Localhost mode (AAP2 execution node has sqlplus)
+    # ---------------------------------------------------------------
+    oracle_databases:
+      hosts:
+        ORAPROD01_1521:
+          oracle_server: oraprod01.example.com
+          oracle_port: 1521
+          oracle_service: ORCL
+          oracle_version: "19"
+
+        ORAPROD02_1521:
+          oracle_server: oraprod02.example.com
+          oracle_port: 1521
+          oracle_service: FINDB
+          oracle_version: "19"
+
+      vars:
+        inspec_delegate_host: ""  # Localhost mode
+        oracle_username: nist_scan_user
+        # oracle_password: injected by AAP2 Custom Credential
+
+    # ---------------------------------------------------------------
+    # Sybase: Mixed mode (per-host override)
+    # Some Sybase DBs are reachable from AAP2 node, others need bastion
+    # ---------------------------------------------------------------
+    sybase_databases:
+      hosts:
+        # This host uses delegate mode (overrides group default)
+        SYBPROD01_5000:
+          sybase_server: sybprod01.example.com
+          sybase_port: 5000
+          sybase_version: "16"
+          inspec_delegate_host: "inspec-runner"  # Host-level override
+
+        # This host uses localhost mode (inherits group default)
+        SYBPROD02_5000:
+          sybase_server: sybprod02.example.com
+          sybase_port: 5000
+          sybase_version: "16"
+
+      vars:
+        inspec_delegate_host: ""  # Group default: localhost mode
+        sybase_username: nist_scan_user
+        sybase_use_ssh: true
+        sybase_ssh_user: sybase_admin
+
+# COMBINED MODE KEY CONCEPTS:
+#
+# 1. Group-level default: Set inspec_delegate_host in group vars
+#    - Applies to all hosts in that group
+#
+# 2. Host-level override: Set inspec_delegate_host on a specific host
+#    - Overrides the group default for just that host
+#    - Ansible variable precedence: host_vars > group_vars
+#
+# 3. The roles handle both modes automatically:
+#    - "" or "localhost" → InSpec runs locally on the target/execution node
+#    - "inspec-runner"   → InSpec runs on the delegate host via SSH
+#
+# 4. The "inspec-runner" host definition is only needed if at least one
+#    group or host uses delegate mode. Remove it if everything is localhost.
