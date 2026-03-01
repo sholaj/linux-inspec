@@ -86,7 +86,7 @@
         # Database connection parameters come from inventory host variables:
         # sybase_server, sybase_port, sybase_database, sybase_service,
         # sybase_version, sybase_username, sybase_password
-        # SSH parameters: sybase_ssh_user, sybase_ssh_password, sybase_use_ssh
+        # SSH parameters: sybase_ssh_user, sybase_ssh_key_path, sybase_use_ssh
 
   post_tasks:
     - name: Generate Sybase consolidated report

@@ -205,7 +205,7 @@ sybase_databases:
     sybase_use_ssh: true
     sybase_ssh_user: oracle
     # sybase_password: injected by AAP2
-    # sybase_ssh_password: injected by AAP2
+    # sybase_ssh_key_path: set in inventory or defaults
 ```
 
 ---
@@ -220,7 +220,7 @@ sybase_databases:
 ### Database Credentials (InSpec to Database)
 - `mssql_username`, `mssql_password`
 - `oracle_username`, `oracle_password`
-- `sybase_username`, `sybase_password`, `sybase_ssh_password`
+- `sybase_username`, `sybase_password`, `sybase_ssh_key_path`
 
 ### Execution Control
 - `inspec_delegate_host` - Where InSpec runs
@@ -243,7 +243,7 @@ Layer 1 Variables:              Layer 2 Variables:
 ansible_user                   mssql_username / mssql_password
 ansible_password               oracle_username / oracle_password
   OR                           sybase_username / sybase_password
-ansible_ssh_private_key_file   sybase_ssh_user / sybase_ssh_password
+ansible_ssh_private_key_file   sybase_ssh_user / sybase_ssh_key_path
 ```
 
 ---
@@ -369,7 +369,6 @@ Create custom credential types in AAP2:
 - `mssql_password` - Single password for all MSSQL DBs
 - `oracle_password` - Single password for all Oracle DBs
 - `sybase_password` - Single password for all Sybase DBs
-- `sybase_ssh_password` - SSH tunnel password for Sybase
 
 AAP2 injects these as extra vars at job runtime.
 

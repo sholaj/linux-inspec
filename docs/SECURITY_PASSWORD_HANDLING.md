@@ -87,12 +87,12 @@ Same pattern as MSSQL, with Oracle-specific environment variables for Oracle Hom
 
 ### Sybase Role (`sybase_inspec/tasks/execute.yml`)
 
-**Sybase has THREE authentication layers:**
+**Sybase has TWO authentication layers:**
 
-#### SSH Mode (InSpec SSH Transport)
+#### SSH Mode (InSpec SSH Transport - Key-Based)
 **Environment Variables Used:**
 - `INSPEC_SSH_USER` - SSH username for Sybase server
-- `INSPEC_SSH_PASSWORD` - SSH password for Sybase server (PROTECTED)
+- `INSPEC_SSH_KEY_PATH` - SSH private key path for Sybase server
 - `INSPEC_DB_USERNAME` - Sybase database username
 - `INSPEC_DB_PASSWORD` - Sybase database password (PROTECTED)
 - `INSPEC_DB_HOST` - Sybase server hostname
@@ -101,21 +101,20 @@ Same pattern as MSSQL, with Oracle-specific environment variables for Oracle Hom
 
 **Implementation:**
 ```yaml
-- name: Execute Sybase InSpec controls via SSH (credentials passed via environment variables)
+- name: Execute Sybase InSpec controls via SSH (key-based auth)
   shell: |
-    /usr/bin/inspec exec {{ item.path }} \
-      --ssh://${INSPEC_SSH_USER}:${INSPEC_SSH_PASSWORD}@${INSPEC_DB_HOST} \
-      -o {{ sybase_ssh_key_path }} \
+    /usr/bin/inspec exec {{ sybase_profile_path }} \
+      -t ssh://${INSPEC_SSH_USER}@${INSPEC_DB_HOST} \
+      -i {{ sybase_ssh_key_path }} \
       --input usernm="$INSPEC_DB_USERNAME" \
               passwd="$INSPEC_DB_PASSWORD" \
-              hostnm="$INSPEC_DB_HOST" \
               servicenm="$INSPEC_DB_SERVICE" \
-              port="$INSPEC_DB_PORT" \
+              database="$INSPEC_DB_DATABASE" \
       --reporter=json-min \
       --no-color
   environment:
     INSPEC_SSH_USER: "{{ sybase_ssh_user }}"
-    INSPEC_SSH_PASSWORD: "{{ sybase_ssh_password }}"
+    INSPEC_SSH_KEY_PATH: "{{ sybase_ssh_key_path }}"
     INSPEC_DB_USERNAME: "{{ sybase_username }}"
     INSPEC_DB_PASSWORD: "{{ sybase_password }}"
     INSPEC_DB_HOST: "{{ sybase_server }}"

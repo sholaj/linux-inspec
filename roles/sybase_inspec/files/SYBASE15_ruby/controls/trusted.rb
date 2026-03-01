@@ -10,7 +10,7 @@
 sybase_opts = {
   username: input('usernm'),
   password: input('passwd'),
-  server: input('servernm'),
+  server: input('servicenm'),
   database: input('database', value: 'master')
 }
 

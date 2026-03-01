@@ -78,7 +78,7 @@ aks-gitops/
 ### Sybase (New)
 - **SSH tunnel support** - Matches original script SSH logic
 - **Versions**: 15, 16 (ASE)
-- **SSH command pattern**: `--ssh://oracle:password@server -o keyfile`
+- **SSH command pattern**: `-t ssh://oracle@server -i keyfile`
 - **File pattern**: `SYBASE_CIS_*_*.json`
 - **Hello World**:  Sybase InSpec Compliance Scan
 - **Unique feature**: SSH connectivity validation
@@ -137,14 +137,14 @@ SYBASE sybaseserver01 master SAP_ASE 5000 16
 - **Password lookup patterns**:
   - MSSQL: `vault_{server}_{port}_password` (server-level, no database)
   - Oracle/Sybase: `vault_{server}_{database}_{port}_password` (database-level)
-- **SSH credentials for Sybase**: `vault_sybase_ssh_password`, `vault_sybase_ssh_private_key`
+- **SSH credentials for Sybase**: `vault_sybase_ssh_private_key` (key-based auth via `sybase_ssh_key_path`)
 
 ### Original Script Compatibility
 - **MSSQL**: Direct execution (existing)
 - **Oracle**: Standard database connection
-- **Sybase**: SSH tunnel execution matching original:
+- **Sybase**: SSH tunnel execution with key-based auth:
   ```bash
-  /usr/bin/inspec exec ... --ssh://oracle:password@server -o keyfile ...
+  /usr/bin/inspec exec ... -t ssh://oracle@server -i ~oracle/.ssh/id_rsa ...
   ```
 
 ## 🚀 Hello World Validation
@@ -190,7 +190,7 @@ Note: This role includes SSH tunnel support as per original script!
 | `portnum=$5` | `{platform}_port` |
 | `dbversion=$6` | `{platform}_version` |
 | `ruby_dir=$script_dir/${platform}_${dbversion}_ruby` | `{platform}_inspec/files/{PLATFORM}{VERSION}_ruby/` |
-| SSH for Sybase: `--ssh://oracle:edcp!cv0576@` | `sybase_ssh_setup.yml` with vault credentials |
+| SSH for Sybase: `-t ssh://oracle@host -i keyfile` | `sybase_ssh_setup.yml` with key-based auth |
 | File naming: `${platform}_CIS_$$_${servernm}_${dbname}_${dbversion}_${now}_${file_prefix}.json` | Maintained exactly |
 
 ## 🎯 Production Readiness

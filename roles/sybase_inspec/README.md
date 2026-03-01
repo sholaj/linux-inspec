@@ -7,7 +7,7 @@ Executes InSpec compliance checks against SAP ASE (Sybase) databases.
 - Ansible 2.9+
 - InSpec 5.22+ installed on the execution host
 - Sybase client (isql from SAP ASE SDK or tsql from FreeTDS) installed on the execution host
-- SSH access to Sybase server (for SSH transport mode)
+- SSH key access to Sybase server (for SSH transport mode)
 - Network connectivity to target Sybase servers
 
 ## Execution Modes
@@ -47,14 +47,16 @@ sybase_password: ""             # Database password (use vault/AAP credential)
 sybase_version: "16"            # Sybase version (15, 16)
 ```
 
-### SSH Connection Variables (for SSH transport)
+### SSH Connection Variables (for key-based SSH transport)
+
+SSH transport uses key-based auth (`-t ssh://user@host -i keyfile`), consistent with InSpec's
+standard transport flags. No SSH password is needed.
 
 ```yaml
 sybase_use_ssh: true                    # Enable SSH transport (recommended)
 sybase_ssh_user: "oracle"               # SSH username for Sybase server
-sybase_ssh_password: ""                 # SSH password (use vault/AAP credential)
 sybase_ssh_port: 22                     # SSH port
-sybase_ssh_key_path: "/tmp/sybase_ssh_key"  # Path to SSH private key
+sybase_ssh_key_path: "~oracle/.ssh/id_rsa"  # Path to SSH private key (identity file)
 ```
 
 ### Optional Variables
@@ -121,6 +123,17 @@ sybase_inspec/
 └── README.md
 ```
 
+### InSpec Input Names
+
+The role passes these inputs to InSpec controls, consistent across all platform roles:
+
+| InSpec Input | Ansible Variable | Description |
+|-------------|-----------------|-------------|
+| `usernm` | `sybase_username` | Database username |
+| `passwd` | `sybase_password` | Database password |
+| `servicenm` | `sybase_service` | ASE server/service name |
+| `database` | `sybase_database` | Target database name |
+
 ## Usage
 
 ### Basic Playbook (SSH Mode - Recommended)
@@ -141,7 +154,7 @@ sybase_inspec/
     sybase_version: "16"
     sybase_use_ssh: true
     sybase_ssh_user: "oracle"
-    sybase_ssh_password: "{{ vault_ssh_password }}"
+    sybase_ssh_key_path: "~oracle/.ssh/id_rsa"
     inspec_delegate_host: ""
 
   roles:

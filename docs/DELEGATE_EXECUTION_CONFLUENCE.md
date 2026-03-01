@@ -30,7 +30,7 @@ mssql_databases:
 ## Credential Separation (never mix these)
 - **SSH (delegate hop)**: `ansible_user`, `ansible_password` or `ansible_ssh_private_key_file` (only needed in delegate mode).
 - **Database (InSpec to DB)**: `mssql_username/mssql_password`, `oracle_username/oracle_password`, `sybase_username/sybase_password` (needed in both modes).
-- **Sybase extra (SSH into DB host)**: `sybase_ssh_user`, `sybase_ssh_password` (used by InSpec SSH transport to Sybase).
+- **Sybase extra (SSH into DB host)**: `sybase_ssh_user`, `sybase_ssh_key_path` (used by InSpec SSH transport to Sybase).
 
 ## Minimal Steps – Delegate Mode
 1) Inventory: set `inspec_delegate_host: "inspec-runner"` and define DB vars.
