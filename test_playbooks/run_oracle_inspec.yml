@@ -31,10 +31,6 @@
       ansible.builtin.setup:
         gather_subset:
           - min
-          - hardware
-          - network
-          - virtual
-          - env
       delegate_to: localhost
       run_once: true
       register: controller_facts
@@ -44,26 +40,29 @@
         controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
       run_once: true
 
+    # Compute safe delegate target per host (same logic as the role)
+    - name: Determine execution target for pre-tasks
+      ansible.builtin.set_fact:
+        _playbook_delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
     - name: Ensure base results directory exists
       ansible.builtin.file:
         path: "{{ base_results_dir }}"
         state: directory
         mode: "0755"
-      run_once: true
-      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_to: "{{ _playbook_delegate_host }}"
 
     - name: Display Oracle scan configuration
       ansible.builtin.debug:
         msg: |
-          🔵 Oracle InSpec Compliance Scans Starting
+          Oracle InSpec Compliance Scans Starting
           ===========================================
           Total Oracle hosts: {{ groups['oracle_databases'] | length }}
+          Execution target: {{ _playbook_delegate_host }}
           Results directory: {{ base_results_dir }}
           Timestamp: {{ scan_timestamp }}
           Debug mode: {{ enable_debug }}
           Batch size: {{ batch_size | default(5) }}
-
-          Hello World from Oracle Compliance Scanning! 🌍
       run_once: true
       when: enable_debug | bool
 
@@ -95,7 +94,7 @@
             patterns: "ORACLE_NIST_*.json"
             recurse: yes
           register: oracle_json_files
-          delegate_to: "{{ inspec_delegate_host }}"
+          delegate_to: "{{ _playbook_delegate_host }}"
           run_once: true
 
         - name: Display Oracle scan completion summary
@@ -108,13 +107,10 @@
               Result files generated: {{ oracle_json_files.files | length }}
               Results location: {{ base_results_dir }}
 
-              Oracle file pattern: ORACLE_NIST_*_*.json
-
-              To view Oracle results:
+              To view results:
               find {{ base_results_dir }}/ -name "ORACLE_NIST_*.json"
               =====================================
           run_once: true
-          delegate_to: "{{ inspec_delegate_host }}"
       when: not ansible_check_mode
 # Example usage:
 # POC Mode:
