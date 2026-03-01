@@ -31,10 +31,6 @@
       ansible.builtin.setup:
         gather_subset:
           - min
-          - hardware
-          - network
-          - virtual
-          - env
       delegate_to: localhost
       run_once: true
       register: controller_facts
@@ -44,13 +40,17 @@
         controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
       run_once: true
 
+    # Compute safe delegate target per host (same logic as the role)
+    - name: Determine execution target for pre-tasks
+      ansible.builtin.set_fact:
+        _playbook_delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
     - name: Ensure base results directory exists
       ansible.builtin.file:
         path: "{{ base_results_dir }}"
         state: directory
         mode: "0755"
-      run_once: true
-      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_to: "{{ _playbook_delegate_host }}"
 
     - name: Display scan configuration
       ansible.builtin.debug:
@@ -58,6 +58,7 @@
           Starting MSSQL Compliance Scans
           ================================
           Total servers in group: {{ groups['mssql_databases'] | length }}
+          Execution target: {{ _playbook_delegate_host }}
           Results directory: {{ base_results_dir }}
           Timestamp: {{ scan_timestamp }}
           Debug mode: {{ enable_debug }}
@@ -93,7 +94,7 @@
             patterns: "*.json"
             recurse: yes
           register: json_files
-          delegate_to: "{{ inspec_delegate_host }}"
+          delegate_to: "{{ _playbook_delegate_host }}"
           run_once: true
 
         - name: Display scan completion summary
@@ -110,7 +111,6 @@
               ls -la {{ base_results_dir }}/
               =====================================
           run_once: true
-          delegate_to: "{{ inspec_delegate_host }}"
       when: not ansible_check_mode
 
     - name: Archive scan results (optional)
@@ -121,7 +121,7 @@
       when:
         - archive_results | default(false)
         - not ansible_check_mode
-      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_to: "{{ _playbook_delegate_host }}"
       run_once: true
 
     - name: Send notification (optional)
@@ -139,7 +139,7 @@
         - notification_email is defined
         - send_notifications | default(false)
       ignore_errors: yes
-      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_to: "{{ _playbook_delegate_host }}"
       run_once: true
 
     - name: Send results to Splunk (optional)
@@ -169,7 +169,7 @@
         - send_to_splunk | bool
         - splunk_hec_url != ""
         - splunk_hec_token != ""
-      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_to: "{{ _playbook_delegate_host }}"
       run_once: true
       ignore_errors: yes
 # Example usage:
