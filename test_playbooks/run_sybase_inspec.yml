@@ -21,6 +21,8 @@
     # AAP compatibility
     job_id: "{{ tower_job_id | default('local') }}"
     project_name: "{{ project_name | default('sybase_compliance') }}"
+    # Results directory (must match role default so pre_tasks can create it)
+    base_results_dir: "{{ override_results_dir | default('/tmp/compliance_scans') }}"
     # Splunk integration
     send_to_splunk: "{{ splunk_enabled | default(false) }}"
     splunk_hec_url: "{{ splunk_hec_url | default('') }}"
