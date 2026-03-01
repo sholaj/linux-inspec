@@ -27,17 +27,19 @@ all:
         SQLPROD01_1433:
           mssql_server: sqlprod01.example.com
           mssql_port: 1433
+          mssql_database: master
           mssql_version: "2019"
 
         SQLPROD02_1433:
           mssql_server: sqlprod02.example.com
           mssql_port: 1433
+          mssql_database: master
           mssql_version: "2017"
 
       vars:
         inspec_delegate_host: "inspec-runner"  # Delegate mode
         mssql_username: nist_scan_user
-        # mssql_password: injected by AAP2 Custom Credential
+        # mssql_password: injected by AAP2 Custom Credential or vault
         inspec_results_dir: /tmp/inspec_mssql_results
         inspec_debug_mode: false
         generate_summary_report: true
@@ -50,19 +52,21 @@ all:
         ORAPROD01_1521:
           oracle_server: oraprod01.example.com
           oracle_port: 1521
+          oracle_database: ORCL
           oracle_service: ORCL
           oracle_version: "19"
 
         ORAPROD02_1521:
           oracle_server: oraprod02.example.com
           oracle_port: 1521
+          oracle_database: FINDB
           oracle_service: FINDB
           oracle_version: "19"
 
       vars:
         inspec_delegate_host: ""  # Localhost mode
         oracle_username: nist_scan_user
-        # oracle_password: injected by AAP2 Custom Credential
+        # oracle_password: injected by AAP2 Custom Credential or vault
 
     # ---------------------------------------------------------------
     # Sybase: Mixed mode (per-host override)
@@ -74,6 +78,8 @@ all:
         SYBPROD01_5000:
           sybase_server: sybprod01.example.com
           sybase_port: 5000
+          sybase_database: master
+          sybase_service: SYBPROD01          # ASE server name (maps to isql -S)
           sybase_version: "16"
           inspec_delegate_host: "inspec-runner"  # Host-level override
 
@@ -81,13 +87,18 @@ all:
         SYBPROD02_5000:
           sybase_server: sybprod02.example.com
           sybase_port: 5000
+          sybase_database: master
+          sybase_service: SYBPROD02          # ASE server name (maps to isql -S)
           sybase_version: "16"
 
       vars:
         inspec_delegate_host: ""  # Group default: localhost mode
         sybase_username: nist_scan_user
+        # sybase_password: injected by AAP2 Custom Credential or vault
         sybase_use_ssh: true
-        sybase_ssh_user: sybase_admin
+        sybase_ssh_user: oracle              # SSH user to Sybase host (from legacy script)
+        sybase_ssh_key_path: "/home/oracle/.ssh/authorized_keys"  # Existing key on execution host (legacy pattern)
+        # sybase_ssh_password: injected by AAP2 Custom Credential or vault
 
 # COMBINED MODE KEY CONCEPTS:
 #
