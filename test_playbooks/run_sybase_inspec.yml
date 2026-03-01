@@ -32,10 +32,6 @@
       ansible.builtin.setup:
         gather_subset:
           - min
-          - hardware
-          - network
-          - virtual
-          - env
       delegate_to: localhost
       run_once: true
       register: controller_facts
@@ -45,13 +41,17 @@
         controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
       run_once: true
 
+    # Compute safe delegate target per host (same logic as the role)
+    - name: Determine execution target for pre-tasks
+      ansible.builtin.set_fact:
+        _playbook_delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
     - name: Ensure base results directory exists
       ansible.builtin.file:
         path: "{{ base_results_dir }}"
         state: directory
         mode: "0755"
-      run_once: true
-      delegate_to: "{{ inspec_delegate_host }}"
+      delegate_to: "{{ _playbook_delegate_host }}"
 
     - name: Display Sybase scan configuration
       ansible.builtin.debug:
@@ -59,38 +59,14 @@
           Sybase InSpec Compliance Scans Starting
           ==========================================
           Total Sybase hosts: {{ groups['sybase_databases'] | length }}
+          Execution target: {{ _playbook_delegate_host }}
           Results directory: {{ base_results_dir }}
           Timestamp: {{ scan_timestamp }}
           Debug mode: {{ enable_debug }}
           Batch size: {{ batch_size | default(3) }}
           SSH Support: ENABLED (as per original script)
-
-          Hello World from Sybase Compliance Scanning! 🌍
-          Note: This includes SSH tunnel support like the original NIST_for_db.ksh!
       run_once: true
       when: enable_debug | bool
-
-    - name: Check SSH connectivity (Sybase specific requirement)
-      ansible.builtin.shell: ssh -o ConnectTimeout=5 -o BatchMode=yes {{ sybase_ssh_user | default('oracle') }}@{{ sybase_server }} "echo 'SSH test'"
-      args:
-        executable: /bin/bash
-      register: ssh_connectivity_test
-      changed_when: false
-      failed_when: false
-      when: sybase_use_ssh | default(true)
-      delegate_to: "{{ inspec_delegate_host }}"
-
-    - name: Display SSH connectivity status
-      ansible.builtin.debug:
-        msg: |
-          SSH Connectivity Test Results:
-          {% for host in ansible_play_hosts %}
-          {{ host }}: {{ hostvars[host].ssh_connectivity_test.rc == 0 | ternary('[OK] SSH OK', '[FAIL] SSH Failed') }}
-          {% endfor %}
-      run_once: true
-      when:
-        - enable_debug | bool
-        - sybase_use_ssh | default(true)
 
   tasks:
     - name: Display current Sybase database being scanned
@@ -121,7 +97,7 @@
             patterns: "SYBASE_NIST_*.json"
             recurse: yes
           register: sybase_json_files
-          delegate_to: "{{ inspec_delegate_host }}"
+          delegate_to: "{{ _playbook_delegate_host }}"
           run_once: true
 
         - name: Display Sybase scan completion summary
@@ -135,16 +111,10 @@
               Results location: {{ base_results_dir }}
               SSH Mode: {{ sybase_use_ssh | default(true) | ternary('Enabled', 'Direct') }}
 
-              Sybase file pattern: SYBASE_NIST_*_*.json
-
-              To view Sybase results:
+              To view results:
               find {{ base_results_dir }}/ -name "SYBASE_NIST_*.json"
-
-              Original script SSH command pattern:
-              /usr/bin/inspec exec ... --ssh://oracle:password@server -o keyfile ...
               =====================================
           run_once: true
-          delegate_to: "{{ inspec_delegate_host }}"
       when: not ansible_check_mode
 # Example usage:
 # POC Mode:
