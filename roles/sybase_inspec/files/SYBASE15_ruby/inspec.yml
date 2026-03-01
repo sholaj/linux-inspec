@@ -19,8 +19,8 @@ inputs:
     required: true
     sensitive: true
 
-  - name: servernm
-    description: Sybase server name (ASE server identifier)
+  - name: servicenm
+    description: Sybase server/service name (ASE server identifier)
     type: string
     required: true
 

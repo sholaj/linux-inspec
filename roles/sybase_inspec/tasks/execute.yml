@@ -67,11 +67,11 @@
     source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
 
     inspec exec {{ sybase_profile_path }} \
-      --ssh://'{{ sybase_ssh_user }}':'{{ sybase_ssh_password }}'@'{{ sybase_server }}' \
-      -o {{ sybase_ssh_key_path }} \
+      -t ssh://'{{ sybase_ssh_user }}'@'{{ sybase_server }}' \
+      -i {{ sybase_ssh_key_path }} \
       --input usernm='{{ sybase_username }}' \
               passwd='{{ sybase_password }}' \
-              servernm='{{ sybase_service }}' \
+              servicenm='{{ sybase_service }}' \
               database='{{ sybase_database | default("master") }}' \
       --reporter=json-min \
       --no-color
@@ -93,7 +93,7 @@
     inspec exec {{ sybase_profile_path }} \
       --input usernm='{{ sybase_username }}' \
               passwd='{{ sybase_password }}' \
-              servernm='{{ sybase_service }}' \
+              servicenm='{{ sybase_service }}' \
               database='{{ sybase_database | default("master") }}' \
       --reporter=json-min \
       --no-color

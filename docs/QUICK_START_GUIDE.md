@@ -64,7 +64,6 @@ vault_oracledb01_password: "secure_password_here"
 
 # Sybase passwords
 vault_sybasedb01_password: "secure_password_here"
-vault_sybasedb01_ssh_password: "ssh_password_here"
 ```
 
 ## Step 2: Validate Your Configuration

@@ -1,6 +1,6 @@
 ---
 # SSH setup tasks for Sybase InSpec execution
-# Based on original script SSH logic: --ssh://oracle:edcp!cv0576@ -o oracle/.ssh/authorized_keys
+# Key-based SSH auth: -t ssh://oracle@host -i ~oracle/.ssh/id_rsa
 
 - name: Gather facts from delegate host for SSH setup
   ansible.builtin.setup:

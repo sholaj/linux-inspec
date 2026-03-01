@@ -6,13 +6,13 @@ sybase_username: "nist_scan_user"
 sybase_port: 5000
 sybase_version: "16"
 sybase_password: ""  # AAP2 injects via extra vars (single credential for all DBs with RBAC)
-sybase_ssh_password: ""  # AAP2 injects via extra vars (for SSH tunnel to Sybase servers)
 
 # SSH connection settings (unique to Sybase from original script)
+# Uses key-based auth: -t ssh://user@host -i keyfile
 sybase_use_ssh: true
 sybase_ssh_user: "oracle"
 sybase_ssh_port: 22
-sybase_ssh_key_path: "/tmp/sybase_ssh_key"
+sybase_ssh_key_path: "~oracle/.ssh/id_rsa"
 
 # Default paths and directories
 base_results_dir: "/tmp/compliance_scans"

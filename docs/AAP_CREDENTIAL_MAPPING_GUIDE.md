@@ -232,29 +232,21 @@ Sybase is special - it needs TWO password fields (SSH tunnel + database):
      {
        "fields": [
          {
-           "id": "ssh_password",
-           "type": "string",
-           "label": "Sybase SSH Tunnel Password",
-           "secret": true
-         },
-         {
            "id": "password",
            "type": "string",
            "label": "Sybase Database Password",
            "secret": true
          }
        ],
-       "required": ["ssh_password", "password"]
+       "required": ["password"]
      }
 
      Injectors:
      {
        "env": {
-         "SYBASE_SSH_PASSWORD": "{{ ssh_password }}",
          "SYBASE_PASSWORD": "{{ password }}"
        },
        "extra_vars": {
-         "sybase_ssh_password": "{{ ssh_password }}",
          "sybase_password": "{{ password }}"
        }
      }
@@ -269,7 +261,6 @@ Sybase is special - it needs TWO password fields (SSH tunnel + database):
      Name:                           Sybase Compliance Scan Account
      Organization:                   (select your org)
      Credential Type:                Sybase Database
-     Sybase SSH Tunnel Password:     [SSH tunnel password]
      Sybase Database Password:       [Database password]
      ```
    - Click **Save**

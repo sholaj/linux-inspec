@@ -97,8 +97,7 @@ all:
         # sybase_password: injected by AAP2 Custom Credential or vault
         sybase_use_ssh: true
         sybase_ssh_user: oracle              # SSH user to Sybase host (from legacy script)
-        sybase_ssh_key_path: "/home/oracle/.ssh/authorized_keys"  # Existing key on execution host (legacy pattern)
-        # sybase_ssh_password: injected by AAP2 Custom Credential or vault
+        sybase_ssh_key_path: "~oracle/.ssh/id_rsa"  # SSH private key for InSpec transport
 
 # COMBINED MODE KEY CONCEPTS:
 #

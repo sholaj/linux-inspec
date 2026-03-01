@@ -49,7 +49,7 @@ max_parallelism: 12
 ssh_settings:
   enabled: true
   default_user: "oracle"
-  default_keyfile: "oracle/.ssh/authorized_keys"
+  default_keyfile: "~oracle/.ssh/id_rsa"
   connection_timeout: 30
   command_timeout: 300
   
@@ -90,7 +90,7 @@ inspec_settings:
 # SSH command patterns matching original script
 # InSpec SSH command template for Sybase connections
 ssh_command_patterns:
-  inspec_ssh_template: "--ssh://{{ sybase_ssh_user }}:{{ vault_sybase_ssh_password }}@{{ sybase_server }} -o {{ sybase_ssh_keyfile }}"
+  inspec_ssh_template: "-t ssh://{{ sybase_ssh_user }}@{{ sybase_server }} -i {{ sybase_ssh_key_path }}"
   ssh_options:
     - "StrictHostKeyChecking=no"
     - "UserKnownHostsFile=/dev/null"

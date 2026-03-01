@@ -32,8 +32,8 @@
       ansible.builtin.assert:
         that:
           - sybase_ssh_user is defined and sybase_ssh_user | length > 0
-          - sybase_ssh_password is defined and sybase_ssh_password | length > 0
-        fail_msg: "Missing required SSH parameters for Sybase connection"
+          - sybase_ssh_key_path is defined and sybase_ssh_key_path | length > 0
+        fail_msg: "Missing required SSH parameters for Sybase connection (ssh_user and ssh_key_path)"
         success_msg: "SSH parameters validated successfully"
       when: sybase_use_ssh | default(true)
   no_log: true
