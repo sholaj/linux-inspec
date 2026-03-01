@@ -28,4 +28,31 @@ Implementing CyberArk as the central credential store for database compliance sc
 |Sybase ASE|~105 databases    |
 |**Total** |**~205 databases**|
 
+
+
+cd /opt/sybase_install/ebf31104
+cp sample_response.txt my_response.txt
+
+# Edit to set: (the sample already has most defaults correct)
+# USER_INSTALL_DIR=/opt/sybase
+# CHOSEN_INSTALL_SET=Custom
+# CHOSEN_INSTALL_FEATURE_LIST=fopen_client
+# AGREE_TO_SAP_LICENSE=TRUE
+
+sed -i 's|CHOSEN_INSTALL_SET=Typical|CHOSEN_INSTALL_SET=Custom|' my_response.txt
+sed -i '/CHOSEN_INSTALL_FEATURE_LIST/d' my_response.txt
+echo "CHOSEN_INSTALL_FEATURE_LIST=fopen_client" >> my_response.txt
+echo "AGREE_TO_SAP_LICENSE=true" >> my_response.txt
+
+./setup.bin -f my_response.txt
+
+
+option1
+
+cd /opt/sybase_install/ebf31104
+mkdir -p jre/bin
+ln -s /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.472.b08-1.el8.x86_64/jre/bin/java jre/bin/java
+ln -s /usr/lib/jvm/java-1.8.0-openjdk-1.8.0.472.b08-1.el8.x86_64/jre/lib jre/lib
+
+./setup.bin -i silent -DUSER_INSTALL_DIR=/opt/sybase -DINSTALL_OLDER_VERSION=false -DDDO_UPDATE_INSTALL=FALSE -DCHOSEN_INSTALL_SET=fopen_client -DAGREE_TO_SAP_LICENSE=TRUE -DRUN_SILENT=true
 -----
