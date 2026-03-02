@@ -18,11 +18,11 @@ result_format: "json-min"
 # Environment variables for SAP ASE SDK
 # Sybase-specific environment setup with SSH support
 # NOTE: These will be combined with delegate host's environment at runtime
-# Production paths use /opt/sap (SAP ASE SDK standard installation)
+# Production paths use /opt/sybase (SAP ASE SDK installation)
 sybase_environment_base:
-  PATH: "/opt/sap/OCS-16_0/bin"
-  LD_LIBRARY_PATH: "/opt/sap/OCS-16_0/lib"
-  SYBASE: "/opt/sap"
+  PATH: "/opt/sybase/OCS-16_0/bin"
+  LD_LIBRARY_PATH: "/opt/sybase/OCS-16_0/lib"
+  SYBASE: "/opt/sybase"
   SYBASE_OCS: "OCS-16_0"
 
 # Timestamp formats matching original script exactly

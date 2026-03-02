@@ -160,7 +160,7 @@
       block:
         - name: Test Sybase credentials
           ansible.builtin.shell: |
-            source /opt/sap/SYBASE.sh 2>/dev/null || true
+            source /opt/sybase/SYBASE.sh 2>/dev/null || true
             export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
 
             timeout 15 tsql -S {{ sybase_server }} -U {{ sybase_username }} -P {{ sybase_password }} << 'SQL' 2>&1
@@ -281,7 +281,7 @@
 
         - name: Execute Sybase InSpec control
           ansible.builtin.shell: |
-            source /opt/sap/SYBASE.sh 2>/dev/null || true
+            source /opt/sybase/SYBASE.sh 2>/dev/null || true
             export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
 
             inspec exec /tmp/sybase_test_control.rb 2>&1 || true

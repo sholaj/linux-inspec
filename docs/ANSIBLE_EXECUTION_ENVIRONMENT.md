@@ -152,7 +152,7 @@ export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
 
 ### Sybase - SAP ASE Client (OCS-16_0)
 
-**Installation Path:** `/opt/sap`
+**Installation Path:** `/opt/sybase`
 
 **Required Binaries:**
 - `isql` - SAP Interactive SQL utility (preferred)
@@ -169,7 +169,7 @@ export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
 #!/bin/bash
 # Install SAP ASE Client 16.0
 
-SYBASE=/opt/sap
+SYBASE=/opt/sybase
 SYBASE_OCS=OCS-16_0
 
 mkdir -p ${SYBASE}/${SYBASE_OCS}/{bin,lib}
@@ -182,7 +182,7 @@ mkdir -p ${SYBASE}/${SYBASE_OCS}/{bin,lib}
 # Create SYBASE.sh environment script
 cat > ${SYBASE}/SYBASE.sh << 'EOF'
 #!/bin/bash
-export SYBASE=/opt/sap
+export SYBASE=/opt/sybase
 export SYBASE_OCS=OCS-16_0
 export PATH=${SYBASE}/${SYBASE_OCS}/bin:${PATH}
 export LD_LIBRARY_PATH=${SYBASE}/${SYBASE_OCS}/lib:${LD_LIBRARY_PATH}
@@ -214,7 +214,7 @@ tsql -C
 **Environment Variables Required:**
 
 ```bash
-export SYBASE=/opt/sap
+export SYBASE=/opt/sybase
 export SYBASE_OCS=OCS-16_0
 export PATH=${SYBASE}/${SYBASE_OCS}/bin:${PATH}
 export LD_LIBRARY_PATH=${SYBASE}/${SYBASE_OCS}/lib:${LD_LIBRARY_PATH}
@@ -261,10 +261,10 @@ The EE should configure the following PATH for all database client binaries:
 
 ```bash
 # Combined PATH for all database clients
-export PATH=/opt/mssql-tools18/bin:/opt/oracle/instantclient_19_16:/opt/sap/OCS-16_0/bin:/usr/local/bin:$PATH
+export PATH=/opt/mssql-tools18/bin:/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/bin:/usr/local/bin:$PATH
 
 # Combined LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_16:/opt/sap/OCS-16_0/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/lib:$LD_LIBRARY_PATH
 
 # Oracle-specific
 export ORACLE_HOME=/opt/oracle/instantclient_19_16
@@ -272,7 +272,7 @@ export TNS_ADMIN=/opt/oracle/instantclient_19_16/network/admin
 export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
 
 # Sybase-specific
-export SYBASE=/opt/sap
+export SYBASE=/opt/sybase
 export SYBASE_OCS=OCS-16_0
 ```
 
@@ -307,10 +307,10 @@ additional_build_steps:
     - COPY scripts/install-db-clients.sh /tmp/
     - RUN chmod +x /tmp/install-db-clients.sh && /tmp/install-db-clients.sh
     - RUN gem install inspec-bin -v 5.22.29 --no-document
-    - ENV PATH="/opt/mssql-tools18/bin:/opt/oracle/instantclient_19_16:/opt/sap/OCS-16_0/bin:/usr/local/bin:${PATH}"
-    - ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_19_16:/opt/sap/OCS-16_0/lib"
+    - ENV PATH="/opt/mssql-tools18/bin:/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
+    - ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/lib"
     - ENV ORACLE_HOME="/opt/oracle/instantclient_19_16"
-    - ENV SYBASE="/opt/sap"
+    - ENV SYBASE="/opt/sybase"
     - ENV SYBASE_OCS="OCS-16_0"
     - ENV NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
 ```
@@ -354,7 +354,7 @@ dnf install -y freetds
 
 echo "=== Creating directories ==="
 mkdir -p /opt/oracle/instantclient_19_16
-mkdir -p /opt/sap/OCS-16_0/{bin,lib}
+mkdir -p /opt/sybase/OCS-16_0/{bin,lib}
 mkdir -p /tmp/compliance_scans
 
 echo "=== Setting permissions ==="
@@ -388,7 +388,7 @@ export TNS_ADMIN="${ORACLE_HOME}/network/admin"
 export NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
 
 # Sybase
-export SYBASE="/opt/sap"
+export SYBASE="/opt/sybase"
 export SYBASE_OCS="OCS-16_0"
 export PATH="${SYBASE}/${SYBASE_OCS}/bin:${PATH}"
 export LD_LIBRARY_PATH="${SYBASE}/${SYBASE_OCS}/lib:${LD_LIBRARY_PATH}"
@@ -507,7 +507,7 @@ export CHEF_LICENSE=accept-silent
 ```bash
 # Check library paths
 ldd /opt/oracle/instantclient_19_16/sqlplus
-ldd /opt/sap/OCS-16_0/bin/isql
+ldd /opt/sybase/OCS-16_0/bin/isql
 
 # Add missing library path
 export LD_LIBRARY_PATH=/path/to/libs:$LD_LIBRARY_PATH

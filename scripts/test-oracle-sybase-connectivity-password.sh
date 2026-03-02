@@ -153,7 +153,7 @@ test_sybase_credentials() {
     
     local result=$(sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=accept-new \
         "$RUNNER_USER@$RUNNER_HOST" bash << 'EOSSH'
-source /opt/sap/SYBASE.sh 2>/dev/null || true
+source /opt/sybase/SYBASE.sh 2>/dev/null || true
 export PATH=/usr/local/bin:/usr/bin:/bin:$PATH
 
 timeout 10 tsql -S 10.0.2.6 -U sa -P SybasePass123 << 'EOF'
@@ -222,7 +222,7 @@ test_sybase_inspec() {
     print_header "TEST 7: Sybase - Basic InSpec Profile Execution"
     print_test "Executing simple Sybase InSpec control"
     
-    local inspec_cmd="source /opt/sap/SYBASE.sh 2>/dev/null || true; \
+    local inspec_cmd="source /opt/sybase/SYBASE.sh 2>/dev/null || true; \
 inspec exec - << 'INSPEC_EOF'
 control 'sybase-basic-connectivity' do
   impact 1.0

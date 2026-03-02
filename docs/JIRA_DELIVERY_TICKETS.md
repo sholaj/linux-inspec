@@ -484,13 +484,13 @@ Set up the execution environment with FreeTDS client and validate end-to-end con
 - [ ] `freetds.conf` configured with server definitions
 - [ ] Can successfully run `telnet <sybase_host> 5000` (default Sybase port)
 - [ ] Can execute `tsql -S <server> -U <user> -P <pass>` and connect
-- [ ] Sybase environment script created at `/opt/sap/SYBASE.sh`
+- [ ] Sybase environment script created at `/opt/sybase/SYBASE.sh`
 - [ ] Error messages for common failures documented
 
 ### Technical Tasks
 1. Install FreeTDS package via package manager
 2. Configure `freetds.conf` for Sybase connectivity
-3. Create Sybase environment compatibility layer at `/opt/sap/`
+3. Create Sybase environment compatibility layer at `/opt/sybase/`
 4. Test connectivity to sample Sybase 16 database
 5. Document FreeTDS configuration options
 6. Verify connectivity from AAP2 execution environment
