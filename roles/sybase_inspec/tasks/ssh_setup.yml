@@ -35,7 +35,9 @@
 
 - name: Test SSH connectivity to Sybase host
   ansible.builtin.shell: |
-    ssh -o ConnectTimeout=10 \
+    ssh -i {{ sybase_ssh_key_path }} \
+        -o ConnectTimeout=10 \
+        -o BatchMode=yes \
         -o StrictHostKeyChecking=no \
         -o UserKnownHostsFile=/dev/null \
         -p {{ sybase_ssh_port }} \
