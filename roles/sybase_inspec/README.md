@@ -7,14 +7,59 @@ Executes InSpec compliance checks against SAP ASE (Sybase) databases.
 - Ansible 2.9+
 - InSpec 5.22+ installed on the execution host
 - Sybase client (isql from SAP ASE SDK or tsql from FreeTDS) installed on the execution host
-- SSH key access to Sybase server (for SSH transport mode)
 - Network connectivity to target Sybase servers
+- SSH key access to Sybase server (only if using legacy SSH transport mode)
+
+## Connection Modes: Direct vs SSH
+
+The role supports two database connection modes. **Direct mode is recommended.**
+
+### Direct Mode (Default, Recommended)
+
+```
+AAP2 → SSH → Delegate Host → isql (network) → Sybase Database
+              (Ansible)        (port 5000)
+```
+
+InSpec runs on the delegate host and `isql` connects to the database over the network. This is the same pattern used by the MSSQL and Oracle roles.
+
+```yaml
+sybase_use_ssh: false  # Default
+```
+
+### SSH Mode (Legacy)
+
+```
+AAP2 → SSH → Delegate Host → SSH → Sybase Server → isql → Database
+              (Ansible)       (InSpec transport)     (local)
+```
+
+InSpec SSHs into the Sybase server itself and runs `isql` locally on the database host. This was the pattern used by the original `NISTv2.ksh` script.
+
+```yaml
+sybase_use_ssh: true
+sybase_ssh_user: "oracle"
+sybase_ssh_key_path: "~oracle/.ssh/id_rsa"
+```
+
+### Why Direct Mode is Better
+
+| Factor | Direct Mode | SSH Mode |
+|--------|-------------|----------|
+| **Dependencies on DB server** | Network port only | SSH access + oracle user + isql |
+| **SSH key management** | Not needed | Required on every DB server |
+| **Consistency** | Same as MSSQL/Oracle roles | Unique pattern |
+| **Onboarding complexity** | Firewall rule + DB credentials | SSH access per server |
+| **Points of failure** | 2 layers | 3 layers |
+| **Privilege escalation** | Not needed | oracle user access required |
+
+Direct mode is simpler, has fewer moving parts, and aligns with how the other database roles work. SSH mode is retained for backward compatibility with environments that already have the SSH/oracle user pattern configured.
 
 ## Execution Modes
 
-The role supports two execution modes controlled by `inspec_delegate_host`:
+Orthogonal to the connection mode above, the role supports two execution modes controlled by `inspec_delegate_host`:
 
-### Localhost Mode (Default)
+### Localhost Mode
 
 InSpec runs on the inventory target host. Control files are copied from the Ansible controller.
 
@@ -23,7 +68,7 @@ inspec_delegate_host: ""           # Empty string
 inspec_delegate_host: "localhost"  # Explicit localhost
 ```
 
-### Delegate Mode
+### Delegate Mode (Recommended for production)
 
 InSpec runs on a remote bastion/jump server that has database connectivity.
 
@@ -47,16 +92,15 @@ sybase_password: ""             # Database password (use vault/AAP credential)
 sybase_version: "16"            # Sybase version (15, 16)
 ```
 
-### SSH Connection Variables (for key-based SSH transport)
+### SSH Connection Variables (legacy mode only)
 
-SSH transport uses key-based auth (`-t ssh://user@host -i keyfile`), consistent with InSpec's
-standard transport flags. No SSH password is needed.
+Only required when `sybase_use_ssh: true`. Not needed for direct mode (default).
 
 ```yaml
-sybase_use_ssh: true                    # Enable SSH transport (recommended)
-sybase_ssh_user: "oracle"               # SSH username for Sybase server
-sybase_ssh_port: 22                     # SSH port
-sybase_ssh_key_path: "~oracle/.ssh/id_rsa"  # Path to SSH private key (identity file)
+sybase_use_ssh: false                   # Direct mode (default, recommended)
+sybase_ssh_user: "oracle"               # SSH username for Sybase server (SSH mode only)
+sybase_ssh_port: 22                     # SSH port (SSH mode only)
+sybase_ssh_key_path: "~oracle/.ssh/id_rsa"  # Path to SSH private key (SSH mode only)
 ```
 
 ### Optional Variables
@@ -113,6 +157,8 @@ sybase_inspec/
 ├── vars/main.yml             # Role variables (tool paths, SSH settings)
 ├── files/
 │   ├── SYBASE15_ruby/        # Sybase 15 controls
+│   │   └── libraries/
+│   │       └── sybase_session_local.rb  # Custom InSpec resource
 │   └── SYBASE16_ruby/        # Sybase 16 controls
 │       └── libraries/
 │           └── sybase_session_local.rb  # Custom InSpec resource
@@ -136,7 +182,7 @@ The role passes these inputs to InSpec controls, consistent across all platform 
 
 ## Usage
 
-### Basic Playbook (SSH Mode - Recommended)
+### Direct Mode Playbook (Recommended)
 
 ```yaml
 ---
@@ -152,20 +198,18 @@ The role passes these inputs to InSpec controls, consistent across all platform 
     sybase_username: "scan_user"
     sybase_password: "{{ vault_sybase_password }}"
     sybase_version: "16"
-    sybase_use_ssh: true
-    sybase_ssh_user: "oracle"
-    sybase_ssh_key_path: "~oracle/.ssh/id_rsa"
-    inspec_delegate_host: ""
 
   roles:
     - sybase_inspec
 ```
 
-### Direct Mode Playbook (No SSH)
+### SSH Mode Playbook (Legacy)
+
+Only use this if your environment requires SSH into the Sybase server to run isql locally.
 
 ```yaml
 ---
-- name: Run Sybase Compliance Scan (Direct)
+- name: Run Sybase Compliance Scan (SSH Mode)
   hosts: runner
   gather_facts: true
 
@@ -177,13 +221,15 @@ The role passes these inputs to InSpec controls, consistent across all platform 
     sybase_username: "scan_user"
     sybase_password: "{{ vault_sybase_password }}"
     sybase_version: "16"
-    sybase_use_ssh: false
+    sybase_use_ssh: true
+    sybase_ssh_user: "oracle"
+    sybase_ssh_key_path: "~oracle/.ssh/id_rsa"
 
   roles:
     - sybase_inspec
 ```
 
-### Delegate Mode Playbook
+### Delegate Mode with Inventory (Production)
 
 ```yaml
 ---
@@ -204,7 +250,7 @@ The role passes these inputs to InSpec controls, consistent across all platform 
 all:
   hosts:
     inspec-runner:
-      ansible_host: jumphost.example.com
+      ansible_host: [DELEGATE_HOST]
       ansible_connection: ssh
       ansible_user: ansible_svc
 
@@ -226,8 +272,6 @@ all:
       vars:
         inspec_delegate_host: "inspec-runner"
         sybase_username: nist_scan_user
-        sybase_use_ssh: true
-        sybase_ssh_user: oracle
 ```
 
 ## Sybase Client Options
@@ -387,14 +431,15 @@ inspec_debug_mode: true
 
 ## Custom InSpec Resource
 
-The role includes a custom `sybase_session_local` InSpec resource that:
+The role includes a custom `sybase_session_local` InSpec resource (in both SYBASE15 and SYBASE16 profiles) that:
 
 - Auto-detects SAP isql or FreeTDS tsql
+- Supports custom interfaces file path via `-I` flag (for on-prem where `/opt/sybase/interfaces` may not exist)
 - Handles local and remote execution properly
 - Parses both isql and tsql output formats
 - Manages temporary SQL files correctly
 
-Located at: `files/SYBASE16_ruby/libraries/sybase_session_local.rb`
+Located at: `files/SYBASE{15,16}_ruby/libraries/sybase_session_local.rb`
 
 ## License
 
