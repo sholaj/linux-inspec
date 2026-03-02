@@ -15,6 +15,15 @@
         state: directory
         mode: "0755"
 
+    # Check if Sybase SDK is already installed (on-prem environments)
+    - name: Check if Sybase environment already exists
+      ansible.builtin.stat:
+        path: "{{ sybase_environment_base.SYBASE }}/SYBASE.sh"
+      register: _sybase_env_exists
+
+    # Only create directory structure and deploy files on fresh environments
+    # (e.g. Azure test). On-prem, the SDK is already installed and the
+    # Ansible user does not have become/sudo privileges for /opt/sybase.
     - name: Create SAP ASE directory structure
       ansible.builtin.file:
         path: "{{ item }}"
@@ -25,6 +34,7 @@
         - "{{ sybase_environment_base.SYBASE }}/{{ sybase_environment_base.SYBASE_OCS }}/bin"
         - "{{ sybase_environment_base.SYBASE }}/{{ sybase_environment_base.SYBASE_OCS }}/lib"
       become: true
+      when: not _sybase_env_exists.stat.exists
 
     - name: Deploy SYBASE.sh environment script
       ansible.builtin.template:
@@ -32,6 +42,12 @@
         dest: "{{ sybase_environment_base.SYBASE }}/SYBASE.sh"
         mode: "0755"
       become: true
+      when: not _sybase_env_exists.stat.exists
+
+    - name: Check if interfaces file exists
+      ansible.builtin.stat:
+        path: "{{ sybase_environment_base.SYBASE }}/interfaces"
+      register: _sybase_interfaces_exists
 
     - name: Deploy Sybase interfaces file
       ansible.builtin.template:
@@ -39,6 +55,7 @@
         dest: "{{ sybase_environment_base.SYBASE }}/interfaces"
         mode: "0644"
       become: true
+      when: not _sybase_interfaces_exists.stat.exists
 
     # Check if controls already exist (skip copy if present)
     - name: Check if controls already copied
