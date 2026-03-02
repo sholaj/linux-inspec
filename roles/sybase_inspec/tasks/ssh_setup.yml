@@ -16,17 +16,17 @@
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ hostvars[_delegate_host].ansible_env.SSH_AUTH_SOCK | default('') }}"
 
-- name: Ensure SSH key directory exists
+- name: Ensure SSH key directory exists (vault-deployed keys only)
   ansible.builtin.file:
     path: "{{ sybase_ssh_key_path | dirname }}"
     state: directory
     mode: '0700'
   delegate_to: "{{ _delegate_host }}"
-  when: sybase_ssh_key_path | dirname != '/tmp'
+  when: vault_sybase_ssh_private_key is defined
 
 - name: Deploy SSH private key for Sybase access (from vault)
   ansible.builtin.copy:
-    content: "{{ vault_sybase_ssh_private_key | default('# SSH key not provided in vault') }}"
+    content: "{{ vault_sybase_ssh_private_key }}"
     dest: "{{ sybase_ssh_key_path }}"
     mode: '0600'
   no_log: true
