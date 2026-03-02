@@ -1,44 +1,51 @@
 ---
-# Sybase InSpec execution tasks with SSH support
+# InSpec execution tasks for Sybase
+# ==================================
+# Routes to appropriate execution mode based on sybase_use_ssh variable.
+# Supports both direct (isql over network) and SSH (legacy) modes.
 #
-# EXECUTION MODES:
-# Mode 1: Delegate/Bastion Mode (when inspec_delegate_host is defined)
-#   - Layer 1: Ansible SSHs to delegate host using ansible_user (from inventory)
-#   - Layer 2: Delegate host SSHs to Sybase server using sybase_ssh_user (for InSpec SSH transport)
-#   - Layer 3: InSpec connects to database using sybase_username/sybase_password (from vault)
-#
-# Mode 2: Local/Direct Mode (when inspec_delegate_host is undefined or empty)
-#   - Layer 1: InSpec runs directly on AAP2/local machine
-#   - Layer 2: InSpec SSHs to Sybase server using sybase_ssh_user (for InSpec SSH transport)
-#   - Layer 3: InSpec connects to database using sybase_username/sybase_password (from vault)
-#
-# Note: Sybase ALWAYS uses SSH transport for InSpec, regardless of execution mode
-# Note: _delegate_host is set in main.yml - do not duplicate here
+# Prerequisites:
+#   - _delegate_host is set (to inspec_delegate_host or inventory_hostname)
+#   - preflight_passed is true
+#   - sybase_profile_path is set (control files copied to delegate)
 
-- name: Gather environment facts from execution target
+# Determine connection mode
+- name: "[Execute] Determine connection mode"
+  ansible.builtin.set_fact:
+    _connection_mode: "{{ 'ssh' if (sybase_use_ssh | default(false) | bool) else 'direct' }}"
+
+- name: "[Execute] Display execution mode"
+  ansible.builtin.debug:
+    msg: |
+      Execution Mode: {{ _connection_mode | upper }}
+      Delegate Host: {{ _delegate_host }}
+      Sybase Target: {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }}
+  when: inspec_debug_mode | default(false) | bool
+
+- name: "[Execute] Gather environment facts"
   ansible.builtin.setup:
     gather_subset:
       - env
   delegate_to: "{{ _delegate_host }}"
   delegate_facts: true
 
-- name: Set target environment from execution host
+- name: "[Execute] Set target environment"
   ansible.builtin.set_fact:
     _target_env: "{{ hostvars[_delegate_host].ansible_env | default({'PATH': '', 'LD_LIBRARY_PATH': ''}) }}"
 
-- name: Get system PATH from delegate host if not available in facts
+- name: "[Execute] Get system PATH from delegate"
   ansible.builtin.shell: echo "$PATH"
   register: delegate_system_path
   changed_when: false
   delegate_to: "{{ _delegate_host }}"
   when: not (_target_env.PATH | default('')) or (_target_env.PATH | default('')) == ''
 
-- name: Update target environment with system PATH
+- name: "[Execute] Update target environment with system PATH"
   ansible.builtin.set_fact:
     _target_env: "{{ _target_env | combine({'PATH': delegate_system_path.stdout}) }}"
   when: delegate_system_path.stdout is defined
 
-- name: Build environment variables
+- name: "[Execute] Build environment variables"
   ansible.builtin.set_fact:
     sybase_environment:
       PATH: "{{ sybase_environment_base.PATH }}{% if _target_env.PATH | default('') %}:{{ _target_env.PATH }}{% endif %}"
@@ -47,24 +54,12 @@
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
 
-- name: Display execution info
-  ansible.builtin.debug:
-    msg: |
-      Sybase InSpec Execution Configuration
-      =====================================
-      Target Server: {{ sybase_server }}:{{ sybase_port }}
-      Service Name: {{ sybase_service }}
-      Database: {{ sybase_database | default('master') }}
-      SSH Mode: {{ sybase_use_ssh | default(true) }}
-      Execution Target: {{ _delegate_host }}
-
-      Note: Connectivity will be validated by InSpec's sybase_session resource
-  when: inspec_debug_mode | default(false) | bool
-
-- name: Execute Sybase InSpec profile via SSH
+# Route to appropriate execution based on mode
+- name: "[Execute] Run SSH-based execution (legacy)"
   ansible.builtin.shell: |
     # Source Sybase environment
     source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
+    export CHEF_LICENSE=accept
 
     inspec exec {{ sybase_profile_path }} \
       -t ssh://'{{ sybase_ssh_user }}'@'{{ sybase_server }}' \
@@ -79,17 +74,18 @@
   args:
     executable: /bin/bash
   timeout: "{{ scan_timeout | default(600) }}"
-  register: sybase_inspec_results
+  register: _inspec_ssh_result
   changed_when: false
-  failed_when: sybase_inspec_results.rc not in [0, 100, 101]
+  failed_when: _inspec_ssh_result.rc not in [0, 100, 101]
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
   delegate_to: "{{ _delegate_host }}"
-  when: sybase_use_ssh | default(true)
+  when: _connection_mode == 'ssh'
 
-- name: Execute InSpec profile (direct mode)
+- name: "[Execute] Run direct execution"
   ansible.builtin.shell: |
     # Source Sybase environment
     source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
+    export CHEF_LICENSE=accept
 
     inspec exec {{ sybase_profile_path }} \
       --input usernm='{{ sybase_username }}' \
@@ -102,31 +98,38 @@
   args:
     executable: /bin/bash
   timeout: "{{ scan_timeout | default(600) }}"
-  register: sybase_inspec_results_direct
+  register: _inspec_direct_result
   changed_when: false
-  failed_when: sybase_inspec_results_direct.rc not in [0, 100, 101]
+  failed_when: _inspec_direct_result.rc not in [0, 100, 101]
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
   delegate_to: "{{ _delegate_host }}"
-  when: not (sybase_use_ssh | default(true))
+  when: _connection_mode == 'direct'
 
-- name: Set results variable for processing
+# Common post-execution tasks
+- name: "[Execute] Set results variable"
   ansible.builtin.set_fact:
-    sybase_final_results: "{{ (sybase_use_ssh | default(true)) | ternary(sybase_inspec_results | default({}), sybase_inspec_results_direct | default({})) }}"
+    inspec_results:
+      results:
+        - "{{ _inspec_ssh_result if _connection_mode == 'ssh' else _inspec_direct_result }}"
 
-# Parse results for display
-- name: Parse Sybase InSpec results
+# Parse and display results
+# Note: stdout may already be parsed as dict by Jinja2, or may be a string
+- name: "[Execute] Parse InSpec results"
   ansible.builtin.set_fact:
-    _parsed_results: "{{ [sybase_final_results.stdout if sybase_final_results.stdout is mapping else (sybase_final_results.stdout | from_json)] }}"
-  when: sybase_final_results.stdout is defined and sybase_final_results.stdout != ''
+    _parsed_results: "{{ _parsed_results | default([]) + [item.stdout if item.stdout is mapping else (item.stdout | from_json)] }}"
+  loop: "{{ inspec_results.results | default([]) }}"
+  loop_control:
+    label: "Result {{ ansible_loop.index }}"
+  when: item.stdout is defined and item.stdout != ''
   no_log: true
 
-- name: Display scan summary
+- name: "[Execute] Display scan summary"
   ansible.builtin.debug:
     msg: |
       ═══════════════════════════════════════════════════════════════════
        Sybase InSpec Compliance Scan Results
-       Database: {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service | default('N/A') }}
-       Version: {{ sybase_version }}
+       Database: {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }}
+       Mode: {{ _connection_mode | upper }}
       ═══════════════════════════════════════════════════════════════════
       {% set ns = namespace(passed=0, failed=0, total=0) %}
       {% for result in _parsed_results | default([]) %}
@@ -143,8 +146,11 @@
       ═══════════════════════════════════════════════════════════════════
   when: _parsed_results is defined and (_parsed_results | length) > 0
 
-- name: Process Sybase InSpec results
+# Process results for file output
+- name: "[Execute] Process InSpec results"
   ansible.builtin.include_tasks: process_results.yml
-  vars:
-    inspec_result: "{{ sybase_final_results }}"
-    profile_name: "sybase-16-cis"
+  loop: "{{ inspec_results.results | default([]) }}"
+  loop_control:
+    index_var: _result_idx
+    label: "Result {{ _result_idx + 1 }}"
+  when: inspec_results.results is defined

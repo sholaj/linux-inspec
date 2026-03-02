@@ -1,54 +1,43 @@
 ---
-# Sybase result processing tasks
-# Expects: inspec_result (from shell command), profile_name
+# Process and save InSpec results to files
+# Loop variable: item (from execute.yml loop)
+# Index variable: _result_idx
 
-- name: Set Sybase result file names
+- name: Set result file name
   ansible.builtin.set_fact:
-    sybase_timestamp: "{{ ansible_date_time.epoch }}"
-    sybase_process_id: "{{ ansible_process_id | default(ansible_date_time.epoch) }}"
-    sybase_platform: "SYBASE"
+    _result_file: "SYBASE_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_{{ _timestamp }}_sybase-{{ sybase_version }}-cis.json"
 
-- name: Set Sybase result file name
-  ansible.builtin.set_fact:
-    sybase_result_file_name: "{{ sybase_platform }}_NIST_{{ sybase_process_id }}_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_{{ sybase_timestamp }}_{{ profile_name }}"
-
-- name: Parse Sybase InSpec result status
-  ansible.builtin.set_fact:
-    sybase_inspec_status: "{{ 'passed' if (inspec_result.rc | int) == 0 else 'failed' if (inspec_result.rc | int) in [100, 101] else 'error' }}"
-
-- name: Handle successful Sybase InSpec execution
-  block:
-    - name: Save successful Sybase results to JSON file
-      ansible.builtin.copy:
-        content: "{{ inspec_result.stdout if inspec_result.stdout is string else (inspec_result.stdout | to_json) }}"
-        dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
-      when:
-        - (inspec_result.rc | int) in [0, 100, 101]
-        - inspec_result.stdout is defined
-
-    - name: Log successful Sybase execution
-      ansible.builtin.debug:
-        msg: "Sybase profile {{ profile_name }} completed with status: {{ sybase_inspec_status }} (exit code: {{ inspec_result.rc }})"
+- name: Save successful result
+  ansible.builtin.copy:
+    # Handle both string and dict stdout (json-min output)
+    content: "{{ item.stdout if item.stdout is string else (item.stdout | to_json) }}"
+    dest: "{{ inspec_results_dir }}/{{ _result_file }}"
+    mode: "0644"
   delegate_to: "{{ _delegate_host }}"
+  when:
+    - item.stdout is defined
+    # Handle rc as both string and int (e.g., '100' or 100)
+    - (item.rc | int) in [0, 100, 101]
 
-- name: Handle failed Sybase InSpec execution
-  block:
-    - name: Create Sybase error report
-      ansible.builtin.copy:
-        content: |
-          {"controls":[{"timestamp":"{{ ansible_date_time.iso8601 }}","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"InSpec execution failed","profile_id":"{{ profile_name }}","profile_sha256":"N/A","status":"Error","code_desc":"{{ inspec_result.stderr | default('Unknown error') | regex_replace('[\r\n]+', ' ') }}","statistics":{"duration":0},"version":"N/A"}]}
-        dest: "{{ inspec_results_dir }}/{{ sybase_result_file_name }}.json"
-      when:
-        - (inspec_result.rc | int) not in [0, 100, 101]
-
-    - name: Log Sybase execution error
-      ansible.builtin.debug:
-        msg: |
-          Sybase profile {{ profile_name }} failed to execute.
-          Exit Code: {{ inspec_result.rc }}
-          Error: {{ inspec_result.stderr | default('Unknown error') }}
-          Result file: {{ sybase_result_file_name }}.json
-      when:
-        - inspec_debug_mode | default(false) | bool
-        - (inspec_result.rc | int) not in [0, 100, 101]
+- name: Save error result
+  ansible.builtin.copy:
+    content: |
+      {
+        "controls": [{
+          "id": "ERROR",
+          "title": "InSpec execution failed",
+          "status": "error",
+          "hostname": "{{ sybase_server }}",
+          "database": "{{ sybase_database }}",
+          "port": "{{ sybase_port }}",
+          "version": "{{ sybase_version }}",
+          "error": "{{ item.stderr | default('Unknown error') | regex_replace('\"', '\\\"') }}"
+        }]
+      }
+    dest: "{{ inspec_results_dir }}/{{ _result_file }}"
+    mode: "0644"
   delegate_to: "{{ _delegate_host }}"
+  when:
+    - item.rc is defined
+    # Handle rc as both string and int
+    - (item.rc | int) not in [0, 100, 101]

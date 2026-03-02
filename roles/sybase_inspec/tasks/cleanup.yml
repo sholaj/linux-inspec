@@ -1,11 +1,12 @@
 ---
-# Sybase cleanup and reporting tasks
+# Cleanup tasks for Sybase InSpec role
+# _delegate_host is always set: to inspec_delegate_host or inventory_hostname
 #
 # Handles both:
 # 1. Successful scans - generates compliance summary report
 # 2. Skipped databases - generates skip report with reason
 
-# Ensure results directory exists (needed for both scan and skip reports)
+# Ensure results directory exists (for skip reports too)
 - name: Ensure results directory exists
   ansible.builtin.file:
     path: "{{ inspec_results_dir }}"
@@ -19,7 +20,7 @@
     - name: Create skip report
       ansible.builtin.template:
         src: skip_report.j2
-        dest: "{{ inspec_results_dir }}/SKIPPED_{{ sybase_server | replace('.', '_') }}_{{ sybase_database }}_{{ ansible_date_time.epoch }}.json"
+        dest: "{{ inspec_results_dir }}/SKIPPED_{{ sybase_server | replace('.', '_') }}_{{ sybase_database }}_{{ _timestamp }}.json"
         mode: "0644"
       delegate_to: "{{ _delegate_host }}"
 
@@ -35,45 +36,71 @@
            Timestamp:  {{ ansible_date_time.iso8601 }}
           ═══════════════════════════════════════════════════════════════════
   when:
-    - not (preflight_passed | default(true))
+    - not preflight_passed
 
 # Generate summary report (only for successful scans)
-- name: Generate and display Sybase summary report
+- name: Generate summary report
   block:
-    - name: Generate Sybase summary report
+    - name: Create summary report
       ansible.builtin.template:
         src: sybase_summary_report.j2
-        dest: "{{ inspec_results_dir }}/sybase_summary_{{ ansible_date_time.epoch }}.txt"
-      register: sybase_summary_report_result
+        dest: "{{ inspec_results_dir }}/summary_{{ _timestamp }}.txt"
+        mode: "0644"
+      delegate_to: "{{ _delegate_host }}"
 
-    - name: Read Sybase summary report content
+    - name: Read summary
       ansible.builtin.slurp:
-        src: "{{ sybase_summary_report_result.dest }}"
-      register: sybase_summary_content
+        src: "{{ inspec_results_dir }}/summary_{{ _timestamp }}.txt"
+      register: _summary
+      delegate_to: "{{ _delegate_host }}"
 
-    - name: Display Sybase summary report
+    - name: Show summary report
       ansible.builtin.debug:
-        msg: "{{ sybase_summary_content.content | b64decode }}"
+        msg: "{{ _summary.content | b64decode }}"
   when:
-    - preflight_passed | default(true)
+    - preflight_passed
     - generate_summary_report | default(true)
-    - sybase_final_results is defined
+    - inspec_results is defined
+
+# Clean up copied control files
+- name: Clean up control files
+  ansible.builtin.file:
+    path: "{{ sybase_controls_base_dir }}"
+    state: absent
+  delegate_to: "{{ _delegate_host }}"
+  when:
+    - cleanup_temp_files | default(true)
+    - sybase_controls_base_dir is defined
+    - preflight_passed
+
+# Clean up SSH private key (only when SSH mode was used with vault-deployed keys)
+- name: Clean up SSH private key
+  ansible.builtin.file:
+    path: "{{ sybase_ssh_key_path }}"
+    state: absent
+  when:
+    - preflight_passed
+    - sybase_use_ssh | default(false)
+    - vault_sybase_ssh_private_key is defined
   ignore_errors: true
   delegate_to: "{{ _delegate_host }}"
 
-# Splunk integration - send scan results (only for successful scans)
-- name: Send Sybase results to Splunk (if enabled)
+# Splunk integration (optional) - send scan results
+- name: Send results to Splunk
   ansible.builtin.include_tasks: splunk_integration.yml
+  loop: "{{ inspec_results.results | default([]) }}"
+  loop_control:
+    loop_var: _splunk_item
   vars:
-    inspec_result_json: "{{ sybase_final_results.stdout | default('') }}"
+    inspec_result_json: "{{ _splunk_item.stdout | default('') }}"
   when:
-    - preflight_passed | default(true)
-    - send_to_splunk | default(false)
-    - splunk_hec_url is defined
-    - splunk_hec_token is defined
-    - sybase_final_results is defined
+    - preflight_passed
+    - send_to_splunk | default(false) | bool
+    - splunk_hec_url | default('') | length > 0
+    - splunk_hec_token | default('') | length > 0
+    - inspec_results is defined
 
-# Splunk integration - send skip notification
+# Splunk integration (optional) - send skip notification
 - name: Send skip notification to Splunk
   ansible.builtin.uri:
     url: "{{ splunk_hec_url }}"
@@ -100,60 +127,8 @@
     status_code: [200, 201]
   ignore_errors: true
   when:
-    - not (preflight_passed | default(true))
+    - not preflight_passed
     - send_to_splunk | default(false) | bool
     - splunk_hec_url | default('') | length > 0
     - splunk_hec_token | default('') | length > 0
   delegate_to: "{{ _delegate_host }}"
-
-# Clean up SSH private key (only for successful scans or when SSH was used)
-- name: Clean up SSH private key
-  ansible.builtin.file:
-    path: "{{ sybase_ssh_key_path }}"
-    state: absent
-  when:
-    - preflight_passed | default(true)
-    - sybase_use_ssh | default(true)
-    - sybase_ssh_key_path is defined
-  ignore_errors: true
-  delegate_to: "{{ _delegate_host }}"
-
-# Clean up temporary files (only for successful scans)
-- name: Clean up Sybase temporary files
-  ansible.builtin.file:
-    path: "{{ sybase_temp_dir.path }}"
-    state: absent
-  when:
-    - preflight_passed | default(true)
-    - sybase_temp_dir is defined
-  ignore_errors: true
-  delegate_to: "{{ _delegate_host }}"
-
-- name: Clean up Sybase control files directory (remote delegate only)
-  ansible.builtin.file:
-    path: "{{ delegate_controls_dir.path }}"
-    state: absent
-  when:
-    - preflight_passed | default(true)
-    - delegate_controls_dir is defined
-    - delegate_controls_dir.path is defined
-  ignore_errors: true
-  delegate_to: "{{ _delegate_host }}"
-
-# Display completion summary (only for successful scans)
-- name: Display Sybase scan completion summary
-  ansible.builtin.debug:
-    msg: |
-      Sybase {{ sybase_version }} compliance scan completed
-      ====================================================
-      Server: {{ sybase_server }}:{{ sybase_port }}
-      Database: {{ sybase_database }}
-      Service: {{ sybase_service | default('N/A') }}
-      SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
-      Profile: {{ sybase_profile_path }}
-      Exit Code: {{ sybase_final_results.rc | default('N/A') }}
-      Results directory: {{ inspec_results_dir }}
-      Platform pattern: SYBASE_NIST_*_{{ sybase_server }}_{{ sybase_database }}_{{ sybase_version }}_*.json
-  when:
-    - preflight_passed | default(true)
-    - sybase_final_results is defined

@@ -33,11 +33,7 @@
       Service: {{ sybase_service }}
       Version: {{ sybase_version }}
       Username: {{ sybase_username }}
-      SSH Enabled: {{ sybase_use_ssh }}
-      SSH User: {{ sybase_ssh_user | default('N/A') }}
-
-      Starting Sybase InSpec compliance scan...
-      Note: This role includes SSH tunnel support.
+      Mode: {{ 'SSH (legacy)' if sybase_use_ssh | default(false) else 'Direct' }}
 
 - name: Validate Sybase connection parameters and environment
   ansible.builtin.include_tasks: validate.yml
@@ -82,7 +78,7 @@
   ansible.builtin.include_tasks: ssh_setup.yml
   when:
     - preflight_passed | default(true)
-    - sybase_use_ssh | default(true)
+    - sybase_use_ssh | default(false)
   tags: setup
 
 # Step 4: Setup - prepare directories and control files (only if preflight passed)
@@ -104,11 +100,5 @@
 
 - name: Sybase InSpec Compliance Scan Complete
   ansible.builtin.debug:
-    msg: |
-      [OK] Sybase InSpec scan completed successfully!
-      Results directory: {{ inspec_results_dir }}
-      Platform: SYBASE
-      Database: {{ sybase_database }}
-      Version: {{ sybase_version }}
-      SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Disabled') }}
+    msg: "[OK] Sybase InSpec scan completed - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }} ({{ sybase_version }})"
   when: preflight_passed | default(true)

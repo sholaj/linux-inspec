@@ -11,16 +11,18 @@ Port: {{ sybase_port }}
 Database: {{ sybase_database }}
 Version: Sybase {{ sybase_version }}
 Service: {{ sybase_service | default('Default Service') }}
-SSH Mode: {{ sybase_use_ssh | ternary('Enabled', 'Direct') }}
+Mode: {{ _connection_mode | default('direct') | upper }}
 
 Scan Results Summary:
 ---------------------
-{%- if sybase_final_results is defined and sybase_final_results.stdout is defined %}
+{%- if inspec_results is defined and inspec_results.results is defined and inspec_results.results | length > 0 %}
 {%- set ns = namespace(passed=0, failed=0, skipped=0, errors=0, total=0) %}
-{%- if sybase_final_results.stdout is mapping %}
-{%- set json_result = sybase_final_results.stdout %}
+{%- for result in inspec_results.results %}
+{%- if result.stdout is defined and result.stdout %}
+{%- if result.stdout is mapping %}
+{%- set json_result = result.stdout %}
 {%- else %}
-{%- set json_result = sybase_final_results.stdout | from_json %}
+{%- set json_result = result.stdout | from_json %}
 {%- endif %}
 {%- if json_result.profiles is defined %}
 {%- for profile in json_result.profiles %}
@@ -55,6 +57,10 @@ Scan Results Summary:
 {%- else %}
 {%- set ns.errors = ns.errors + 1 %}
 {%- endif %}
+{%- else %}
+{%- set ns.errors = ns.errors + 1 %}
+{%- endif %}
+{%- endfor %}
 
 Total Controls Executed: {{ ns.total }}
 
