@@ -14,10 +14,10 @@ all:
     # Sybase environment on runner VM
     # Note: Sybase client (isql) must be installed on runner
     sybase_environment_base:
-      SYBASE: "/opt/sap"
+      SYBASE: "/opt/sybase"
       SYBASE_OCS: "OCS-16_0"
-      PATH: "/opt/sap/OCS-16_0/bin:/usr/local/bin:/usr/bin:/bin"
-      LD_LIBRARY_PATH: "/opt/sap/OCS-16_0/lib"
+      PATH: "/opt/sybase/OCS-16_0/bin:/usr/local/bin:/usr/bin:/bin"
+      LD_LIBRARY_PATH: "/opt/sybase/OCS-16_0/lib"
 
   children:
     # Delegate hosts - where InSpec runs

@@ -84,9 +84,9 @@ These are internal variables used by the role:
 
 ```yaml
 sybase_environment_base:
-  PATH: "/opt/sap/OCS-16_0/bin"
-  LD_LIBRARY_PATH: "/opt/sap/OCS-16_0/lib"
-  SYBASE: "/opt/sap"
+  PATH: "/opt/sybase/OCS-16_0/bin"
+  LD_LIBRARY_PATH: "/opt/sybase/OCS-16_0/lib"
+  SYBASE: "/opt/sybase"
   SYBASE_OCS: "OCS-16_0"
 ```
 
@@ -240,10 +240,10 @@ The native SAP client provides full compatibility:
 
 ```bash
 # Location (SAP ASE SDK)
-/opt/sap/OCS-16_0/bin/isql
+/opt/sybase/OCS-16_0/bin/isql
 
 # Environment
-export SYBASE=/opt/sap
+export SYBASE=/opt/sybase
 export SYBASE_OCS=OCS-16_0
 export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
 export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
@@ -293,7 +293,7 @@ Results are saved as JSON files in `base_results_dir`:
 The role automatically generates a Sybase interfaces file for server connectivity:
 
 ```
-# /opt/sap/interfaces (generated)
+# /opt/sybase/interfaces (generated)
 SYBASESVR
     master tcp ether sybase.example.com 5000
     query tcp ether sybase.example.com 5000
@@ -333,7 +333,7 @@ The role handles:
 
 ```bash
 # Check SAP ASE client installation
-ls -la /opt/sap/OCS-16_0/bin/isql
+ls -la /opt/sybase/OCS-16_0/bin/isql
 
 # Or install FreeTDS
 dnf install -y freetds
@@ -354,7 +354,7 @@ chmod 600 /path/to/key
 
 ```bash
 # Source environment
-source /opt/sap/SYBASE.sh
+source /opt/sybase/SYBASE.sh
 
 # Test isql connection
 isql -S SERVERNAME -U user -P password -D database

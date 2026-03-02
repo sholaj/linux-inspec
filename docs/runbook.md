@@ -58,7 +58,7 @@ echo "SELECT 1 FROM DUAL;" | sqlplus -s sys/OraclePass123@10.0.2.6:1521/ORCLCDB 
 
 # Sybase: InSpec's sybase_session handles connectivity directly
 # Verify interfaces file exists:
-cat /opt/sap/interfaces
+cat /opt/sybase/interfaces
 ```
 4) Run individual playbooks (localhost)
 ```

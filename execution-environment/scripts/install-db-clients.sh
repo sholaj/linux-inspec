@@ -62,17 +62,17 @@ echo "Installing FreeTDS for Sybase..."
 microdnf install -y freetds
 
 # Create Sybase directory structure for compatibility
-mkdir -p /opt/sap/OCS-16_0/{bin,lib}
+mkdir -p /opt/sybase/OCS-16_0/{bin,lib}
 
 # Create SYBASE.sh environment script
-cat > /opt/sap/SYBASE.sh << 'SYBASE_ENV'
+cat > /opt/sybase/SYBASE.sh << 'SYBASE_ENV'
 #!/bin/bash
-export SYBASE=/opt/sap
+export SYBASE=/opt/sybase
 export SYBASE_OCS=OCS-16_0
 export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
 export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
 SYBASE_ENV
-chmod +x /opt/sap/SYBASE.sh
+chmod +x /opt/sybase/SYBASE.sh
 
 echo "FreeTDS installed: $(which tsql)"
 

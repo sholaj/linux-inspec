@@ -30,7 +30,7 @@ module Inspec::Resources
       @password = opts[:password]
       @database = opts[:database]
       @server = opts[:server]
-      @sybase_home = opts[:sybase_home] || "/opt/sap"
+      @sybase_home = opts[:sybase_home] || "/opt/sybase"
       @col_sep = "|"
 
       fail_resource "Can't run Sybase checks without authentication" unless username && password

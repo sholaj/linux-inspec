@@ -247,31 +247,31 @@ echo "Setting up Sybase environment for InSpec..."
 dnf install -y libaio ncurses-libs
 
 # Create SAP ASE directory structure (for production compatibility)
-mkdir -p /opt/sap/OCS-16_0/bin
-mkdir -p /opt/sap/OCS-16_0/lib
-chown -R azureuser:azureuser /opt/sap
+mkdir -p /opt/sybase/OCS-16_0/bin
+mkdir -p /opt/sybase/OCS-16_0/lib
+chown -R azureuser:azureuser /opt/sybase
 
 # Create SYBASE.sh environment script
-cat > /opt/sap/SYBASE.sh << 'SYBASE_ENV'
+cat > /opt/sybase/SYBASE.sh << 'SYBASE_ENV'
 #!/bin/bash
 # SAP ASE Environment Variables
-export SYBASE=/opt/sap
+export SYBASE=/opt/sybase
 export SYBASE_OCS=OCS-16_0
 export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
 export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
 SYBASE_ENV
-chmod +x /opt/sap/SYBASE.sh
+chmod +x /opt/sybase/SYBASE.sh
 
 # Add to system-wide profile
 cat > /etc/profile.d/sybase.sh << 'SYBASE_PROFILE'
 # SAP ASE Environment
-if [ -f /opt/sap/SYBASE.sh ]; then
-  source /opt/sap/SYBASE.sh
+if [ -f /opt/sybase/SYBASE.sh ]; then
+  source /opt/sybase/SYBASE.sh
 fi
 SYBASE_PROFILE
 
 # Create interfaces file for Sybase server connections
-cat > /opt/sap/interfaces << 'INTERFACES'
+cat > /opt/sybase/interfaces << 'INTERFACES'
 # SAP ASE Server Interfaces File
 MYSYBASE
 	query tcp ether 10.0.2.5 5000
@@ -299,7 +299,7 @@ echo "  - InSpec: $(/usr/local/bin/inspec version 2>/dev/null || echo 'check man
 echo "  - sqlcmd (MSSQL): $(which sqlcmd 2>/dev/null || echo 'not in PATH yet')"
 echo "  - sqlplus (Oracle): $(which sqlplus 2>/dev/null || echo 'not in PATH yet')"
 echo "  - psql (PostgreSQL): $(which psql 2>/dev/null || echo 'not in PATH yet')"
-echo "  - Sybase: Using InSpec sybase_session (interfaces file at /opt/sap/interfaces)"
+echo "  - Sybase: Using InSpec sybase_session (interfaces file at /opt/sybase/interfaces)"
 CLOUDINIT
 }
 
