@@ -73,6 +73,7 @@
               passwd='{{ sybase_password }}' \
               servicenm='{{ sybase_service }}' \
               database='{{ sybase_database | default("master") }}' \
+              interfaces_file='{{ _sybase_interfaces_path | default("") }}' \
       --reporter=json-min \
       --no-color
   args:
@@ -95,6 +96,7 @@
               passwd='{{ sybase_password }}' \
               servicenm='{{ sybase_service }}' \
               database='{{ sybase_database | default("master") }}' \
+              interfaces_file='{{ _sybase_interfaces_path | default("") }}' \
       --reporter=json-min \
       --no-color
   args:

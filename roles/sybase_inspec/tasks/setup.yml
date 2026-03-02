@@ -44,18 +44,43 @@
       become: true
       when: not _sybase_env_exists.stat.exists
 
-    - name: Check if interfaces file exists
+    - name: Check if interfaces file exists in SYBASE directory
       ansible.builtin.stat:
         path: "{{ sybase_environment_base.SYBASE }}/interfaces"
       register: _sybase_interfaces_exists
 
-    - name: Deploy Sybase interfaces file
+    # Fresh environment (Azure): deploy to SYBASE dir with become
+    - name: Deploy Sybase interfaces file (fresh environment)
       ansible.builtin.template:
         src: interfaces.j2
         dest: "{{ sybase_environment_base.SYBASE }}/interfaces"
         mode: "0644"
       become: true
-      when: not _sybase_interfaces_exists.stat.exists
+      when:
+        - not _sybase_env_exists.stat.exists
+        - not _sybase_interfaces_exists.stat.exists
+
+    # On-prem: deploy to user-writable /tmp (no become needed)
+    - name: Deploy Sybase interfaces file (user-writable location)
+      ansible.builtin.template:
+        src: interfaces.j2
+        dest: "/tmp/sybase_interfaces"
+        mode: "0644"
+      when:
+        - _sybase_env_exists.stat.exists
+        - not _sybase_interfaces_exists.stat.exists
+
+    # Set the interfaces file path for InSpec to use
+    - name: Set interfaces file path
+      ansible.builtin.set_fact:
+        _sybase_interfaces_path: >-
+          {%- if _sybase_interfaces_exists.stat.exists -%}
+          {{ sybase_environment_base.SYBASE }}/interfaces
+          {%- elif _sybase_env_exists.stat.exists -%}
+          /tmp/sybase_interfaces
+          {%- else -%}
+          {{ sybase_environment_base.SYBASE }}/interfaces
+          {%- endif -%}
 
     # Check if controls already exist (skip copy if present)
     - name: Check if controls already copied
