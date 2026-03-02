@@ -7,9 +7,10 @@ sybase_port: 5000
 sybase_version: "16"
 sybase_password: ""  # AAP2 injects via extra vars (single credential for all DBs with RBAC)
 
-# SSH connection settings (unique to Sybase from original script)
-# Uses key-based auth: -t ssh://user@host -i keyfile
-sybase_use_ssh: true
+# SSH connection settings (legacy - from original NISTv2.ksh script)
+# Direct mode (false) is recommended: simpler, fewer dependencies, consistent with MSSQL/Oracle
+# SSH mode (true) requires SSH key access + oracle user on every Sybase server
+sybase_use_ssh: false
 sybase_ssh_user: "oracle"
 sybase_ssh_port: 22
 sybase_ssh_key_path: "~oracle/.ssh/id_rsa"
