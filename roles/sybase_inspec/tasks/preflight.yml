@@ -46,12 +46,25 @@
     fi
 
     if [ -n "$ISQL" ]; then
+      # Create temporary interfaces file so isql can resolve the service name.
+      # The permanent interfaces file is created later by setup.yml, but
+      # preflight runs first and needs name resolution to work.
+      TEMP_IFACES=$(mktemp /tmp/sybase_preflight_interfaces.XXXXXX)
+      cat > "$TEMP_IFACES" << 'IFACES_EOF'
+    {{ sybase_service }}
+    	master tcp ether {{ sybase_server }} {{ sybase_port }}
+    	query tcp ether {{ sybase_server }} {{ sybase_port }}
+    IFACES_EOF
+
       echo -e "SELECT 1\ngo" | timeout {{ preflight_auth_timeout | default(10) }} "$ISQL" \
         -S '{{ sybase_service }}' \
         -U '{{ sybase_username }}' \
         -P '{{ sybase_password }}' \
+        -I "$TEMP_IFACES" \
         -w 200 2>&1
-      exit $?
+      RC=$?
+      rm -f "$TEMP_IFACES"
+      exit $RC
     fi
 
     # Fall back to tsql (FreeTDS - for test environments)
