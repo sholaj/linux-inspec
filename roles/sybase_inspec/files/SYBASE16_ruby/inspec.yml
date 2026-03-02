@@ -38,3 +38,8 @@ inputs:
     description: Custom path to isql binary
     type: string
     required: false
+
+  - name: interfaces_file
+    description: Path to Sybase interfaces file (for isql -I flag)
+    type: string
+    required: false

@@ -18,8 +18,10 @@ sybase_opts = {
 # Add optional parameters if provided (use empty string as default, check for non-empty)
 sybase_home_val = input('sybase_home', value: '')
 isql_bin_val = input('isql_bin', value: '')
+interfaces_file_val = input('interfaces_file', value: '')
 sybase_opts[:sybase_home] = sybase_home_val unless sybase_home_val.to_s.empty?
 sybase_opts[:bin] = isql_bin_val unless isql_bin_val.to_s.empty?
+sybase_opts[:interfaces_file] = interfaces_file_val unless interfaces_file_val.to_s.empty?
 
 # Use custom sybase_session_local resource that handles local execution and tsql
 sql = sybase_session_local(sybase_opts)
