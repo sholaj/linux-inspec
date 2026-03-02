@@ -3,7 +3,7 @@
 # =====================================================
 # Validates database connectivity before running InSpec scans.
 # Sets facts to skip execution if database is unreachable or auth fails.
-# Uses tsql (FreeTDS) for connectivity testing.
+# Uses isql (SAP ASE client) or tsql (FreeTDS) for connectivity testing.
 
 - name: Initialize preflight results
   ansible.builtin.set_fact:
@@ -31,30 +31,49 @@
     preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
 
 # Step 2: Authentication Check (only if port is open)
-# Uses tsql (FreeTDS) to test Sybase connectivity
-- name: Test database authentication with tsql
+# Tries isql (SAP ASE client) first, falls back to tsql (FreeTDS)
+- name: Test database authentication
   ansible.builtin.shell: |
-    # Build PATH with common FreeTDS locations
-    export PATH="/usr/local/bin:/usr/bin:/opt/freetds/bin:$PATH"
-
-    # Find tsql binary
-    TSQL=$(command -v tsql 2>/dev/null)
-    if [ -z "$TSQL" ]; then
-      echo "TSQL_NOT_FOUND"
-      exit 127
+    # Source Sybase environment if available
+    if [ -f "{{ sybase_environment_base.SYBASE }}/SYBASE.sh" ]; then
+      source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
     fi
 
-    # Test connection with simple query using tsql
-    # tsql returns 0 on success, non-zero on failure
-    echo -e "SELECT 1\ngo\nquit" | timeout {{ preflight_auth_timeout | default(10) }} "$TSQL" \
-      -H '{{ sybase_server }}' \
-      -p '{{ sybase_port }}' \
-      -U '{{ sybase_username }}' \
-      -P '{{ sybase_password }}' 2>&1
+    # Try isql first (SAP ASE client - preferred for on-prem)
+    ISQL="{{ sybase_isql_bin | default('') }}"
+    if [ -z "$ISQL" ]; then
+      ISQL=$(command -v isql 2>/dev/null)
+    fi
 
-    exit $?
+    if [ -n "$ISQL" ]; then
+      echo -e "SELECT 1\ngo" | timeout {{ preflight_auth_timeout | default(10) }} "$ISQL" \
+        -S '{{ sybase_service }}' \
+        -U '{{ sybase_username }}' \
+        -P '{{ sybase_password }}' \
+        -w 200 2>&1
+      exit $?
+    fi
+
+    # Fall back to tsql (FreeTDS - for test environments)
+    TSQL=$(command -v tsql 2>/dev/null)
+    if [ -n "$TSQL" ]; then
+      echo -e "SELECT 1\ngo\nquit" | timeout {{ preflight_auth_timeout | default(10) }} "$TSQL" \
+        -H '{{ sybase_server }}' \
+        -p '{{ sybase_port }}' \
+        -U '{{ sybase_username }}' \
+        -P '{{ sybase_password }}' 2>&1
+      exit $?
+    fi
+
+    echo "SYBASE_CLIENT_NOT_FOUND"
+    exit 127
   args:
     executable: /bin/bash
+  environment:
+    PATH: "{{ sybase_environment_base.PATH }}:/usr/local/bin:/usr/bin:/opt/freetds/bin:{{ ansible_env.PATH | default('/usr/bin') }}"
+    LD_LIBRARY_PATH: "{{ sybase_environment_base.LD_LIBRARY_PATH | default('') }}"
+    SYBASE: "{{ sybase_environment_base.SYBASE }}"
+    SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
   register: _auth_check
   ignore_errors: true
   no_log: "{{ not (inspec_debug_mode | default(false)) }}"
@@ -68,11 +87,13 @@
       {%- if _auth_check is skipped -%}
       Port check failed - skipped auth test
       {%- elif _auth_check.rc | default(0) == 127 -%}
-      tsql (FreeTDS) not found on execution host
+      Sybase client not found on execution host (neither isql nor tsql available)
       {%- elif _auth_check.rc | default(0) == 124 -%}
       Authentication timeout after {{ preflight_auth_timeout | default(10) }}s
       {%- elif 'Login failed' in (_auth_check.stdout | default('')) or 'Login incorrect' in (_auth_check.stdout | default('')) -%}
       Invalid username/password
+      {%- elif 'CT-LIBRARY error' in (_auth_check.stdout | default('')) and 'connect' in (_auth_check.stdout | default('')) -%}
+      isql connection failed (CT-LIBRARY error)
       {%- elif 'Unknown host' in (_auth_check.stdout | default('')) or 'could not connect' in (_auth_check.stdout | default('')) -%}
       Cannot resolve hostname or connect to server
       {%- elif 'Connection refused' in (_auth_check.stdout | default('')) -%}
@@ -81,6 +102,8 @@
       Connection timed out
       {%- elif 'Adaptive Server is unavailable' in (_auth_check.stdout | default('')) -%}
       Adaptive Server is unavailable or not responding
+      {%- elif 'Server name not found' in (_auth_check.stdout | default('')) or 'interfaces' in (_auth_check.stdout | default('')) -%}
+      Server not found in interfaces file - check sybase_service matches interfaces entry
       {%- elif _auth_check.rc | default(0) != 0 -%}
       Database connection failed (exit code: {{ _auth_check.rc | default('unknown') }})
       {%- else -%}
@@ -92,11 +115,13 @@
     preflight_skip_reason: "{{ _auth_error_msg }}"
     preflight_error_code: >-
       {%- if _auth_check.rc | default(0) == 127 -%}
-      TSQL_NOT_FOUND
+      SYBASE_CLIENT_NOT_FOUND
       {%- elif _auth_check.rc | default(0) == 124 -%}
       AUTH_TIMEOUT
       {%- elif 'Login failed' in (_auth_check.stdout | default('')) or 'Login incorrect' in (_auth_check.stdout | default('')) -%}
       AUTH_FAILED
+      {%- elif 'CT-LIBRARY error' in (_auth_check.stdout | default('')) -%}
+      ISQL_CONNECTION_ERROR
       {%- elif 'Unknown host' in (_auth_check.stdout | default('')) or 'could not connect' in (_auth_check.stdout | default('')) -%}
       HOST_UNREACHABLE
       {%- elif 'Connection refused' in (_auth_check.stdout | default('')) -%}
@@ -105,6 +130,8 @@
       CONNECTION_TIMEOUT
       {%- elif 'Adaptive Server is unavailable' in (_auth_check.stdout | default('')) -%}
       SERVER_UNAVAILABLE
+      {%- elif 'Server name not found' in (_auth_check.stdout | default('')) or 'interfaces' in (_auth_check.stdout | default('')) -%}
+      INTERFACES_ERROR
       {%- elif _auth_check.rc | default(0) != 0 -%}
       CONNECTION_ERROR
       {%- else -%}
