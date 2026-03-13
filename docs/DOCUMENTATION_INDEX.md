@@ -78,6 +78,15 @@ Binary installation guide for Delegate Host / Ansible EE.
 - PATH and LD_LIBRARY_PATH configuration
 - Verification procedures
 
+### 11b. **ORACLE_CLIENT_INSTALLATION_GUIDE.md**
+Oracle Instant Client installation for EE and delegate hosts.
+- RPM package contents (basic, sqlplus, tools)
+- EE container build steps and verification
+- On-prem delegate host installation (RPM or NFS)
+- Dual-path configuration (oracle_home_ee vs oracle_home_delegate)
+- Upgrading from Oracle 19 to 23
+- Troubleshooting library and path issues
+
 ### 12. **ANSIBLE_EXECUTION_ENVIRONMENT.md**
 Complete Ansible EE build specifications.
 - Container image definition
