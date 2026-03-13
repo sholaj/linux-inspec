@@ -8,7 +8,7 @@
 - name: "[Direct Execute] Build execution environment"
   ansible.builtin.set_fact:
     _mssql_env:
-      PATH: "{{ mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
+      PATH: "{{ _effective_mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
       CHEF_LICENSE: "accept"
 
 # Verify sqlcmd is available

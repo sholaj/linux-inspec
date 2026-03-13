@@ -126,6 +126,39 @@ splunk_hec_url: ""                       # Splunk HEC endpoint
 splunk_hec_token: ""                     # Splunk HEC token
 ```
 
+### Client Tool Paths (EE vs Delegate Host)
+
+The role maintains **two sets of MSSQL tool paths** and auto-selects based on execution mode:
+
+| Variable | Default | Used When |
+|----------|---------|-----------|
+| `mssql_tools_paths_ee` | `["/usr/local/bin", "/opt/mssql-tools18/bin"]` | Localhost mode (AAP2 Execution Environment) |
+| `mssql_tools_paths_delegate` | `["/usr/local/bin", "/opt/mssql-tools18/bin", "/opt/mssql-tools/bin"]` | Delegate mode (on-prem bastion) |
+| `mssql_tools_paths` | `[]` (empty) | Direct override - bypasses auto-select |
+
+**How auto-selection works:**
+
+```
+inspec_delegate_host: ""              → uses mssql_tools_paths_ee
+inspec_delegate_host: "inspec-runner" → uses mssql_tools_paths_delegate
+mssql_tools_paths: ["/custom/path"]   → always uses this (overrides auto-select)
+```
+
+The resolved paths are prepended to `PATH` when running `sqlcmd` and `inspec`.
+
+**Customizing for your environment:**
+
+```yaml
+# Override delegate paths (if the on-prem bastion has a non-standard location)
+mssql_tools_paths_delegate:
+  - "/usr/local/bin"
+  - "/opt/mssql-tools18/bin"
+
+# Force specific paths regardless of mode
+mssql_tools_paths:
+  - "/opt/mssql-tools18/bin"
+```
+
 ### WinRM Variables (Windows/AD Authentication)
 
 ```yaml

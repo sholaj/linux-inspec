@@ -2,9 +2,6 @@
 # MSSQL InSpec Role - Variables
 # ==============================
 
-# Base environment paths for MSSQL tools
-# These are prepended to the system PATH on the execution target
-mssql_tools_paths:
-  - "/usr/local/bin"
-  - "/opt/mssql-tools18/bin"
-  - "/opt/mssql-tools/bin"
+# NOTE: mssql_tools_paths is now computed at runtime in main.yml
+# based on execution mode (EE vs delegate). Path defaults are in defaults/main.yml.
+# See: mssql_tools_paths_ee, mssql_tools_paths_delegate

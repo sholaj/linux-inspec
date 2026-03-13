@@ -29,7 +29,7 @@
 # Step 2: Authentication Check (only if port is open)
 - name: "[Direct Preflight] Test database authentication"
   ansible.builtin.shell: |
-    export PATH="{{ mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
+    export PATH="{{ _effective_mssql_tools_paths | join(':') }}:/usr/local/bin:/usr/bin:/bin"
 
     # Find sqlcmd
     SQLCMD=$(command -v sqlcmd 2>/dev/null)

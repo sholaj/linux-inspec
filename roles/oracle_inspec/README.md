@@ -49,11 +49,6 @@ oracle_version: "19c"       # Oracle version (11g, 12c, 18c, 19c)
 ### Optional Variables
 
 ```yaml
-# Oracle Client Environment (override per environment)
-ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"  # Path to Oracle Instant Client
-oracle_extra_path: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"  # Additional paths
-NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"    # NLS_LANG setting
-
 # TNS Configuration (enables auto-generated tnsnames.ora)
 oracle_use_tns: false                    # Use TNS names for connection
 oracle_tns_alias: ""                     # TNS alias name (defaults to oracle_service)
@@ -75,52 +70,62 @@ splunk_hec_token: ""                     # Splunk HEC token
 splunk_index: "compliance_scans"         # Splunk index name
 ```
 
+### Client Tool Paths (EE vs Delegate Host)
+
+The role maintains **two sets of Oracle client paths** and auto-selects based on execution mode:
+
+| Variable | Default | Used When |
+|----------|---------|-----------|
+| `oracle_home_ee` | `/usr/lib/oracle/23/client64` | Localhost mode (AAP2 Execution Environment) |
+| `oracle_extra_path_ee` | `/opt/mssql-tools18/bin` | Localhost mode |
+| `oracle_home_delegate` | `/tools/ver/oracle-client-21.3.0.0-32` | Delegate mode (on-prem bastion) |
+| `oracle_extra_path_delegate` | `/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin` | Delegate mode |
+| `ORACLE_HOME` | `""` (empty) | Direct override - bypasses auto-select |
+| `oracle_extra_path` | `""` (empty) | Direct override - bypasses auto-select |
+| `NLS_LANG` | `AMERICAN_AMERICA.AL32UTF8` | Always |
+
+**How auto-selection works:**
+
+```
+inspec_delegate_host: ""              → uses oracle_home_ee
+inspec_delegate_host: "inspec-runner" → uses oracle_home_delegate
+ORACLE_HOME: "/custom/path"          → always uses this (overrides auto-select)
+```
+
 ### Environment Variables
 
-The role automatically configures Oracle environment variables based on `ORACLE_HOME`:
+The role automatically configures Oracle environment variables from the resolved paths:
 
-| Variable | Description | Default/Value |
-|----------|-------------|---------------|
-| `ORACLE_HOME` | Oracle client installation path | `/tools/ver/oracle-client-21.3.0.0-32` |
-| `PATH` | Prepends `$ORACLE_HOME/bin` and `oracle_extra_path` | `$ORACLE_HOME/bin:oracle_extra_path:$PATH` |
-| `LD_LIBRARY_PATH` | Prepends `$ORACLE_HOME/lib` | `$ORACLE_HOME/lib:$LD_LIBRARY_PATH` |
-| `TNS_ADMIN` | TNS configuration directory | `oracle_tns_admin` or `$ORACLE_HOME/network/admin` |
-| `NLS_LANG` | Oracle NLS language setting | `AMERICAN_AMERICA.AL32UTF8` |
-
-Override `ORACLE_HOME` in your inventory or group_vars to match your Oracle client installation:
-
-```yaml
-# group_vars/all.yml or host_vars/delegate-host.yml
-ORACLE_HOME: "/opt/oracle/instantclient_21_3"
-```
+| Variable | Value |
+|----------|-------|
+| `ORACLE_HOME` | Resolved from `oracle_home_ee` or `oracle_home_delegate` |
+| `PATH` | `$oracle_extra_path:$ORACLE_HOME/bin:$system_PATH` |
+| `LD_LIBRARY_PATH` | `$ORACLE_HOME/lib:$system_LD_LIBRARY_PATH` |
+| `TNS_ADMIN` | `oracle_tns_admin` or `$ORACLE_HOME/network/admin` |
+| `NLS_LANG` | `AMERICAN_AMERICA.AL32UTF8` |
 
 ## Configuration Guide
 
-### Configurable Environment
-
-The Oracle environment paths are configurable via `defaults/main.yml`:
-
-| Setting | Default | Description |
-|---------|---------|-------------|
-| `ORACLE_HOME` | `/tools/ver/oracle-client-21.3.0.0-32` | Path to Oracle client installation |
-| `oracle_extra_path` | `/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin` | Additional paths to prepend to PATH |
-| `NLS_LANG` | `AMERICAN_AMERICA.AL32UTF8` | Oracle NLS language setting |
-
 ### Customizing for Your Environment
 
-1. **If using a different Oracle client version**, set `ORACLE_HOME` in your inventory:
+1. **EE has a different Oracle client** — override the EE path:
+   ```yaml
+   # group_vars/all.yml
+   oracle_home_ee: "/usr/lib/oracle/21/client64"
+   ```
+
+2. **Delegate host has a different Oracle client** — override the delegate path:
    ```yaml
    # group_vars/all.yml or host_vars/delegate-host.yml
+   oracle_home_delegate: "/opt/oracle/instantclient_21_3"
+   ```
+
+3. **Force a specific path regardless of mode** — set the direct override:
+   ```yaml
    ORACLE_HOME: "/opt/oracle/instantclient_21_3"
    ```
 
-2. **If your delegate host doesn't need extra paths**, set `oracle_extra_path` to empty:
-   ```yaml
-   # group_vars/all.yml
-   oracle_extra_path: ""
-   ```
-
-3. **Verify your Oracle client installation** before running scans:
+4. **Verify your Oracle client installation** before running scans:
    ```bash
    ls -la $ORACLE_HOME/bin/sqlplus
    ls -la $ORACLE_HOME/lib/libclntsh.so*
@@ -559,21 +564,28 @@ The role handles:
 
 ```bash
 # Check Oracle Instant Client installation
-ls -la /opt/oracle/instantclient_* /tools/ver/oracle-*
+ls -la /opt/oracle/instantclient_* /tools/ver/oracle-* /usr/lib/oracle/*/client64/
 
-# Verify sqlplus is in ORACLE_HOME/bin
+# Verify sqlplus is in the expected path
 ls -la $ORACLE_HOME/bin/sqlplus
 
 # Set environment manually for testing
-export ORACLE_HOME=/tools/ver/oracle-19.16.0.0-64
+export ORACLE_HOME=/usr/lib/oracle/23/client64
 export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME/bin:$PATH
 ```
 
-**Fix:** Set `ORACLE_HOME` in your inventory to match your installation:
+**Fix:** Override the path for your execution mode:
 
 ```yaml
-ORACLE_HOME: "/tools/ver/oracle-19.16.0.0-64"
+# If running in EE (localhost mode)
+oracle_home_ee: "/usr/lib/oracle/23/client64"
+
+# If running on delegate host
+oracle_home_delegate: "/tools/ver/oracle-client-21.3.0.0-32"
+
+# Or force a specific path regardless of mode
+ORACLE_HOME: "/opt/oracle/instantclient_21_3"
 ```
 
 ### TNS Resolution Failed

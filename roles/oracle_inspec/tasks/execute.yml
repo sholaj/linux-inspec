@@ -39,10 +39,10 @@
 - name: Build environment variables
   ansible.builtin.set_fact:
     oracle_environment:
-      PATH: "{{ oracle_extra_path }}:{{ ORACLE_HOME }}/bin{% if _target_env.PATH | default('') %}:{{ _target_env.PATH }}{% endif %}"
-      LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib{% if _target_env.LD_LIBRARY_PATH | default('') %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
-      ORACLE_HOME: "{{ ORACLE_HOME }}"
-      TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
+      PATH: "{{ _effective_oracle_extra_path }}:{{ _effective_oracle_home }}/bin{% if _target_env.PATH | default('') %}:{{ _target_env.PATH }}{% endif %}"
+      LD_LIBRARY_PATH: "{{ _effective_oracle_home }}/lib{% if _target_env.LD_LIBRARY_PATH | default('') %}:{{ _target_env.LD_LIBRARY_PATH }}{% endif %}"
+      ORACLE_HOME: "{{ _effective_oracle_home }}"
+      TNS_ADMIN: "{{ oracle_tns_admin | default(_effective_oracle_home + '/network/admin') }}"
       NLS_LANG: "{{ NLS_LANG }}"
 
 - name: Set connection parameters based on TNS mode

@@ -37,7 +37,7 @@
       "Delegate host setting": "{{ inspec_delegate_host | default('NOT SET') }}"
       "Inventory hostname": "{{ inventory_hostname }}"
       "Ansible host": "{{ ansible_host | default('NOT SET') }}"
-      "ORACLE_HOME value": "{{ ORACLE_HOME }}"
+      "ORACLE_HOME value": "{{ _effective_oracle_home }}"
   when: _preflight_port_open
 
 - name: Display execution context
@@ -47,13 +47,13 @@
 
 - name: Debug - Check ORACLE_HOME and sqlplus existence
   ansible.builtin.shell: |
-    echo "=== ORACLE_HOME: {{ ORACLE_HOME }} ==="
+    echo "=== ORACLE_HOME: {{ _effective_oracle_home }} ==="
     echo "=== Checking if directory exists ==="
-    [ -d "{{ ORACLE_HOME }}/bin/" ] && echo "✓ Directory EXISTS" || echo "✗ Directory DOES NOT exist"
+    [ -d "{{ _effective_oracle_home }}/bin/" ] && echo "✓ Directory EXISTS" || echo "✗ Directory DOES NOT exist"
     echo "=== Checking sqlplus binary ==="
-    [ -f "{{ ORACLE_HOME }}/bin/sqlplus" ] && echo "✓ sqlplus EXISTS" || echo "✗ sqlplus DOES NOT exist"
+    [ -f "{{ _effective_oracle_home }}/bin/sqlplus" ] && echo "✓ sqlplus EXISTS" || echo "✗ sqlplus DOES NOT exist"
     echo "=== Checking if executable ==="
-    [ -x "{{ ORACLE_HOME }}/bin/sqlplus" ] && echo "✓ sqlplus IS executable" || echo "✗ sqlplus is NOT executable"
+    [ -x "{{ _effective_oracle_home }}/bin/sqlplus" ] && echo "✓ sqlplus IS executable" || echo "✗ sqlplus is NOT executable"
     echo "=== PWD and basic info ==="
     pwd
     id
@@ -74,12 +74,12 @@
     # Test connection with sqlplus using full path
     echo "SELECT 'PREFLIGHT_OK' FROM DUAL;" | \
     timeout {{ preflight_auth_timeout | default(10) }} \
-    {{ ORACLE_HOME }}/bin/sqlplus -S \
+    {{ _effective_oracle_home }}/bin/sqlplus -S \
       "{{ oracle_username }}/{{ oracle_password }}@//{{ oracle_server }}:{{ oracle_port }}/{{ oracle_service }}" 2>&1
   environment:
-    ORACLE_HOME: "{{ ORACLE_HOME }}"
-    LD_LIBRARY_PATH: "{{ ORACLE_HOME }}/lib"
-    TNS_ADMIN: "{{ oracle_tns_admin | default(ORACLE_HOME + '/network/admin') }}"
+    ORACLE_HOME: "{{ _effective_oracle_home }}"
+    LD_LIBRARY_PATH: "{{ _effective_oracle_home }}/lib"
+    TNS_ADMIN: "{{ oracle_tns_admin | default(_effective_oracle_home + '/network/admin') }}"
     NLS_LANG: "{{ NLS_LANG }}"
   args:
     executable: /bin/bash

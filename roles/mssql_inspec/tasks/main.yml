@@ -58,6 +58,16 @@
   when: inspec_debug_mode | default(false) | bool
   tags: always
 
+# Resolve effective MSSQL tool paths based on execution mode
+# Direct override (mssql_tools_paths set explicitly) takes precedence
+- name: Resolve MSSQL tool paths for execution mode
+  ansible.builtin.set_fact:
+    _effective_mssql_tools_paths: >-
+      {{ mssql_tools_paths if (mssql_tools_paths | default([]) | length > 0)
+         else (mssql_tools_paths_delegate if _use_delegate | bool
+         else mssql_tools_paths_ee) }}
+  tags: always
+
 # Step 2: Validate parameters
 - name: Validate MSSQL connection parameters
   ansible.builtin.include_tasks: validate.yml

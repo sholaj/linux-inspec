@@ -43,9 +43,15 @@ all:
         inspec_results_dir: /tmp/inspec_mssql_results
         inspec_debug_mode: false
         generate_summary_report: true
+        # Delegate mode auto-selects mssql_tools_paths_delegate defaults
+        # Override if the delegate host has non-standard paths:
+        # mssql_tools_paths_delegate:
+        #   - "/usr/local/bin"
+        #   - "/opt/mssql-tools18/bin"
 
     # ---------------------------------------------------------------
     # Oracle: Localhost mode (AAP2 execution node has sqlplus)
+    # Paths auto-select oracle_home_ee (EE container Oracle client)
     # ---------------------------------------------------------------
     oracle_databases:
       hosts:
@@ -64,13 +70,16 @@ all:
           oracle_version: "19"
 
       vars:
-        inspec_delegate_host: ""  # Localhost mode
+        inspec_delegate_host: ""  # Localhost mode → uses EE paths
         oracle_username: nist_scan_user
         # oracle_password: injected by AAP2 Custom Credential or vault
 
     # ---------------------------------------------------------------
     # Sybase: Mixed mode (per-host override)
     # Some Sybase DBs are reachable from AAP2 node, others need bastion
+    # Paths auto-select based on each host's execution mode:
+    #   delegate hosts → sybase_home_delegate
+    #   localhost hosts → sybase_home_ee
     # ---------------------------------------------------------------
     sybase_databases:
       hosts:
@@ -81,7 +90,7 @@ all:
           sybase_database: master
           sybase_service: SYBPROD01          # ASE server name (maps to isql -S)
           sybase_version: "16"
-          inspec_delegate_host: "inspec-runner"  # Host-level override
+          inspec_delegate_host: "inspec-runner"  # Host-level override → delegate paths
 
         # This host uses localhost mode (inherits group default)
         SYBPROD02_5000:
@@ -92,7 +101,7 @@ all:
           sybase_version: "16"
 
       vars:
-        inspec_delegate_host: ""  # Group default: localhost mode
+        inspec_delegate_host: ""  # Group default: localhost mode → EE paths
         sybase_username: nist_scan_user
         # sybase_password: injected by AAP2 Custom Credential or vault
         sybase_use_ssh: true

@@ -33,6 +33,11 @@ all:
         inspec_results_dir: /tmp/inspec_mssql_results
         inspec_debug_mode: false
         generate_summary_report: true
+        # Client tool paths on the delegate host (override defaults if needed)
+        # mssql_tools_paths_delegate:
+        #   - "/usr/local/bin"
+        #   - "/opt/mssql-tools18/bin"
+        #   - "/opt/mssql-tools/bin"
 
     oracle_databases:
       hosts:
@@ -46,6 +51,9 @@ all:
         inspec_delegate_host: "inspec-runner"
         oracle_username: nist_scan_user
         # oracle_password: injected by AAP2 Custom Credential
+        # Client paths on the delegate host (override defaults if needed)
+        # oracle_home_delegate: "/tools/ver/oracle-client-21.3.0.0-32"
+        # oracle_extra_path_delegate: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
 
     sybase_databases:
       hosts:
@@ -59,6 +67,9 @@ all:
         sybase_username: nist_scan_user
         sybase_use_ssh: true
         sybase_ssh_user: sybase_admin
+        # Client paths on the delegate host (override defaults if needed)
+        # sybase_home_delegate: "/tools/ver/sybase"
+        # sybase_ocs_delegate: "OCS-16_0"
 
 # KEY CONCEPTS:
 # - inspec_delegate_host uses the INVENTORY hostname ("inspec-runner")
