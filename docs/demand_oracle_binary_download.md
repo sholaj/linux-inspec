@@ -128,6 +128,14 @@ Approval and internal hosting of the two Oracle Instant Client 23c RPM packages 
 | Oracle databases covered | 100+ across affiliates |
 | Blocking ticket | DBSCAN-752 (EE build) |
 
+### EE Container Paths (localhost mode)
+
+```bash
+ORACLE_HOME=/usr/lib/oracle/23/client64
+LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
+PATH=/usr/lib/oracle/23/client64/bin:$PATH
+```
+
 -----
 
 *Created: 2026-03-13*
