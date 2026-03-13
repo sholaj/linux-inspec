@@ -22,10 +22,14 @@ additional_build_steps:
     - RUN dnf install -y freetds freetds-devel || true
     # Create symlink for libnsl.so.1 compatibility (Oracle requires this)
     - RUN ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1
-    # Download and install Oracle Instant Client directly with nodeps
-    - RUN curl -LO https://yum.oracle.com/repo/OracleLinux/OL9/oracle/instantclient/x86_64/getPackage/oracle-instantclient19.29-basic-19.29.0.0.0-1.el9.x86_64.rpm
-    - RUN curl -LO https://yum.oracle.com/repo/OracleLinux/OL9/oracle/instantclient/x86_64/getPackage/oracle-instantclient19.29-sqlplus-19.29.0.0.0-1.el9.x86_64.rpm
-    - RUN rpm -ivh --nodeps oracle-instantclient19.29-basic-19.29.0.0.0-1.el9.x86_64.rpm oracle-instantclient19.29-sqlplus-19.29.0.0.0-1.el9.x86_64.rpm
+    # Download and install Oracle Instant Client 23c
+    # Packages required:
+    #   basic   - Core Oracle client libraries (pre-req for sqlplus + InSpec oracledb_session)
+    #   sqlplus - SQL*Plus binary (used by preflight auth checks)
+    # NOT needed: tools (exp/imp/sqlldr) - not used for compliance scanning
+    - RUN curl -LO https://download.oracle.com/otn_software/linux/instantclient/2326100/oracle-instantclient-basic-23.26.1.0.0-1.el8.x86_64.rpm
+    - RUN curl -LO https://download.oracle.com/otn_software/linux/instantclient/2326100/oracle-instantclient-sqlplus-23.26.1.0.0-1.el8.x86_64.rpm
+    - RUN rpm -ivh --nodeps oracle-instantclient-basic-23.26.1.0.0-1.el8.x86_64.rpm oracle-instantclient-sqlplus-23.26.1.0.0-1.el8.x86_64.rpm
     - RUN rm -f oracle-instantclient*.rpm
 
   append_final:
@@ -34,17 +38,17 @@ additional_build_steps:
     - RUN curl -fsSL https://packages.microsoft.com/config/rhel/9/prod.repo -o /etc/yum.repos.d/mssql-release.repo
     - RUN ACCEPT_EULA=Y dnf install -y mssql-tools18 unixODBC-devel 2>/dev/null || true
     - RUN if [ -f /opt/mssql-tools18/bin/sqlcmd ]; then ln -sf /opt/mssql-tools18/bin/sqlcmd /usr/local/bin/sqlcmd; fi
-    # Configure Oracle libraries
-    - RUN echo /usr/lib/oracle/19.29/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf && ldconfig
+    # Configure Oracle 23c libraries
+    - RUN echo /usr/lib/oracle/23/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf && ldconfig
     # Link sqlplus to PATH
-    - RUN ln -sf /usr/lib/oracle/19.29/client64/bin/sqlplus /usr/local/bin/sqlplus
+    - RUN ln -sf /usr/lib/oracle/23/client64/bin/sqlplus /usr/local/bin/sqlplus
     # Install InSpec
     - RUN gem install inspec-bin -v 5.22.29 --no-document
     - RUN inspec --chef-license=accept-silent || true
     # Set environment
-    - ENV PATH=/opt/mssql-tools18/bin:/usr/lib/oracle/19.29/client64/bin:/usr/local/bin:$PATH
-    - ENV LD_LIBRARY_PATH=/usr/lib/oracle/19.29/client64/lib
-    - ENV ORACLE_HOME=/usr/lib/oracle/19.29/client64
+    - ENV PATH=/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64/bin:/usr/local/bin:$PATH
+    - ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
+    - ENV ORACLE_HOME=/usr/lib/oracle/23/client64
     - ENV CHEF_LICENSE=accept-silent
     # Create results directory
     - RUN mkdir -p /tmp/compliance_scans && chmod 777 /tmp/compliance_scans
