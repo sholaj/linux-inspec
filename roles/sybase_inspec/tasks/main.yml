@@ -23,6 +23,29 @@
   when: inspec_debug_mode | default(false) | bool
   tags: always
 
+# Resolve effective Sybase client paths based on execution mode
+# Direct override (sybase_home set explicitly) takes precedence
+- name: Resolve Sybase client paths for execution mode
+  ansible.builtin.set_fact:
+    _effective_sybase_home: >-
+      {{ sybase_home if sybase_home | default('') != ''
+         else (sybase_home_delegate if _use_delegate | bool
+         else sybase_home_ee) }}
+    _effective_sybase_ocs: >-
+      {{ sybase_ocs if sybase_ocs | default('') != ''
+         else (sybase_ocs_delegate if _use_delegate | bool
+         else sybase_ocs_ee) }}
+  tags: always
+
+- name: Build sybase_environment_base from resolved paths
+  ansible.builtin.set_fact:
+    sybase_environment_base:
+      PATH: "{{ _effective_sybase_home }}/{{ _effective_sybase_ocs }}/bin"
+      LD_LIBRARY_PATH: "{{ _effective_sybase_home }}/{{ _effective_sybase_ocs }}/lib"
+      SYBASE: "{{ _effective_sybase_home }}"
+      SYBASE_OCS: "{{ _effective_sybase_ocs }}"
+  tags: always
+
 - name: Sybase InSpec Compliance Scan Starting
   ansible.builtin.debug:
     msg: |

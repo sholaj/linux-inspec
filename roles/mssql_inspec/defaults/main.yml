@@ -16,6 +16,25 @@ mssql_service: ""  # Named instance (optional)
 # - "<hostname>": Run InSpec on remote delegate host via SSH
 inspec_delegate_host: "localhost"
 
+# MSSQL client tool paths
+# ================================
+# Two sets of paths: one for AAP2 Execution Environment (localhost mode),
+# one for on-prem delegate host. The role auto-selects based on _use_delegate.
+#
+# EE paths: Match the mssql-tools installed in the EE container
+mssql_tools_paths_ee:
+  - "/usr/local/bin"
+  - "/opt/mssql-tools18/bin"
+#
+# Delegate host paths: Match the mssql-tools on the on-prem delegate/bastion
+mssql_tools_paths_delegate:
+  - "/usr/local/bin"
+  - "/opt/mssql-tools18/bin"
+  - "/opt/mssql-tools/bin"
+#
+# Direct override (takes precedence over EE/delegate selection if set)
+mssql_tools_paths: []
+
 # ======================
 # Connection Mode
 # ======================

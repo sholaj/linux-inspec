@@ -25,6 +25,7 @@ all:
 
       vars:
         # LOCALHOST MODE: Empty or "localhost"
+        # Client tool paths auto-select EE defaults (mssql_tools_paths_ee)
         inspec_delegate_host: ""
         mssql_username: nist_scan_user
         # mssql_password: injected by AAP2 Custom Credential
@@ -41,6 +42,7 @@ all:
           oracle_version: "19"
 
       vars:
+        # Client tool paths auto-select EE defaults (oracle_home_ee)
         inspec_delegate_host: ""
         oracle_username: nist_scan_user
 
@@ -52,6 +54,7 @@ all:
           sybase_version: "16"
 
       vars:
+        # Client tool paths auto-select EE defaults (sybase_home_ee)
         inspec_delegate_host: ""
         sybase_username: nist_scan_user
         sybase_use_ssh: true

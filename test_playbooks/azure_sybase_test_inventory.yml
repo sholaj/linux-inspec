@@ -13,11 +13,9 @@ all:
 
     # Sybase environment on runner VM
     # Note: Sybase client (isql) must be installed on runner
-    sybase_environment_base:
-      SYBASE: "/opt/sybase"
-      SYBASE_OCS: "OCS-16_0"
-      PATH: "/opt/sybase/OCS-16_0/bin:/usr/local/bin:/usr/bin:/bin"
-      LD_LIBRARY_PATH: "/opt/sybase/OCS-16_0/lib"
+    # Override paths for the Azure test environment (runner VM is the delegate)
+    sybase_home: "/opt/sybase"
+    sybase_ocs: "OCS-16_0"
 
   children:
     # Delegate hosts - where InSpec runs
@@ -40,13 +38,10 @@ all:
           sybase_service: MYSYBASE
           sybase_version: "16"
           sybase_username: sa
-          sybase_password: "myPassword"
+          sybase_password: "SybaseP@ss2024!"
 
-          # SSH settings - disable for direct connection testing
+          # Direct mode (default) - no SSH needed
           sybase_use_ssh: false
-
-          # Skip pre-flight (tsql not installed on runner)
-          preflight_enabled: false
 
           # Delegate execution
           ansible_connection: local

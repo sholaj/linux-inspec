@@ -109,7 +109,6 @@ sybase_ssh_key_path: "~oracle/.ssh/id_rsa"  # Path to SSH private key (SSH mode 
 sybase_service_name: "SAP_ASE"           # Sybase service name
 sybase_charset: "iso_1"                  # Character set
 sybase_isql_bin: ""                      # isql binary path (auto-detected if empty)
-sybase_home: ""                          # SYBASE home directory (uses env if empty)
 inspec_delegate_host: "localhost"        # Execution host (empty = target host)
 base_results_dir: "/tmp/compliance_scans"  # Results directory
 inspec_debug_mode: false                 # Enable debug output
@@ -122,19 +121,53 @@ splunk_hec_token: ""                     # Splunk HEC token
 splunk_index: "compliance_scans"         # Splunk index name
 ```
 
-### Environment Variables (vars/main.yml)
+### Client Tool Paths (EE vs Delegate Host)
 
-These are internal variables used by the role:
+The role maintains **two sets of Sybase client paths** and auto-selects based on execution mode.
+The resolved paths are used to build `sybase_environment_base` at runtime.
 
-```yaml
-sybase_environment_base:
-  PATH: "/opt/sybase/OCS-16_0/bin"
-  LD_LIBRARY_PATH: "/opt/sybase/OCS-16_0/lib"
-  SYBASE: "/opt/sybase"
-  SYBASE_OCS: "OCS-16_0"
+| Variable | Default | Used When |
+|----------|---------|-----------|
+| `sybase_home_ee` | `/opt/sybase` | Localhost mode (AAP2 Execution Environment) |
+| `sybase_ocs_ee` | `OCS-16_0` | Localhost mode |
+| `sybase_home_delegate` | `/tools/ver/sybase` | Delegate mode (on-prem bastion) |
+| `sybase_ocs_delegate` | `OCS-16_0` | Delegate mode |
+| `sybase_home` | `""` (empty) | Direct override - bypasses auto-select |
+| `sybase_ocs` | `""` (empty) | Direct override - bypasses auto-select |
+
+**How auto-selection works:**
+
+```
+inspec_delegate_host: ""              → uses sybase_home_ee / sybase_ocs_ee
+inspec_delegate_host: "inspec-runner" → uses sybase_home_delegate / sybase_ocs_delegate
+sybase_home: "/custom/sybase"         → always uses this (overrides auto-select)
 ```
 
-Override these in your inventory or playbook if Sybase SDK is installed in a different location.
+The role builds `sybase_environment_base` at runtime from the resolved paths:
+
+```yaml
+# Computed automatically in main.yml — do not set directly
+sybase_environment_base:
+  PATH: "<resolved_home>/<resolved_ocs>/bin"
+  LD_LIBRARY_PATH: "<resolved_home>/<resolved_ocs>/lib"
+  SYBASE: "<resolved_home>"
+  SYBASE_OCS: "<resolved_ocs>"
+```
+
+**Customizing for your environment:**
+
+```yaml
+# Override EE path (if Sybase SDK is at a different location in the container)
+sybase_home_ee: "/opt/sap/ase"
+
+# Override delegate path (if the on-prem bastion differs from default)
+sybase_home_delegate: "/opt/sybase"
+sybase_ocs_delegate: "OCS-16_0"
+
+# Force a specific path regardless of mode
+sybase_home: "/custom/sybase"
+sybase_ocs: "OCS-16_0"
+```
 
 ## Supported Sybase Versions
 
@@ -283,11 +316,12 @@ The role supports two Sybase clients:
 The native SAP client provides full compatibility:
 
 ```bash
-# Location (SAP ASE SDK)
-/opt/sybase/OCS-16_0/bin/isql
+# Location varies by environment:
+#   EE container:    /opt/sybase/OCS-16_0/bin/isql
+#   Delegate host:   /tools/ver/sybase/OCS-16_0/bin/isql
 
-# Environment
-export SYBASE=/opt/sybase
+# Environment (set automatically by the role via sybase_environment_base)
+export SYBASE=/opt/sybase          # or sybase_home_delegate value
 export SYBASE_OCS=OCS-16_0
 export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
 export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
@@ -376,12 +410,27 @@ The role handles:
 ### Sybase Client Not Found
 
 ```bash
-# Check SAP ASE client installation
-ls -la /opt/sybase/OCS-16_0/bin/isql
+# Check SAP ASE client installation at expected paths
+ls -la /opt/sybase/OCS-16_0/bin/isql          # EE default
+ls -la /tools/ver/sybase/OCS-16_0/bin/isql    # Delegate default
 
-# Or install FreeTDS
+# Or install FreeTDS (test environments)
 dnf install -y freetds
 which tsql
+```
+
+**Fix:** Override the path for your execution mode:
+
+```yaml
+# If running in EE (localhost mode)
+sybase_home_ee: "/opt/sybase"
+
+# If running on delegate host
+sybase_home_delegate: "/tools/ver/sybase"
+
+# Or force a specific path regardless of mode
+sybase_home: "/opt/sap/ase"
+sybase_ocs: "OCS-16_0"
 ```
 
 ### SSH Connection Failed

@@ -9,8 +9,23 @@
 
 - name: Set delegation variables
   ansible.builtin.set_fact:
-    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost'] }}"
-    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+    _use_delegate: "{{ (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] }}"
+    _delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost', inventory_hostname] else inventory_hostname }}"
+  tags: always
+
+# Resolve effective Oracle client paths based on execution mode
+# Direct override (ORACLE_HOME set explicitly) takes precedence
+- name: Resolve Oracle client paths for execution mode
+  ansible.builtin.set_fact:
+    _effective_oracle_home: >-
+      {{ ORACLE_HOME if ORACLE_HOME | default('') != ''
+         else (oracle_home_delegate if _use_delegate | bool
+         else oracle_home_ee) }}
+    _effective_oracle_extra_path: >-
+      {{ oracle_extra_path if oracle_extra_path | default('') != ''
+         else (oracle_extra_path_delegate if _use_delegate | bool
+         else oracle_extra_path_ee) }}
+  tags: always
 
 - name: Oracle InSpec Compliance Scan Starting
   ansible.builtin.debug:

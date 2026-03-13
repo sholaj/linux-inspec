@@ -22,10 +22,23 @@ oracle_use_tns: false
 oracle_tns_admin: ""
 oracle_service_type: "service_name"  # or "sid"
 
-# Oracle client environment paths (override these per environment)
-# Defaults match the existing production delegate host configuration
-ORACLE_HOME: "/tools/ver/oracle-client-21.3.0.0-32"
-oracle_extra_path: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+# Oracle client environment paths
+# ================================
+# Two sets of paths: one for AAP2 Execution Environment (localhost mode),
+# one for on-prem delegate host. The role auto-selects based on _use_delegate.
+# Set ORACLE_HOME directly to force a specific path regardless of execution mode.
+#
+# EE paths: Match the Oracle Instant Client installed in the EE container
+oracle_home_ee: "/usr/lib/oracle/23/client64"
+oracle_extra_path_ee: "/opt/mssql-tools18/bin"
+#
+# Delegate host paths: Match the Oracle client on the on-prem delegate/bastion
+oracle_home_delegate: "/tools/ver/oracle-client-21.3.0.0-32"
+oracle_extra_path_delegate: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS-16_0/bin"
+#
+# Direct override (takes precedence over EE/delegate selection if set)
+ORACLE_HOME: ""
+oracle_extra_path: ""
 NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
 
 # Error handling
