@@ -2991,6 +2991,145 @@ docs/
 
 ---
 
+## DBSCAN-752: AAP2 EE - Oracle Instant Client 23c Binary Installation
+
+### Purpose
+**As an** AAP2 Platform Engineer, **I want to** install Oracle Instant Client 23c (basic + sqlplus) in the Ansible Execution Environment container image, **so that** InSpec compliance scanning can authenticate and execute SQL controls against Oracle databases.
+
+### Description
+The Database Compliance Scanning framework requires Oracle Instant Client binaries inside the AAP2 Execution Environment (EE) container. The EE is built with `ansible-builder` on a UBI 9 base image. Oracle 23c replaces the previously used Oracle 19.29 client. This ticket covers installing, configuring, and verifying the Oracle client in the EE build pipeline.
+
+**Reference Documentation:** `docs/ORACLE_CLIENT_INSTALLATION_GUIDE.md`
+
+### Background
+- The `oracle_inspec` role uses `sqlplus` for preflight authentication checks and `libclntsh.so` (via InSpec's Ruby OCI8 gem) for executing SQL compliance controls
+- Only two RPM packages are required: `basic` and `sqlplus` — the `tools` package (exp/imp/sqlldr) is NOT needed
+- The EL8 RPMs are compatible with UBI 9 when installed with `--nodeps`
+- A `libnsl.so.1` compatibility symlink is required on RHEL 9 / UBI 9
+
+### Acceptance Criteria
+- [ ] Oracle Instant Client 23c `basic` RPM installed in EE container (`oracle-instantclient-basic-23.26.1.0.0-1.el8.x86_64.rpm`)
+- [ ] Oracle Instant Client 23c `sqlplus` RPM installed in EE container (`oracle-instantclient-sqlplus-23.26.1.0.0-1.el8.x86_64.rpm`)
+- [ ] `libnsl.so.1` symlink created: `ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1`
+- [ ] Oracle libraries registered with dynamic linker: `/etc/ld.so.conf.d/oracle-instantclient.conf` → `ldconfig`
+- [ ] `sqlplus` symlinked to PATH: `ln -sf /usr/lib/oracle/23/client64/bin/sqlplus /usr/local/bin/sqlplus`
+- [ ] Environment variables set in container: `ORACLE_HOME`, `LD_LIBRARY_PATH`, `PATH`
+- [ ] `sqlplus -V` returns `SQL*Plus: Release 23.26.1.0.0` inside the container
+- [ ] `ldd /usr/lib/oracle/23/client64/bin/sqlplus` shows no missing dependencies
+- [ ] `ldconfig -p | grep libclntsh` returns registered library path
+- [ ] RPM files cleaned up after install (no residual `.rpm` files in image)
+
+### Technical Tasks
+
+#### 1. Update `execution-environment.yml`
+Add the following to `additional_build_steps.prepend_base`:
+
+```yaml
+# libnsl.so.1 compatibility — Oracle client requires this on UBI 9
+- RUN ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1
+# Install Oracle Instant Client 23c (basic + sqlplus only)
+- RUN curl -LO https://download.oracle.com/otn_software/linux/instantclient/2326100/oracle-instantclient-basic-23.26.1.0.0-1.el8.x86_64.rpm
+- RUN curl -LO https://download.oracle.com/otn_software/linux/instantclient/2326100/oracle-instantclient-sqlplus-23.26.1.0.0-1.el8.x86_64.rpm
+- RUN rpm -ivh --nodeps oracle-instantclient-basic-23.26.1.0.0-1.el8.x86_64.rpm oracle-instantclient-sqlplus-23.26.1.0.0-1.el8.x86_64.rpm
+- RUN rm -f oracle-instantclient*.rpm
+```
+
+Add the following to `additional_build_steps.append_final`:
+
+```yaml
+# Register Oracle libraries
+- RUN echo /usr/lib/oracle/23/client64/lib > /etc/ld.so.conf.d/oracle-instantclient.conf && ldconfig
+# Symlink sqlplus into PATH
+- RUN ln -sf /usr/lib/oracle/23/client64/bin/sqlplus /usr/local/bin/sqlplus
+# Environment variables
+- ENV PATH=/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64/bin:/usr/local/bin:$PATH
+- ENV LD_LIBRARY_PATH=/usr/lib/oracle/23/client64/lib
+- ENV ORACLE_HOME=/usr/lib/oracle/23/client64
+```
+
+#### 2. Build and Push EE Image
+
+```bash
+cd execution-environment/
+ansible-builder build \
+  --tag acrinspecwzrr.azurecr.io/db-compliance-ee:1.0.0 \
+  --container-runtime podman
+
+podman push acrinspecwzrr.azurecr.io/db-compliance-ee:1.0.0
+```
+
+#### 3. Verify Inside Container
+
+```bash
+podman run --rm acrinspecwzrr.azurecr.io/db-compliance-ee:1.0.0 /bin/bash -c '
+  echo "=== sqlplus ===" && sqlplus -V
+  echo "=== ORACLE_HOME ===" && echo $ORACLE_HOME
+  echo "=== Libraries ===" && ls -la /usr/lib/oracle/23/client64/lib/libclntsh.so*
+  echo "=== ldconfig ===" && ldconfig -p | grep oracle
+  echo "=== ldd ===" && ldd /usr/lib/oracle/23/client64/bin/sqlplus
+  echo "=== libnsl ===" && ls -la /usr/lib64/libnsl.so.1
+'
+```
+
+### Expected Verification Output
+
+```
+=== sqlplus ===
+SQL*Plus: Release 23.26.1.0.0 - Production
+Version 23.26.1.0.0
+
+=== ORACLE_HOME ===
+/usr/lib/oracle/23/client64
+
+=== Libraries ===
+libclntsh.so -> libclntsh.so.23.1
+libclntsh.so.23.1 (98MB)
+
+=== ldconfig ===
+libclntsh.so.23.1 => /usr/lib/oracle/23/client64/lib/libclntsh.so.23.1
+libsqlplus.so => /usr/lib/oracle/23/client64/lib/libsqlplus.so
+
+=== ldd ===
+(all dependencies resolved, no "not found" entries)
+
+=== libnsl ===
+/usr/lib64/libnsl.so.1 -> libnsl.so.3
+```
+
+### Installed File Layout
+
+```
+/usr/lib/oracle/23/client64/          ← ORACLE_HOME
+├── bin/
+│   ├── adrci
+│   ├── genezi
+│   └── sqlplus                        ← Used by preflight.yml
+└── lib/
+    ├── libclntsh.so → libclntsh.so.23.1  ← Used by InSpec OCI8 gem
+    ├── libclntsh.so.23.1              ← Core client library (98MB)
+    ├── libnnz.so                      ← Network security
+    ├── libocci.so*                    ← C++ interface
+    ├── libsqlplus.so                  ← SQL*Plus library
+    ├── libsqlplusic.so               ← SQL*Plus IC library
+    └── glogin.sql                     ← SQL*Plus login script
+```
+
+### Dependencies
+- **Blocks:** DBSCAN-300 (Oracle role connectivity testing), DBSCAN-301 (Oracle role scaffolding)
+- **Related:** DBSCAN-711 (DB Client Installation Documentation), DBSCAN-750 (Sybase/MSSQL dual-path)
+- **Prerequisite:** UBI 9 base image, `libaio` and `libnsl2` system packages
+
+### Notes for AAP2 Platform Team
+1. **`--nodeps` is required** — The RPMs are EL8 but the base image is UBI 9. The binaries are compatible (verified in Azure test container on 2026-03-13)
+2. **`libnsl.so.1` must be created before RPM install** — Oracle links against this removed library
+3. **Container image size** — The basic RPM adds ~350MB (mostly `libociei.so` at 205MB). This is expected
+4. **No Oracle account required** — The download URLs are public (no login needed)
+5. **The `tools` RPM is NOT needed** — It contains exp/imp/sqlldr which are not used for compliance scanning
+
+### Story Points: 3
+
+---
+
 ## Sprint Planning - Onboarding Phase
 
 ### Sprint O+1 (Week 1): Documentation and Templates
@@ -3029,4 +3168,4 @@ docs/
 ---
 
 *Document generated for project planning purposes.*
-*Last Updated: 2026-02-08*
+*Last Updated: 2026-03-13*
