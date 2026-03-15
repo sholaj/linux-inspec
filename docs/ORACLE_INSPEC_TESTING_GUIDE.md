@@ -40,10 +40,10 @@ The Oracle Instant Client must be installed on the runner/delegate host. Typical
 
 ```bash
 # RHEL/CentOS location (yum install)
-/usr/lib/oracle/21/client64/bin/sqlplus
+/usr/lib/oracle/23/client64/bin/sqlplus
 
 # Manual install location (common)
-/opt/oracle/instantclient_19_16/sqlplus
+/usr/lib/oracle/23/client64/bin/sqlplus
 ```
 
 ### 3. Required Environment Variables
@@ -52,7 +52,7 @@ Set these environment variables before running tests:
 
 ```bash
 # Oracle client paths
-export ORACLE_HOME=/usr/lib/oracle/21/client64
+export ORACLE_HOME=/usr/lib/oracle/23/client64
 export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME/bin:$PATH
 
@@ -223,7 +223,7 @@ ssh -i ~/.ssh/inspec_rsa azureuser@<RUNNER_IP>
 #### Step 2: Set Environment Variables
 
 ```bash
-export ORACLE_HOME=/usr/lib/oracle/21/client64
+export ORACLE_HOME=/usr/lib/oracle/23/client64
 export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME/bin:$PATH
 ```
@@ -544,7 +544,7 @@ oracle_databases:
 ssh -i ~/.ssh/inspec_rsa azureuser@<RUNNER_IP>
 
 # 2. Set Oracle environment
-export ORACLE_HOME=/usr/lib/oracle/21/client64
+export ORACLE_HOME=/usr/lib/oracle/23/client64
 export LD_LIBRARY_PATH=$ORACLE_HOME/lib:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME/bin:$PATH
 

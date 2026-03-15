@@ -111,18 +111,18 @@ The role automatically configures Oracle environment variables from the resolved
 1. **EE has a different Oracle client** — override the EE path:
    ```yaml
    # group_vars/all.yml
-   oracle_home_ee: "/usr/lib/oracle/21/client64"
+   oracle_home_ee: "/usr/lib/oracle/23/client64"
    ```
 
 2. **Delegate host has a different Oracle client** — override the delegate path:
    ```yaml
    # group_vars/all.yml or host_vars/delegate-host.yml
-   oracle_home_delegate: "/opt/oracle/instantclient_21_3"
+   oracle_home_delegate: "/tools/ver/oracle-client-21.3.0.0-32"
    ```
 
 3. **Force a specific path regardless of mode** — set the direct override:
    ```yaml
-   ORACLE_HOME: "/opt/oracle/instantclient_21_3"
+   ORACLE_HOME: "/custom/oracle/path"
    ```
 
 4. **Verify your Oracle client installation** before running scans:
@@ -585,7 +585,7 @@ oracle_home_ee: "/usr/lib/oracle/23/client64"
 oracle_home_delegate: "/tools/ver/oracle-client-21.3.0.0-32"
 
 # Or force a specific path regardless of mode
-ORACLE_HOME: "/opt/oracle/instantclient_21_3"
+ORACLE_HOME: "/custom/oracle/path"
 ```
 
 ### TNS Resolution Failed

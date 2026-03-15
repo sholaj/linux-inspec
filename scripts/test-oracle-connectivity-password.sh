@@ -97,7 +97,7 @@ test_oracle_credentials() {
     
     local result=$(sshpass -p "$SSH_PASSWORD" ssh -o StrictHostKeyChecking=accept-new \
         "$RUNNER_USER@$RUNNER_HOST" bash << 'EOSSH'
-export ORACLE_HOME=/opt/oracle/instantclient_19_16
+export ORACLE_HOME=/usr/lib/oracle/23/client64
 export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
 export PATH=$ORACLE_HOME:$PATH
 
@@ -124,7 +124,7 @@ test_oracle_inspec() {
     print_header "TEST 4: Oracle - Basic InSpec Profile Execution"
     print_test "Executing simple Oracle InSpec control"
     
-    local inspec_cmd="export ORACLE_HOME=/opt/oracle/instantclient_19_16; \
+    local inspec_cmd="export ORACLE_HOME=/usr/lib/oracle/23/client64; \
 export LD_LIBRARY_PATH=\$ORACLE_HOME:\$LD_LIBRARY_PATH; \
 export PATH=\$ORACLE_HOME:\$PATH; \
 inspec exec - --input oracle_server=10.0.2.5 oracle_port=1521 oracle_service=ORCLCDB oracle_username=system oracle_password=OraclePass123 << 'INSPEC_EOF'

@@ -298,7 +298,7 @@ Create test playbooks and validate the complete MSSQL scanning workflow against 
 Set up the execution environment with Oracle Instant Client and validate end-to-end connectivity to a sample Oracle database.
 
 ### Acceptance Criteria
-- [ ] Oracle Instant Client 19c (basic + sqlplus) installed at `/opt/oracle/instantclient_19_16`
+- [ ] Oracle Instant Client 23c (basic + sqlplus) installed at `/usr/lib/oracle/23/client64`
 - [ ] Environment variables configured: `ORACLE_HOME`, `LD_LIBRARY_PATH`, `TNS_ADMIN`
 - [ ] Symbolic links created for library compatibility (`libclntsh.so`)
 - [ ] Can successfully run `telnet <oracle_host> 1521` and see connection established

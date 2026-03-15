@@ -96,52 +96,50 @@ ACCEPT_EULA=Y dnf install -y mssql-tools18 unixODBC-devel
 
 ---
 
-### Oracle - Instant Client 19c
+### Oracle - Instant Client 23c
 
-**Installation Path:** `/opt/oracle/instantclient_19_16`
+**Installation Path:** `/usr/lib/oracle/23/client64`
 
 **Required Binaries:**
 - `sqlplus` - Oracle SQL command-line tool
 
 **Required Libraries:**
-- `libclntsh.so.19.1`
-- `libnnz19.so`
-- `libocci.so.19.1`
+- `libclntsh.so.23.1`
+- `libnnz23.so`
+- `libocci.so.23.1`
 
 **Installation Script:**
 
 ```bash
 #!/bin/bash
-# Install Oracle Instant Client 19.16
+# Install Oracle Instant Client 23
 
-ORACLE_VERSION="19.16.0.0.0"
-ORACLE_BASE="/opt/oracle"
-ORACLE_HOME="${ORACLE_BASE}/instantclient_19_16"
+ORACLE_VERSION="23.7.0.0.0"
+ORACLE_HOME="/usr/lib/oracle/23/client64"
 
-mkdir -p ${ORACLE_BASE}
-cd ${ORACLE_BASE}
+mkdir -p ${ORACLE_HOME}
 
 # Download from Oracle CDN (requires license acceptance)
 # Basic, SQL*Plus, and SDK packages required
-curl -O https://download.oracle.com/otn_software/linux/instantclient/1916000/instantclient-basic-linux.x64-${ORACLE_VERSION}dbru.zip
-curl -O https://download.oracle.com/otn_software/linux/instantclient/1916000/instantclient-sqlplus-linux.x64-${ORACLE_VERSION}dbru.zip
+curl -O https://download.oracle.com/otn_software/linux/instantclient/2370000/instantclient-basic-linux.x64-${ORACLE_VERSION}dbru.zip
+curl -O https://download.oracle.com/otn_software/linux/instantclient/2370000/instantclient-sqlplus-linux.x64-${ORACLE_VERSION}dbru.zip
 
-unzip -o instantclient-basic-*.zip
-unzip -o instantclient-sqlplus-*.zip
+unzip -o instantclient-basic-*.zip -d /usr/lib/oracle/23/client64
+unzip -o instantclient-sqlplus-*.zip -d /usr/lib/oracle/23/client64
 
 # Create symbolic links
-cd ${ORACLE_HOME}
-ln -sf libclntsh.so.19.1 libclntsh.so
-ln -sf libocci.so.19.1 libocci.so
+cd ${ORACLE_HOME}/lib
+ln -sf libclntsh.so.23.1 libclntsh.so
+ln -sf libocci.so.23.1 libocci.so
 
 # Verify installation
-${ORACLE_HOME}/sqlplus -V
+${ORACLE_HOME}/bin/sqlplus -V
 ```
 
 **Environment Variables Required:**
 
 ```bash
-export ORACLE_HOME=/opt/oracle/instantclient_19_16
+export ORACLE_HOME=/usr/lib/oracle/23/client64
 export LD_LIBRARY_PATH=${ORACLE_HOME}:${LD_LIBRARY_PATH}
 export PATH=${ORACLE_HOME}:${PATH}
 export TNS_ADMIN=${ORACLE_HOME}/network/admin
@@ -261,14 +259,14 @@ The EE should configure the following PATH for all database client binaries:
 
 ```bash
 # Combined PATH for all database clients
-export PATH=/opt/mssql-tools18/bin:/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/bin:/usr/local/bin:$PATH
+export PATH=/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/bin:/usr/local/bin:$PATH
 
 # Combined LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/lib:$LD_LIBRARY_PATH
 
 # Oracle-specific
-export ORACLE_HOME=/opt/oracle/instantclient_19_16
-export TNS_ADMIN=/opt/oracle/instantclient_19_16/network/admin
+export ORACLE_HOME=/usr/lib/oracle/23/client64
+export TNS_ADMIN=/usr/lib/oracle/23/client64/network/admin
 export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
 
 # Sybase-specific
@@ -307,9 +305,9 @@ additional_build_steps:
     - COPY scripts/install-db-clients.sh /tmp/
     - RUN chmod +x /tmp/install-db-clients.sh && /tmp/install-db-clients.sh
     - RUN gem install inspec-bin -v 5.22.29 --no-document
-    - ENV PATH="/opt/mssql-tools18/bin:/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
-    - ENV LD_LIBRARY_PATH="/opt/oracle/instantclient_19_16:/opt/sybase/OCS-16_0/lib"
-    - ENV ORACLE_HOME="/opt/oracle/instantclient_19_16"
+    - ENV PATH="/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
+    - ENV LD_LIBRARY_PATH="/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/lib"
+    - ENV ORACLE_HOME="/usr/lib/oracle/23/client64"
     - ENV SYBASE="/opt/sybase"
     - ENV SYBASE_OCS="OCS-16_0"
     - ENV NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
@@ -353,7 +351,7 @@ echo "=== Installing FreeTDS (Sybase) ==="
 dnf install -y freetds
 
 echo "=== Creating directories ==="
-mkdir -p /opt/oracle/instantclient_19_16
+mkdir -p /usr/lib/oracle/23/client64
 mkdir -p /opt/sybase/OCS-16_0/{bin,lib}
 mkdir -p /tmp/compliance_scans
 
@@ -381,7 +379,7 @@ Create `/etc/profile.d/inspec-db.sh`:
 export PATH="/opt/mssql-tools18/bin:${PATH}"
 
 # Oracle
-export ORACLE_HOME="/opt/oracle/instantclient_19_16"
+export ORACLE_HOME="/usr/lib/oracle/23/client64"
 export LD_LIBRARY_PATH="${ORACLE_HOME}:${LD_LIBRARY_PATH}"
 export PATH="${ORACLE_HOME}:${PATH}"
 export TNS_ADMIN="${ORACLE_HOME}/network/admin"
@@ -506,7 +504,7 @@ export CHEF_LICENSE=accept-silent
 
 ```bash
 # Check library paths
-ldd /opt/oracle/instantclient_19_16/sqlplus
+ldd /usr/lib/oracle/23/client64/sqlplus
 ldd /opt/sybase/OCS-16_0/bin/isql
 
 # Add missing library path
@@ -545,7 +543,7 @@ ansible inspec-runner -m ping -i inventory.yml
 | InSpec | 5.22.0 | 5.22.29 | License required |
 | Ruby | 3.0 | 3.1+ | For InSpec gem |
 | MSSQL Tools | 17.0 | 18.x | TLS 1.2 support |
-| Oracle Client | 19.0 | 19.16+ | Long-term support |
+| Oracle Client | 23.0 | 23.7+ | Long-term support |
 | FreeTDS | 1.0 | 1.3+ | Sybase TDS 5.0 |
 | RHEL | 8.6 | 9.x | EE base image |
 

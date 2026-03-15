@@ -101,7 +101,7 @@
       block:
         - name: Test Oracle credentials
           ansible.builtin.shell: |
-            export ORACLE_HOME=/opt/oracle/instantclient_19_16
+            export ORACLE_HOME=/usr/lib/oracle/23/client64
             export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
             export PATH=$ORACLE_HOME:$PATH
 
@@ -221,7 +221,7 @@
 
         - name: Execute Oracle InSpec control
           ansible.builtin.shell: |
-            export ORACLE_HOME=/opt/oracle/instantclient_19_16
+            export ORACLE_HOME=/usr/lib/oracle/23/client64
             export LD_LIBRARY_PATH=$ORACLE_HOME:$LD_LIBRARY_PATH
             export PATH=$ORACLE_HOME:$PATH
 
