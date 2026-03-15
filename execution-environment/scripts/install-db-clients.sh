@@ -36,12 +36,12 @@ if [ -f instantclient-basic-linux.x64-19.16.0.0.0dbru.zip ]; then
   unzip -o instantclient-basic-*.zip -d /opt/oracle/
   unzip -o instantclient-sqlplus-*.zip -d /opt/oracle/
 
-  cd /opt/oracle/instantclient_19_16
+  cd /usr/lib/oracle/23/client64
   ln -sf libclntsh.so.19.1 libclntsh.so 2>/dev/null || true
   ln -sf libocci.so.19.1 libocci.so 2>/dev/null || true
 
   # Create symbolic link for sqlplus
-  ln -sf /opt/oracle/instantclient_19_16/sqlplus /usr/local/bin/sqlplus
+  ln -sf /usr/lib/oracle/23/client64/sqlplus /usr/local/bin/sqlplus
   echo "Oracle Instant Client installed: $(which sqlplus)"
 else
   echo "Oracle Instant Client installation skipped - download failed"

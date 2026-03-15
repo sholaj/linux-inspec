@@ -81,8 +81,8 @@ The relevant section in `execution-environment/execution-environment.yml`:
 ```yaml
 additional_build_steps:
   prepend_base:
-    # libnsl.so.1 compatibility — Oracle client requires this on RHEL 9 / UBI 9
-    - RUN ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1
+    # libnsl.so.1 compatibility — Oracle may require this on some UBI 9 builds
+    - RUN test -f /usr/lib64/libnsl.so.3 && ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1 || true
     # Install Oracle Instant Client 23c (basic + sqlplus only)
     - RUN curl -LO https://download.oracle.com/otn_software/linux/instantclient/2326100/oracle-instantclient-basic-23.26.1.0.0-1.el8.x86_64.rpm
     - RUN curl -LO https://download.oracle.com/otn_software/linux/instantclient/2326100/oracle-instantclient-sqlplus-23.26.1.0.0-1.el8.x86_64.rpm
@@ -104,7 +104,7 @@ additional_build_steps:
 
 1. **`--nodeps` flag** — The RPMs are built for EL8 but the base image is UBI 9. `--nodeps` skips the glibc version check. The binaries are compatible because Oracle Instant Client is statically linked against most dependencies.
 
-2. **`libnsl.so.1` symlink** — Oracle client links against `libnsl.so.1` which doesn't exist on RHEL 9. The symlink `libnsl.so.3 → libnsl.so.1` resolves this.
+2. **`libnsl.so.1` symlink** — Oracle client may link against `libnsl.so.1` which doesn't exist on some RHEL 9 / UBI 9 builds. The conditional symlink handles both cases. Note: AAP2 EE verification (2026-03-13) confirmed `libnsl.so.3` is not present on the production base image and `sqlplus` works without it.
 
 3. **`ldconfig`** — Registers `/usr/lib/oracle/23/client64/lib` so the dynamic linker can find `libclntsh.so` at runtime (required by both `sqlplus` and InSpec's Ruby OCI8 gem).
 

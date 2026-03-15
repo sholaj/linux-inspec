@@ -12,7 +12,7 @@ all:
     inspec_delegate_host: "runner_vm"
 
     # Oracle client environment on runner VM (Oracle Instant Client 21c)
-    ORACLE_HOME: "/usr/lib/oracle/21/client64"
+    ORACLE_HOME: "/usr/lib/oracle/23/client64"
 
   children:
     # Delegate hosts - where InSpec runs

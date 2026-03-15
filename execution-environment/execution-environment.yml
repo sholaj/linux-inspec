@@ -20,8 +20,8 @@ additional_build_steps:
     # Enable EPEL for freetds
     - RUN dnf install -y https://dl.fedoraproject.org/pub/epel/epel-release-latest-9.noarch.rpm
     - RUN dnf install -y freetds freetds-devel || true
-    # Create symlink for libnsl.so.1 compatibility (Oracle requires this)
-    - RUN ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1
+    # Create symlink for libnsl.so.1 compatibility (Oracle may require this on some UBI 9 builds)
+    - RUN test -f /usr/lib64/libnsl.so.3 && ln -sf /usr/lib64/libnsl.so.3 /usr/lib64/libnsl.so.1 || true
     # Download and install Oracle Instant Client 23c
     # Packages required:
     #   basic   - Core Oracle client libraries (pre-req for sqlplus + InSpec oracledb_session)
