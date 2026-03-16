@@ -101,7 +101,7 @@ control 'oracle-19c-1.06' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_users WHERE default_tablespace = 'SYSTEM' AND username NOT IN ('SYS', 'SYSTEM', 'OUTLN', 'DIP', 'ORACLE_OCM', 'DBSNMP', 'APPQOSSYS', 'WMSYS', 'EXFSYS', 'CTXSYS', 'XDB', 'ANONYMOUS', 'ORDSYS', 'ORDDATA', 'ORDPLUGINS', 'SI_INFORMTN_SCHEMA', 'MDSYS', 'OLAPSYS', 'MDDATA', 'SPATIAL_WFS_ADMIN_USR', 'SPATIAL_CSW_ADMIN_USR', 'LBACSYS', 'APEX_PUBLIC_USER', 'APEX_040000', 'APEX_040100', 'APEX_040200', 'FLOWS_FILES', 'DVSYS', 'DVF')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_users WHERE default_tablespace = 'SYSTEM' AND username NOT IN ('SYS', 'SYSTEM', 'OUTLN', 'DIP', 'ORACLE_OCM', 'DBSNMP', 'APPQOSSYS', 'WMSYS', 'EXFSYS', 'CTXSYS', 'XDB', 'ANONYMOUS', 'ORDSYS', 'ORDDATA', 'ORDPLUGINS', 'SI_INFORMTN_SCHEMA', 'MDSYS', 'OLAPSYS', 'MDDATA', 'SPATIAL_WFS_ADMIN_USR', 'SPATIAL_CSW_ADMIN_USR', 'LBACSYS', 'APEX_PUBLIC_USER', 'APEX_040000', 'APEX_040100', 'APEX_040200', 'FLOWS_FILES', 'DVSYS', 'DVF')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -114,7 +114,7 @@ control 'oracle-19c-1.07' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM v$controlfile").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM v$controlfile").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 2 } }
   end
 end
@@ -274,7 +274,7 @@ control 'oracle-19c-2.01' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_users WHERE username IN ('SCOTT', 'HR', 'OE', 'SH', 'PM', 'IX', 'BI') AND account_status = 'OPEN'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_users WHERE username IN ('SCOTT', 'HR', 'OE', 'SH', 'PM', 'IX', 'BI') AND account_status = 'OPEN'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -326,7 +326,7 @@ control 'oracle-19c-2.05' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_users_with_defpwd WHERE username NOT IN ('XS$NULL')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_users_with_defpwd WHERE username NOT IN ('XS$NULL')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -443,7 +443,7 @@ control 'oracle-19c-2.14' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM proxy_users").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM proxy_users").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 0 } }
   end
 end
@@ -456,7 +456,7 @@ control 'oracle-19c-2.15' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_ts_quotas WHERE max_bytes = -1 AND username NOT IN ('SYS', 'SYSTEM')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_ts_quotas WHERE max_bytes = -1 AND username NOT IN ('SYS', 'SYSTEM')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -473,7 +473,7 @@ control 'oracle-19c-3.01' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_FILE'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_FILE'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -486,7 +486,7 @@ control 'oracle-19c-3.02' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_HTTP'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_HTTP'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -499,7 +499,7 @@ control 'oracle-19c-3.03' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_TCP'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_TCP'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -512,7 +512,7 @@ control 'oracle-19c-3.04' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_SMTP'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_SMTP'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -525,7 +525,7 @@ control 'oracle-19c-3.05' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_LOB'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_LOB'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -538,7 +538,7 @@ control 'oracle-19c-3.06' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_SQL'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_SQL'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -551,7 +551,7 @@ control 'oracle-19c-3.07' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_RANDOM'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_RANDOM'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -564,7 +564,7 @@ control 'oracle-19c-3.08' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_XMLGEN'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_XMLGEN'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -577,7 +577,7 @@ control 'oracle-19c-3.09' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_JOB'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_JOB'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -590,7 +590,7 @@ control 'oracle-19c-3.10' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_SCHEDULER'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_SCHEDULER'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -603,7 +603,7 @@ control 'oracle-19c-3.11' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_SYS_SQL'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_SYS_SQL'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -616,7 +616,7 @@ control 'oracle-19c-3.12' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_BACKUP_RESTORE'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_BACKUP_RESTORE'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -629,7 +629,7 @@ control 'oracle-19c-3.13' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_MAIL'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_MAIL'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -642,7 +642,7 @@ control 'oracle-19c-3.14' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_INADDR'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'UTL_INADDR'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -655,7 +655,7 @@ control 'oracle-19c-3.15' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_LDAP'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_LDAP'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -668,7 +668,7 @@ control 'oracle-19c-3.16' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_ADVISOR'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE grantee = 'PUBLIC' AND privilege = 'EXECUTE' AND table_name = 'DBMS_ADVISOR'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -681,7 +681,7 @@ control 'oracle-19c-3.17' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_role_privs WHERE granted_role = 'DBA' AND grantee NOT IN ('SYS', 'SYSTEM')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_role_privs WHERE granted_role = 'DBA' AND grantee NOT IN ('SYS', 'SYSTEM')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -694,7 +694,7 @@ control 'oracle-19c-3.18' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'SELECT ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'EXP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE', 'DATAPUMP_EXP_FULL_DATABASE', 'OEM_MONITOR')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'SELECT ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'EXP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE', 'DATAPUMP_EXP_FULL_DATABASE', 'OEM_MONITOR')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -707,7 +707,7 @@ control 'oracle-19c-3.19' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'INSERT ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'INSERT ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -720,7 +720,7 @@ control 'oracle-19c-3.20' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'UPDATE ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'UPDATE ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -733,7 +733,7 @@ control 'oracle-19c-3.21' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'DELETE ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'DELETE ANY TABLE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA', 'IMP_FULL_DATABASE', 'DATAPUMP_IMP_FULL_DATABASE')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -746,7 +746,7 @@ control 'oracle-19c-3.22' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'CREATE ANY PROCEDURE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'CREATE ANY PROCEDURE' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -759,7 +759,7 @@ control 'oracle-19c-3.23' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'ALTER SYSTEM' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'ALTER SYSTEM' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -772,7 +772,7 @@ control 'oracle-19c-3.24' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'CREATE USER' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'CREATE USER' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -785,7 +785,7 @@ control 'oracle-19c-3.25' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_sys_privs WHERE privilege = 'DROP USER' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_sys_privs WHERE privilege = 'DROP USER' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -798,7 +798,7 @@ control 'oracle-19c-3.26' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_role_privs rp JOIN proxy_users pu ON rp.grantee = pu.client WHERE rp.granted_role = 'DBA'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_role_privs rp JOIN proxy_users pu ON rp.grantee = pu.client WHERE rp.granted_role = 'DBA'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -811,7 +811,7 @@ control 'oracle-19c-3.27' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE table_name = 'USER$' AND owner = 'SYS' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE table_name = 'USER$' AND owner = 'SYS' AND grantee NOT IN ('SYS', 'SYSTEM', 'DBA')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -854,7 +854,7 @@ control 'oracle-19c-4.03' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('CREATE SESSION') AND success = 'BY ACCESS' AND failure = 'BY ACCESS'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('CREATE SESSION') AND success = 'BY ACCESS' AND failure = 'BY ACCESS'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -867,7 +867,7 @@ control 'oracle-19c-4.04' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('GRANT ANY PRIVILEGE', 'GRANT ANY ROLE')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('GRANT ANY PRIVILEGE', 'GRANT ANY ROLE')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -880,7 +880,7 @@ control 'oracle-19c-4.05' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option = 'ALTER SYSTEM'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option = 'ALTER SYSTEM'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -893,7 +893,7 @@ control 'oracle-19c-4.06' do
   tag cis_level: 1
   tag severity: 'critical'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('USER', 'CREATE USER', 'ALTER USER', 'DROP USER')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('USER', 'CREATE USER', 'ALTER USER', 'DROP USER')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -906,7 +906,7 @@ control 'oracle-19c-4.07' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('ROLE', 'CREATE ROLE', 'ALTER ROLE', 'DROP ROLE')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('ROLE', 'CREATE ROLE', 'ALTER ROLE', 'DROP ROLE')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -919,7 +919,7 @@ control 'oracle-19c-4.08' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'CREATE INDEX', 'DROP INDEX')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('CREATE TABLE', 'ALTER TABLE', 'DROP TABLE', 'CREATE INDEX', 'DROP INDEX')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -932,7 +932,7 @@ control 'oracle-19c-4.09' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('DATABASE LINK', 'CREATE DATABASE LINK', 'DROP DATABASE LINK')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('DATABASE LINK', 'CREATE DATABASE LINK', 'DROP DATABASE LINK')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -945,7 +945,7 @@ control 'oracle-19c-4.10' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('PROCEDURE', 'CREATE PROCEDURE', 'DROP PROCEDURE')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('PROCEDURE', 'CREATE PROCEDURE', 'DROP PROCEDURE')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -958,7 +958,7 @@ control 'oracle-19c-4.11' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('PROFILE', 'CREATE PROFILE', 'ALTER PROFILE', 'DROP PROFILE')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_stmt_audit_opts WHERE audit_option IN ('PROFILE', 'CREATE PROFILE', 'ALTER PROFILE', 'DROP PROFILE')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 1 } }
   end
 end
@@ -971,7 +971,7 @@ control 'oracle-19c-4.12' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tab_privs WHERE table_name IN ('AUD$', 'FGA_LOG$') AND grantee NOT IN ('SYS', 'SYSTEM')").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tab_privs WHERE table_name IN ('AUD$', 'FGA_LOG$') AND grantee NOT IN ('SYS', 'SYSTEM')").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
@@ -1001,7 +1001,7 @@ control 'oracle-19c-5.02' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_libraries WHERE library_name = 'EXTPROC_CONNECTION_DATA'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_libraries WHERE library_name = 'EXTPROC_CONNECTION_DATA'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 0 } }
   end
 end
@@ -1165,7 +1165,7 @@ control 'oracle-19c-7.01' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM v$encryption_wallet WHERE status = 'OPEN'") do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM v$encryption_wallet WHERE status = 'OPEN'") do
     its('rows') { should_not be_empty }
   end
 end
@@ -1178,7 +1178,7 @@ control 'oracle-19c-7.02' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_tablespaces WHERE encrypted = 'YES'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_tablespaces WHERE encrypted = 'YES'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 0 } }
   end
 end
@@ -1221,7 +1221,7 @@ control 'oracle-19c-8.02' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_db_links").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_db_links").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i >= 0 } }
   end
 end
@@ -1234,7 +1234,7 @@ control 'oracle-19c-8.03' do
   tag cis_level: 1
   tag severity: 'high'
 
-  describe sql.query("SELECT COUNT(*) AS cnt FROM dba_db_links WHERE owner = 'PUBLIC'").row(0).column('cnt') do
+  describe sql.query("SELECT TRIM(COUNT(*)) AS cnt FROM dba_db_links WHERE owner = 'PUBLIC'").row(0).column('cnt') do
     its('value') { should satisfy { |v| v.to_s.strip.to_i == 0 } }
   end
 end
