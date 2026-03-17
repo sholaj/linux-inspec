@@ -2,8 +2,14 @@
 # Deployed by sybase_inspec Ansible role
 # Server: {{ sybase_service }}
 # Host: {{ sybase_server }}
-# Port: {{ sybase_port }}
+# Port: {{ sybase_ssl_port if (sybase_ssl_enabled | default(false) | bool) else sybase_port }}
+# SSL: {{ 'enabled' if (sybase_ssl_enabled | default(false) | bool) else 'disabled' }}
 
 {{ sybase_service }}
+{% if sybase_ssl_enabled | default(false) | bool %}
+	query ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
+	master ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
+{% else %}
 	query tcp ether {{ sybase_server }} {{ sybase_port }}
 	master tcp ether {{ sybase_server }} {{ sybase_port }}
+{% endif %}

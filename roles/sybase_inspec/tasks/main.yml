@@ -46,12 +46,18 @@
       SYBASE_OCS: "{{ _effective_sybase_ocs }}"
   tags: always
 
+- name: Resolve effective connection port (SSL vs plain)
+  ansible.builtin.set_fact:
+    _effective_port: "{{ sybase_ssl_port if (sybase_ssl_enabled | default(false) | bool) else sybase_port }}"
+  tags: always
+
 - name: Sybase InSpec Compliance Scan Starting
   ansible.builtin.debug:
     msg: |
       Sybase InSpec Compliance Scan
       ===============================
-      Server: {{ sybase_server }}:{{ sybase_port }}
+      Server: {{ sybase_server }}:{{ _effective_port }}
+      SSL: {{ 'ENABLED (TLS ' + sybase_ssl_tls_version + ')' if (sybase_ssl_enabled | default(false) | bool) else 'disabled' }}
       Database: {{ sybase_database }}
       Service: {{ sybase_service }}
       Version: {{ sybase_version }}
@@ -76,7 +82,7 @@
           ╔══════════════════════════════════════════════════════════════════╗
           ║  SKIPPING DATABASE - Pre-flight check failed                     ║
           ╠══════════════════════════════════════════════════════════════════╣
-          ║  Server:   {{ sybase_server }}:{{ sybase_port }}
+          ║  Server:   {{ sybase_server }}:{{ _effective_port }}
           ║  Service:  {{ sybase_service }}
           ║  Database: {{ sybase_database }}
           ║  Reason:   {{ preflight_skip_reason }}
@@ -123,5 +129,5 @@
 
 - name: Sybase InSpec Compliance Scan Complete
   ansible.builtin.debug:
-    msg: "[OK] Sybase InSpec scan completed - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }} ({{ sybase_version }})"
+    msg: "[OK] Sybase InSpec scan completed - {{ sybase_server }}:{{ _effective_port }}/{{ sybase_service }} ({{ sybase_version }}{{ ', SSL' if (sybase_ssl_enabled | default(false) | bool) else '' }})"
   when: preflight_passed | default(true)

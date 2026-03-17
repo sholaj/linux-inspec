@@ -28,7 +28,7 @@
       ansible.builtin.debug:
         msg: |
           ═══════════════════════════════════════════════════════════════════
-           DATABASE SKIPPED - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }}
+           DATABASE SKIPPED - {{ sybase_server }}:{{ _effective_port }}/{{ sybase_service }}
           ═══════════════════════════════════════════════════════════════════
            Status:     SKIPPED
            Reason:     {{ preflight_skip_reason }}
@@ -85,6 +85,21 @@
   ignore_errors: true
   delegate_to: "{{ _delegate_host }}"
 
+# Clean up SSL temporary files (only when SSL used /tmp paths)
+- name: Clean up SSL temporary files
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - /tmp/sybase_trusted.txt
+    - /tmp/sybase_libtcl.cfg
+  when:
+    - preflight_passed
+    - sybase_ssl_enabled | default(false) | bool
+    - _ssl_trusted_cert_dest | default('') is search('/tmp/')
+  ignore_errors: true
+  delegate_to: "{{ _delegate_host }}"
+
 # Splunk integration (optional) - send scan results
 - name: Send results to Splunk
   ansible.builtin.include_tasks: splunk_integration.yml
@@ -114,7 +129,7 @@
         type: "database_scan_skipped"
         db_type: "sybase"
         host: "{{ sybase_server }}"
-        port: "{{ sybase_port }}"
+        port: "{{ _effective_port }}"
         database: "{{ sybase_database }}"
         service: "{{ sybase_service }}"
         skip_reason: "{{ preflight_skip_reason }}"

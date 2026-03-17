@@ -36,6 +36,14 @@
         fail_msg: "Missing required SSH parameters for Sybase connection (ssh_user and ssh_key_path)"
         success_msg: "SSH parameters validated successfully"
       when: sybase_use_ssh | default(true)
+
+    - name: Validate SSL parameters
+      ansible.builtin.assert:
+        that:
+          - sybase_ssl_trusted_cert_file | length > 0
+        fail_msg: "sybase_ssl_trusted_cert_file is required when sybase_ssl_enabled is true"
+        success_msg: "SSL parameters validated successfully"
+      when: sybase_ssl_enabled | default(false) | bool
   no_log: true
 
 

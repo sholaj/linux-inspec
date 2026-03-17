@@ -19,7 +19,7 @@
     msg: |
       Execution Mode: {{ _connection_mode | upper }}
       Delegate Host: {{ _delegate_host }}
-      Sybase Target: {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }}
+      Sybase Target: {{ sybase_server }}:{{ _effective_port }}/{{ sybase_service }}
   when: inspec_debug_mode | default(false) | bool
 
 - name: "[Execute] Gather environment facts"
@@ -53,6 +53,7 @@
       SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
+      SYBOCS_CFG: "{{ _ssl_libtcl_cfg_dest | default('') }}"
 
 # Route to appropriate execution based on mode
 - name: "[Execute] Run SSH-based execution (legacy)"
@@ -69,6 +70,7 @@
               servicenm='{{ sybase_service }}' \
               database='{{ sybase_database | default("master") }}' \
               interfaces_file='{{ _sybase_interfaces_path | default("") }}' \
+              ssl_enabled={{ sybase_ssl_enabled | default(false) | bool | lower }} \
       --reporter=json-min \
       --no-color
   args:
@@ -93,6 +95,7 @@
               servicenm='{{ sybase_service }}' \
               database='{{ sybase_database | default("master") }}' \
               interfaces_file='{{ _sybase_interfaces_path | default("") }}' \
+              ssl_enabled={{ sybase_ssl_enabled | default(false) | bool | lower }} \
       --reporter=json-min \
       --no-color
   args:
@@ -128,7 +131,7 @@
     msg: |
       ═══════════════════════════════════════════════════════════════════
        Sybase InSpec Compliance Scan Results
-       Database: {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }}
+       Database: {{ sybase_server }}:{{ _effective_port }}/{{ sybase_service }}
        Mode: {{ _connection_mode | upper }}
       ═══════════════════════════════════════════════════════════════════
       {% set ns = namespace(passed=0, failed=0, total=0) %}

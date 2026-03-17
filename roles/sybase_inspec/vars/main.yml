@@ -64,6 +64,8 @@ error_messages:
   ruby_dir_missing: "The directory specified as ruby_dir for Database Platform SYBASE in the script does not exist or the permissions to access the directory are insufficient."
   ssh_connection_failed: "SSH connection to Sybase server failed. Please verify SSH credentials and connectivity."
   sybase_client_missing: "Sybase client tools not found. Please install Sybase ASE client."
+  ssl_handshake_failed: "SSL/TLS handshake failed. Verify server SSL config, certificate, and cipher suite."
+  ssl_cert_missing: "SSL trusted certificate file not found. Provide sybase_ssl_trusted_cert_file."
 
 # JSON error templates matching original script exactly
 json_templates:
@@ -73,6 +75,8 @@ json_templates:
     {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"Not able to retrieve Cloakware Password for Database Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
   ssh_error: |
     {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ sybase_port }}","DBVersion":"{{ sybase_version }}","id":"SSH connection failed for Sybase database access","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"SSH connection failed","statistics":{"duration":0},"version":"N/A"}]}
+  ssl_error: |
+    {"controls":[{"timestamp":"","hostname":"{{ sybase_server }}","database":"{{ sybase_database }}","port":"{{ _effective_port | default(sybase_port) }}","DBVersion":"{{ sybase_version }}","id":"SSL/TLS connection failed","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"SSL connection failed","statistics":{"duration":0},"version":"N/A"}]}
 
 # InSpec execution settings
 inspec_settings:

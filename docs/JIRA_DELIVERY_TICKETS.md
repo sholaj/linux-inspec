@@ -3130,6 +3130,73 @@ libsqlplus.so => /usr/lib/oracle/23/client64/lib/libsqlplus.so
 
 ---
 
+## DBSCAN-755: Sybase - SSL/TLS Support for InSpec Compliance Scanning
+
+### Purpose
+**As a** DevOps engineer, **I want to** run InSpec compliance scans against SSL-enabled Sybase ASE servers, **so that** databases requiring encrypted connections can be included in the automated compliance scanning framework.
+
+### Description
+Add opt-in SSL/TLS support to the `sybase_inspec` Ansible role. SSL-enabled Sybase servers require TLS 1.2 with specific cipher suites and the isql client must use the `-X` flag with a `trusted.txt` certificate file. This change is fully backward compatible — SSL is disabled by default and existing non-SSL connections are unaffected.
+
+### Background
+The Sybase SME confirmed that SSL-enabled servers:
+- Require **TLS 1.2** with cipher suites `TLS_ECDHE_RSA_WITH_AES128_GCM_SHA256` or `TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384`
+- Listen on **port 1063** for SSL connections (same machine as non-SSL on port 5000)
+- Require a `trusted.txt` certificate file for CA trust
+- Need the isql client to invoke the SSL module via `-X` flag
+
+### Acceptance Criteria
+- [ ] New Ansible variables for SSL configuration (`sybase_ssl_enabled`, `sybase_ssl_port`, `sybase_ssl_cipher_suites`, `sybase_ssl_trusted_cert_file`)
+- [ ] Interfaces file template conditionally uses `ssl` protocol when SSL enabled
+- [ ] `libtcl.cfg` template created and deployed for SSL driver configuration
+- [ ] InSpec `sybase_session_local` resource supports `-X` flag via `ssl_enabled` option
+- [ ] InSpec profiles accept `ssl_enabled` input and pass it to the resource
+- [ ] Preflight checks use correct port (SSL port vs standard port) and add `-X` flag
+- [ ] SSL certificate (`trusted.txt`) and `libtcl.cfg` deployed to delegate host
+- [ ] `SYBOCS_CFG` environment variable set during InSpec execution for SSL
+- [ ] SSL-specific error detection: `SSL_HANDSHAKE_FAILED`, `SSL_CERT_INVALID`
+- [ ] Validation fails if `sybase_ssl_enabled=true` without `sybase_ssl_trusted_cert_file`
+- [ ] Terraform test infrastructure exposes port 1063 with SSL placeholder config
+- [ ] Regression: default (`sybase_ssl_enabled: false`) behavior identical to current
+- [ ] Mixed inventory: SSL and non-SSL hosts in same playbook run work correctly
+- [ ] README documents SSL configuration, variables, and troubleshooting
+- [ ] Cleanup task removes temporary SSL files from `/tmp`
+
+### Sub-tasks
+1. Add SSL default variables to `defaults/main.yml`
+2. Update interfaces template for conditional SSL/TCP protocol
+3. Create `libtcl.cfg.j2` template for SSL driver config
+4. Add `ssl_enabled` to InSpec resource (`sybase_session_local.rb`) for both v15 and v16
+5. Add `ssl_enabled` input to InSpec profiles (`inspec.yml`) for both v15 and v16
+6. Pass `ssl_enabled` to resource in controls (`trusted.rb`) for both v15 and v16
+7. Compute `_effective_port` in `main.yml`
+8. Add SSL parameter validation in `validate.yml`
+9. SSL-aware preflight checks in `preflight.yml`
+10. Deploy SSL config files in `setup.yml`
+11. Pass SSL input and `SYBOCS_CFG` env in `execute.yml`
+12. Add SSL error messages in `vars/main.yml`
+13. Add SSL temp file cleanup in `cleanup.yml`
+14. Add Terraform port 1063 and NSG rules
+15. Update README with SSL documentation
+
+### Technical Notes
+- SSL is **isql-only**; FreeTDS tsql does not support SAP ASE SSL natively
+- On-prem environments may have read-only `/opt/sybase`; use `/tmp` paths with `SYBOCS_CFG` env var override
+- The `libtcl.cfg` file tells the Open Client library which SSL shared object to load and which cipher suites to use
+- `trusted.txt` contains the CA certificate chain for the Sybase server's SSL certificate
+
+### Labels
+`sybase-16`, `ssl`, `security`, `ansible`, `role-enhancement`
+
+### Type: Story
+### Story Points: 8
+
+### Dependencies
+- **Related:** DBSCAN-200 (Sybase role scaffolding), DBSCAN-201 (Sybase connectivity testing)
+- **Prerequisite:** Working Sybase InSpec role with non-SSL connectivity
+
+---
+
 ## Sprint Planning - Onboarding Phase
 
 ### Sprint O+1 (Week 1): Documentation and Templates

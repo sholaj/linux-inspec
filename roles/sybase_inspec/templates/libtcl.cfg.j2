@@ -1,0 +1,7 @@
+; SAP ASE Open Client SSL driver configuration
+; Deployed by sybase_inspec Ansible role
+[SSL]
+ssl = libsybssl64.so
+{% if sybase_ssl_cipher_suites | default('') %}
+CIPHER_SUITE = {{ sybase_ssl_cipher_suites }}
+{% endif %}

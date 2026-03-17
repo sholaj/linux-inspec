@@ -17,7 +17,7 @@
 - name: Test TCP port connectivity
   ansible.builtin.wait_for:
     host: "{{ sybase_server }}"
-    port: "{{ sybase_port }}"
+    port: "{{ _effective_port }}"
     timeout: "{{ preflight_port_timeout | default(5) }}"
     state: started
   register: _port_check
@@ -27,7 +27,7 @@
 - name: Set port connectivity result
   ansible.builtin.set_fact:
     _preflight_port_open: "{{ _port_check is succeeded }}"
-    preflight_skip_reason: "{{ 'Connection timeout - port ' ~ sybase_port ~ ' unreachable on ' ~ sybase_server if _port_check is failed else '' }}"
+    preflight_skip_reason: "{{ 'Connection timeout - port ' ~ _effective_port ~ ' unreachable on ' ~ sybase_server if _port_check is failed else '' }}"
     preflight_error_code: "{{ 'PORT_UNREACHABLE' if _port_check is failed else '' }}"
 
 # Step 2: Authentication Check (only if port is open)
@@ -52,8 +52,13 @@
       TEMP_IFACES=$(mktemp /tmp/sybase_preflight_interfaces.XXXXXX)
       cat > "$TEMP_IFACES" << 'IFACES_EOF'
     {{ sybase_service }}
+    {% if sybase_ssl_enabled | default(false) | bool %}
+    	master ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
+    	query ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
+    {% else %}
     	master tcp ether {{ sybase_server }} {{ sybase_port }}
     	query tcp ether {{ sybase_server }} {{ sybase_port }}
+    {% endif %}
     IFACES_EOF
 
       echo -e "SELECT 1\ngo" | timeout {{ preflight_auth_timeout | default(10) }} "$ISQL" \
@@ -61,7 +66,7 @@
         -U '{{ sybase_username }}' \
         -P '{{ sybase_password }}' \
         -I "$TEMP_IFACES" \
-        -w 200 2>&1
+        -w 200 {% if sybase_ssl_enabled | default(false) | bool %}-X {% endif %}2>&1
       RC=$?
       rm -f "$TEMP_IFACES"
       exit $RC
@@ -115,6 +120,10 @@
       Connection timed out
       {%- elif 'Adaptive Server is unavailable' in (_auth_check.stdout | default('')) -%}
       Adaptive Server is unavailable or not responding
+      {%- elif 'SSL handshake' in (_auth_check.stdout | default('')) or 'ssl handshake' in (_auth_check.stdout | default('')) -%}
+      SSL/TLS handshake failed - verify server SSL config and cipher suite
+      {%- elif 'certificate' in (_auth_check.stdout | default('')) and 'error' in (_auth_check.stdout | default('')) -%}
+      SSL certificate validation failed - check trusted.txt certificate file
       {%- elif 'Server name not found' in (_auth_check.stdout | default('')) or 'interfaces' in (_auth_check.stdout | default('')) -%}
       Server not found in interfaces file - check sybase_service matches interfaces entry
       {%- elif _auth_check.rc | default(0) != 0 -%}
@@ -143,6 +152,10 @@
       CONNECTION_TIMEOUT
       {%- elif 'Adaptive Server is unavailable' in (_auth_check.stdout | default('')) -%}
       SERVER_UNAVAILABLE
+      {%- elif 'SSL handshake' in (_auth_check.stdout | default('')) or 'ssl handshake' in (_auth_check.stdout | default('')) -%}
+      SSL_HANDSHAKE_FAILED
+      {%- elif 'certificate' in (_auth_check.stdout | default('')) and 'error' in (_auth_check.stdout | default('')) -%}
+      SSL_CERT_INVALID
       {%- elif 'Server name not found' in (_auth_check.stdout | default('')) or 'interfaces' in (_auth_check.stdout | default('')) -%}
       INTERFACES_ERROR
       {%- elif _auth_check.rc | default(0) != 0 -%}
@@ -160,14 +173,14 @@
 
 - name: Log preflight success
   ansible.builtin.debug:
-    msg: "Preflight PASSED - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }} is reachable and authenticated"
+    msg: "Preflight PASSED - {{ sybase_server }}:{{ _effective_port }}/{{ sybase_service }} is reachable and authenticated"
   when:
     - preflight_passed
     - inspec_debug_mode | default(false) | bool
 
 - name: Log preflight failure
   ansible.builtin.debug:
-    msg: "Preflight FAILED - {{ sybase_server }}:{{ sybase_port }}/{{ sybase_service }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
+    msg: "Preflight FAILED - {{ sybase_server }}:{{ _effective_port }}/{{ sybase_service }} - {{ preflight_skip_reason }} [{{ preflight_error_code }}]"
   when:
     - not preflight_passed
     - inspec_debug_mode | default(false) | bool
@@ -177,7 +190,7 @@
   ansible.builtin.set_fact:
     _db_scan_record:
       host: "{{ sybase_server }}"
-      port: "{{ sybase_port }}"
+      port: "{{ _effective_port }}"
       database: "{{ sybase_database }}"
       service: "{{ sybase_service }}"
       db_type: "sybase"
