@@ -39,10 +39,23 @@
       source {{ sybase_environment_base.SYBASE }}/SYBASE.sh
     fi
 
-    # Try isql first (SAP ASE client - preferred for on-prem)
+    # Try SAP ASE isql first (NOT unixODBC isql which has different syntax)
     ISQL="{{ sybase_isql_bin | default('') }}"
     if [ -z "$ISQL" ]; then
-      ISQL=$(command -v isql 2>/dev/null)
+      # Check SAP ASE SDK path first (matches InSpec resource detect_client_type)
+      SAP_ISQL="{{ sybase_environment_base.SYBASE }}/{{ sybase_environment_base.SYBASE_OCS }}/bin/isql"
+      if [ -x "$SAP_ISQL" ]; then
+        ISQL="$SAP_ISQL"
+      else
+        # Fallback: find isql on PATH but verify it's SAP (not unixODBC)
+        CANDIDATE=$(command -v isql 2>/dev/null)
+        if [ -n "$CANDIDATE" ]; then
+          # unixODBC isql prints "unixODBC" in its help; SAP isql does not
+          if ! "$CANDIDATE" --help 2>&1 | grep -qi "unixODBC"; then
+            ISQL="$CANDIDATE"
+          fi
+        fi
+      fi
     fi
 
     if [ -n "$ISQL" ]; then
