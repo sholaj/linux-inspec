@@ -107,6 +107,30 @@ resource "azurerm_network_security_group" "runner" {
     destination_address_prefix = "VirtualNetwork"
   }
 
+  security_rule {
+    name                       = "AllowSybaseOutbound"
+    priority                   = 130
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "5000"
+    source_address_prefix      = "*"
+    destination_address_prefix = "VirtualNetwork"
+  }
+
+  security_rule {
+    name                       = "AllowSybaseSSLOutbound"
+    priority                   = 140
+    direction                  = "Outbound"
+    access                     = "Allow"
+    protocol                   = "Tcp"
+    source_port_range          = "*"
+    destination_port_range     = "1063"
+    source_address_prefix      = "*"
+    destination_address_prefix = "VirtualNetwork"
+  }
+
   tags = azurerm_resource_group.main.tags
 }
 
@@ -277,6 +301,31 @@ MYSYBASE
 	query tcp ether 10.0.2.5 5000
 	master tcp ether 10.0.2.5 5000
 INTERFACES
+
+
+# Add SSL interfaces entry
+cat >> /opt/sybase/interfaces << 'INTERFACES_SSL'
+MYSYBASE_SSL
+	query ssl ether 10.0.2.5 1063
+	master ssl ether 10.0.2.5 1063
+INTERFACES_SSL
+
+# Create SSL configuration directory and files
+mkdir -p /opt/sybase/OCS-16_0/config
+cat > /opt/sybase/OCS-16_0/config/libtcl.cfg << 'LIBTCL'
+; SAP ASE Open Client SSL driver configuration
+[SSL]
+ssl = libsybssl64.so
+CIPHER_SUITE = TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384
+LIBTCL
+
+# Create placeholder trusted.txt (replace with real CA cert for SSL testing)
+cat > /opt/sybase/OCS-16_0/config/trusted.txt << 'TRUSTED'
+# Placeholder CA certificate file
+# Replace with actual CA certificate for SSL-enabled Sybase testing
+TRUSTED
+
+chown -R azureuser:azureuser /opt/sybase/OCS-16_0/config
 
 echo "Sybase environment configured"
 echo "Note: InSpec uses sybase_session resource for database connectivity"

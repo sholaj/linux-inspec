@@ -29,6 +29,15 @@ inspec_delegate_host: "localhost"
 sybase_service_name: "SAP_ASE"
 sybase_charset: "iso_1"
 
+# Sybase SSL/TLS Configuration (opt-in)
+sybase_ssl_enabled: false
+sybase_ssl_port: 1063
+sybase_ssl_tls_version: "TLS 1.2"
+sybase_ssl_cipher_suites: "TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384"
+sybase_ssl_trusted_cert_file: ""   # Source path on controller (required when SSL enabled)
+sybase_ssl_trusted_cert_dest: ""   # Auto-selected if empty
+sybase_ssl_libtcl_cfg_path: ""     # Auto-selected if empty
+
 # Sybase client environment paths
 # ================================
 # Two sets of paths: one for AAP2 Execution Environment (localhost mode),

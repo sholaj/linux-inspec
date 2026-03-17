@@ -343,6 +343,103 @@ The role's custom `sybase_session_local` InSpec resource auto-detects the availa
 1. SAP isql (if available in SYBASE path)
 2. FreeTDS tsql (fallback)
 
+## SSL/TLS Configuration
+
+The role supports opt-in SSL/TLS for Sybase ASE servers that require encrypted connections. SSL is **disabled by default** and all existing non-SSL connections work unchanged.
+
+### SSL Variables
+
+```yaml
+sybase_ssl_enabled: false                    # Enable SSL/TLS for this connection
+sybase_ssl_port: 1063                        # SSL port (default: 1063)
+sybase_ssl_tls_version: "TLS 1.2"           # TLS version
+sybase_ssl_cipher_suites: "TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384"  # Cipher suite
+sybase_ssl_trusted_cert_file: ""             # Source path to trusted.txt on controller (required)
+sybase_ssl_trusted_cert_dest: ""             # Override destination path (auto-selected if empty)
+sybase_ssl_libtcl_cfg_path: ""               # Override libtcl.cfg path (auto-selected if empty)
+```
+
+### SSL Playbook Example
+
+```yaml
+---
+- name: Run Sybase SSL Compliance Scan
+  hosts: runner
+  gather_facts: true
+
+  vars:
+    sybase_server: "sybase.example.com"
+    sybase_port: 5000                      # Standard port (still needed for service definition)
+    sybase_database: "master"
+    sybase_service: "SYBASESVR"
+    sybase_username: "scan_user"
+    sybase_password: "{{ vault_sybase_password }}"
+    sybase_version: "16"
+    sybase_ssl_enabled: true
+    sybase_ssl_port: 1063
+    sybase_ssl_trusted_cert_file: "files/trusted.txt"
+
+  roles:
+    - sybase_inspec
+```
+
+### Mixed Inventory (SSL + Non-SSL)
+
+```yaml
+all:
+  children:
+    sybase_databases:
+      hosts:
+        SYBPROD01_5000:
+          sybase_server: sybprod01.example.com
+          sybase_port: 5000
+          sybase_service: "SYBPROD01"
+          sybase_database: "master"
+          sybase_ssl_enabled: false
+        SYBPROD01_1063:
+          sybase_server: sybprod01.example.com
+          sybase_port: 5000
+          sybase_service: "SYBPROD01_SSL"
+          sybase_database: "master"
+          sybase_ssl_enabled: true
+          sybase_ssl_port: 1063
+          sybase_ssl_trusted_cert_file: "files/sybprod01_trusted.txt"
+```
+
+### How SSL Works
+
+1. **Interfaces file**: Uses `ssl` protocol instead of `tcp` with the SSL port
+2. **libtcl.cfg**: Tells the Open Client library to load `libsybssl64.so` with the configured cipher suite
+3. **trusted.txt**: CA certificate file deployed to the delegate host for certificate validation
+4. **isql -X flag**: Tells isql to use the SSL module for the connection
+5. **SYBOCS_CFG**: Environment variable pointing to `libtcl.cfg` location
+
+### SSL Troubleshooting
+
+#### SSL Handshake Failed
+
+```
+Error: SSL_HANDSHAKE_FAILED
+```
+
+- Verify the Sybase server has SSL enabled on the configured port
+- Check that the cipher suite matches the server's configuration
+- Ensure the TLS version is compatible (TLS 1.2 required)
+
+#### SSL Certificate Invalid
+
+```
+Error: SSL_CERT_INVALID
+```
+
+- Verify `sybase_ssl_trusted_cert_file` points to the correct CA certificate
+- Ensure the certificate is valid and not expired
+- Check that the certificate chain is complete
+
+#### SSL on FreeTDS (Not Supported)
+
+SSL is only supported with the SAP isql client. FreeTDS tsql does not support SAP ASE SSL natively. If SSL is enabled and only tsql is available, the role will log a warning.
+
 ## Output
 
 Results are saved as JSON files in `base_results_dir`:

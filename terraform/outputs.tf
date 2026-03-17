@@ -58,6 +58,11 @@ output "sybase_connection_info" {
   value       = var.deploy_sybase ? "source /opt/sybase/SYBASE.sh && isql -S MYSYBASE -U sa -P <password>" : "Not deployed"
 }
 
+output "sybase_ssl_connection_info" {
+  description = "Sybase SSL connection information"
+  value       = var.deploy_sybase ? "source /opt/sybase/SYBASE.sh && isql -X -S MYSYBASE_SSL -U sa -P <password>" : "Not deployed"
+}
+
 output "postgres_private_ip" {
   description = "Private IP address of the PostgreSQL container"
   value       = var.deploy_postgres ? azurerm_container_group.postgres[0].ip_address : "Not deployed"

@@ -82,6 +82,51 @@
           {{ sybase_environment_base.SYBASE }}/interfaces
           {%- endif -%}
 
+    # SSL/TLS Configuration Deployment
+    - name: Deploy SSL configuration files
+      when: sybase_ssl_enabled | default(false) | bool
+      block:
+        - name: Determine SSL file destinations
+          ansible.builtin.set_fact:
+            _ssl_trusted_cert_dest: >-
+              {{ sybase_ssl_trusted_cert_dest if sybase_ssl_trusted_cert_dest | default('') != ''
+                 else ('/tmp/sybase_trusted.txt' if _sybase_env_exists.stat.exists
+                 else sybase_environment_base.SYBASE + '/' + sybase_environment_base.SYBASE_OCS + '/config/trusted.txt') }}
+            _ssl_libtcl_cfg_dest: >-
+              {{ sybase_ssl_libtcl_cfg_path if sybase_ssl_libtcl_cfg_path | default('') != ''
+                 else ('/tmp/sybase_libtcl.cfg' if _sybase_env_exists.stat.exists
+                 else sybase_environment_base.SYBASE + '/' + sybase_environment_base.SYBASE_OCS + '/config/libtcl.cfg') }}
+
+        - name: Create SSL config directory (fresh environment)
+          ansible.builtin.file:
+            path: "{{ sybase_environment_base.SYBASE }}/{{ sybase_environment_base.SYBASE_OCS }}/config"
+            state: directory
+            mode: "0755"
+          become: true
+          when: not _sybase_env_exists.stat.exists
+
+        - name: Deploy trusted certificate file
+          ansible.builtin.copy:
+            src: "{{ sybase_ssl_trusted_cert_file }}"
+            dest: "{{ _ssl_trusted_cert_dest }}"
+            mode: "0644"
+
+        - name: Deploy libtcl.cfg SSL driver configuration
+          ansible.builtin.template:
+            src: libtcl.cfg.j2
+            dest: "{{ _ssl_libtcl_cfg_dest }}"
+            mode: "0644"
+
+        - name: Display SSL configuration
+          ansible.builtin.debug:
+            msg: |
+              SSL Configuration Deployed
+              ========================
+              Trusted cert: {{ _ssl_trusted_cert_dest }}
+              libtcl.cfg: {{ _ssl_libtcl_cfg_dest }}
+              Cipher: {{ sybase_ssl_cipher_suites }}
+          when: inspec_debug_mode | default(false) | bool
+
     # Check if controls already exist (skip copy if present)
     - name: Check if controls already copied
       ansible.builtin.stat:

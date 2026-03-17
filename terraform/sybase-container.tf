@@ -28,6 +28,11 @@ resource "azurerm_container_group" "sybase" {
       protocol = "TCP"
     }
 
+    ports {
+      port     = 1063
+      protocol = "TCP"
+    }
+
     environment_variables = {
       SYBASE_SERVER = "SYBASE"
     }

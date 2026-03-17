@@ -85,6 +85,12 @@ variable "deploy_sybase" {
   default     = false
 }
 
+variable "sybase_ssl_enabled" {
+  description = "Whether to configure SSL for Sybase container (port 1063)"
+  type        = bool
+  default     = false
+}
+
 # PostgreSQL Database Variables
 variable "postgres_password" {
   description = "Password for PostgreSQL postgres account"

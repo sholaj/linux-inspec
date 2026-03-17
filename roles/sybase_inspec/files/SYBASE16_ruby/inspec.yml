@@ -43,3 +43,8 @@ inputs:
     description: Path to Sybase interfaces file (for isql -I flag)
     type: string
     required: false
+
+  - name: ssl_enabled
+    description: Whether SSL/TLS is enabled for this Sybase connection
+    type: boolean
+    value: false

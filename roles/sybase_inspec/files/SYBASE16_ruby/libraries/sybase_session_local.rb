@@ -23,7 +23,7 @@ module Inspec::Resources
       end
     EXAMPLE
 
-    attr_reader :bin, :col_sep, :database, :password, :server, :sybase_home, :username, :client_type, :interfaces_file
+    attr_reader :bin, :col_sep, :database, :password, :server, :sybase_home, :username, :client_type, :interfaces_file, :ssl_enabled
 
     def initialize(opts = {})
       @username = opts[:username]
@@ -32,6 +32,7 @@ module Inspec::Resources
       @server = opts[:server]
       @sybase_home = opts[:sybase_home] || "/opt/sybase"
       @interfaces_file = opts[:interfaces_file]
+      @ssl_enabled = opts[:ssl_enabled] || false
       @col_sep = "|"
 
       fail_resource "Can't run Sybase checks without authentication" unless username && password
@@ -126,7 +127,8 @@ module Inspec::Resources
         # SAP isql syntax: isql -S server -U user -D database -P password < file.sql
         # Use -I flag for custom interfaces file path when provided
         ifaces_opt = @interfaces_file ? "-I #{@interfaces_file} " : ""
-        "LANG=en_US.UTF-8 SYBASE=#{sybase_home} #{@bin} -s\"#{col_sep}\" -w80000 #{ifaces_opt}-S #{server} -U #{username} -D #{database} -P \"#{password}\" < #{sql_file_path}"
+        ssl_opt = @ssl_enabled ? "-X " : ""
+        "LANG=en_US.UTF-8 SYBASE=#{sybase_home} #{@bin} -s\"#{col_sep}\" -w80000 #{ifaces_opt}#{ssl_opt}-S #{server} -U #{username} -D #{database} -P \"#{password}\" < #{sql_file_path}"
       end
     end
 
