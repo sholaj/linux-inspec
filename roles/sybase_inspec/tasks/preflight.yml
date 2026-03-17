@@ -47,13 +47,15 @@
       if [ -x "$SAP_ISQL" ]; then
         ISQL="$SAP_ISQL"
       else
-        # Fallback: find isql on PATH but verify it's SAP (not unixODBC)
+        # Fallback: find isql on PATH but verify it is SAP, not unixODBC.
+        # unixODBC isql uses positional DSN syntax; SAP isql uses -S flag.
         CANDIDATE=$(command -v isql 2>/dev/null)
         if [ -n "$CANDIDATE" ]; then
-          # unixODBC isql prints "unixODBC" in its help; SAP isql does not
-          if ! "$CANDIDATE" --help 2>&1 | grep -qi "unixODBC"; then
-            ISQL="$CANDIDATE"
-          fi
+          HELP_OUT=$("$CANDIDATE" --help 2>&1 || true)
+          case "$HELP_OUT" in
+            *unixODBC*|*ODBC*) ;; # skip unixODBC isql
+            *) ISQL="$CANDIDATE" ;;
+          esac
         fi
       fi
     fi
