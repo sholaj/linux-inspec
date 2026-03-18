@@ -53,7 +53,7 @@ all:
         # oracle_password: injected by AAP2 Custom Credential
         # Client paths on the delegate host (override defaults if needed)
         # oracle_home_delegate: "/tools/ver/oracle-client-21.3.0.0-32"
-        # oracle_extra_path_delegate: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS_16_0/bin"
+        # oracle_extra_path_delegate: "/opt/mssql-tools/bin:/opt/sybase/OCS_16_0/bin"
 
     sybase_databases:
       hosts:
@@ -68,7 +68,7 @@ all:
         sybase_use_ssh: true
         sybase_ssh_user: sybase_admin
         # Client paths on the delegate host (override defaults if needed)
-        # sybase_home_delegate: "/tools/ver/sybase"
+        # sybase_home_delegate: "/opt/sybase"
         # sybase_ocs_delegate: "OCS_16_0"
 
 # KEY CONCEPTS:
