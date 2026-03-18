@@ -129,9 +129,9 @@ The resolved paths are used to build `sybase_environment_base` at runtime.
 | Variable | Default | Used When |
 |----------|---------|-----------|
 | `sybase_home_ee` | `/opt/sybase` | Localhost mode (AAP2 Execution Environment) |
-| `sybase_ocs_ee` | `OCS-16_0` | Localhost mode |
+| `sybase_ocs_ee` | `OCS_16_0` | Localhost mode |
 | `sybase_home_delegate` | `/tools/ver/sybase` | Delegate mode (on-prem bastion) |
-| `sybase_ocs_delegate` | `OCS-16_0` | Delegate mode |
+| `sybase_ocs_delegate` | `OCS_16_0` | Delegate mode |
 | `sybase_home` | `""` (empty) | Direct override - bypasses auto-select |
 | `sybase_ocs` | `""` (empty) | Direct override - bypasses auto-select |
 
@@ -162,11 +162,11 @@ sybase_home_ee: "/opt/sap/ase"
 
 # Override delegate path (if the on-prem bastion differs from default)
 sybase_home_delegate: "/opt/sybase"
-sybase_ocs_delegate: "OCS-16_0"
+sybase_ocs_delegate: "OCS_16_0"
 
 # Force a specific path regardless of mode
 sybase_home: "/custom/sybase"
-sybase_ocs: "OCS-16_0"
+sybase_ocs: "OCS_16_0"
 ```
 
 ## Supported Sybase Versions
@@ -317,12 +317,12 @@ The native SAP client provides full compatibility:
 
 ```bash
 # Location varies by environment:
-#   EE container:    /opt/sybase/OCS-16_0/bin/isql
-#   Delegate host:   /tools/ver/sybase/OCS-16_0/bin/isql
+#   EE container:    /opt/sybase/OCS_16_0/bin/isql
+#   Delegate host:   /tools/ver/sybase/OCS_16_0/bin/isql
 
 # Environment (set automatically by the role via sybase_environment_base)
 export SYBASE=/opt/sybase          # or sybase_home_delegate value
-export SYBASE_OCS=OCS-16_0
+export SYBASE_OCS=OCS_16_0
 export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
 export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
 ```
@@ -508,8 +508,8 @@ The role handles:
 
 ```bash
 # Check SAP ASE client installation at expected paths
-ls -la /opt/sybase/OCS-16_0/bin/isql          # EE default
-ls -la /tools/ver/sybase/OCS-16_0/bin/isql    # Delegate default
+ls -la /opt/sybase/OCS_16_0/bin/isql          # EE default
+ls -la /tools/ver/sybase/OCS_16_0/bin/isql    # Delegate default
 
 # Or install FreeTDS (test environments)
 dnf install -y freetds
@@ -527,7 +527,7 @@ sybase_home_delegate: "/tools/ver/sybase"
 
 # Or force a specific path regardless of mode
 sybase_home: "/opt/sap/ase"
-sybase_ocs: "OCS-16_0"
+sybase_ocs: "OCS_16_0"
 ```
 
 ### SSH Connection Failed

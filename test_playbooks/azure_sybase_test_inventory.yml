@@ -15,7 +15,7 @@ all:
     # Note: Sybase client (isql) must be installed on runner
     # Override paths for the Azure test environment (runner VM is the delegate)
     sybase_home: "/opt/sybase"
-    sybase_ocs: "OCS-16_0"
+    sybase_ocs: "OCS_16_0"
 
   children:
     # Delegate hosts - where InSpec runs

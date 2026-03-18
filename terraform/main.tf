@@ -271,8 +271,8 @@ echo "Setting up Sybase environment for InSpec..."
 dnf install -y libaio ncurses-libs
 
 # Create SAP ASE directory structure (for production compatibility)
-mkdir -p /opt/sybase/OCS-16_0/bin
-mkdir -p /opt/sybase/OCS-16_0/lib
+mkdir -p /opt/sybase/OCS_16_0/bin
+mkdir -p /opt/sybase/OCS_16_0/lib
 chown -R azureuser:azureuser /opt/sybase
 
 # Create SYBASE.sh environment script
@@ -280,7 +280,7 @@ cat > /opt/sybase/SYBASE.sh << 'SYBASE_ENV'
 #!/bin/bash
 # SAP ASE Environment Variables
 export SYBASE=/opt/sybase
-export SYBASE_OCS=OCS-16_0
+export SYBASE_OCS=OCS_16_0
 export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
 export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
 SYBASE_ENV
@@ -311,8 +311,8 @@ MYSYBASE_SSL
 INTERFACES_SSL
 
 # Create SSL configuration directory and files
-mkdir -p /opt/sybase/OCS-16_0/config
-cat > /opt/sybase/OCS-16_0/config/libtcl.cfg << 'LIBTCL'
+mkdir -p /opt/sybase/OCS_16_0/config
+cat > /opt/sybase/OCS_16_0/config/libtcl.cfg << 'LIBTCL'
 ; SAP ASE Open Client SSL driver configuration
 [SSL]
 ssl = libsybssl64.so
@@ -320,12 +320,12 @@ CIPHER_SUITE = TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384
 LIBTCL
 
 # Create placeholder trusted.txt (replace with real CA cert for SSL testing)
-cat > /opt/sybase/OCS-16_0/config/trusted.txt << 'TRUSTED'
+cat > /opt/sybase/OCS_16_0/config/trusted.txt << 'TRUSTED'
 # Placeholder CA certificate file
 # Replace with actual CA certificate for SSL-enabled Sybase testing
 TRUSTED
 
-chown -R azureuser:azureuser /opt/sybase/OCS-16_0/config
+chown -R azureuser:azureuser /opt/sybase/OCS_16_0/config
 
 echo "Sybase environment configured"
 echo "Note: InSpec uses sybase_session resource for database connectivity"

@@ -148,7 +148,7 @@ export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
 
 ---
 
-### Sybase - SAP ASE Client (OCS-16_0)
+### Sybase - SAP ASE Client (OCS_16_0)
 
 **Installation Path:** `/opt/sybase`
 
@@ -168,7 +168,7 @@ export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
 # Install SAP ASE Client 16.0
 
 SYBASE=/opt/sybase
-SYBASE_OCS=OCS-16_0
+SYBASE_OCS=OCS_16_0
 
 mkdir -p ${SYBASE}/${SYBASE_OCS}/{bin,lib}
 
@@ -181,7 +181,7 @@ mkdir -p ${SYBASE}/${SYBASE_OCS}/{bin,lib}
 cat > ${SYBASE}/SYBASE.sh << 'EOF'
 #!/bin/bash
 export SYBASE=/opt/sybase
-export SYBASE_OCS=OCS-16_0
+export SYBASE_OCS=OCS_16_0
 export PATH=${SYBASE}/${SYBASE_OCS}/bin:${PATH}
 export LD_LIBRARY_PATH=${SYBASE}/${SYBASE_OCS}/lib:${LD_LIBRARY_PATH}
 EOF
@@ -213,7 +213,7 @@ tsql -C
 
 ```bash
 export SYBASE=/opt/sybase
-export SYBASE_OCS=OCS-16_0
+export SYBASE_OCS=OCS_16_0
 export PATH=${SYBASE}/${SYBASE_OCS}/bin:${PATH}
 export LD_LIBRARY_PATH=${SYBASE}/${SYBASE_OCS}/lib:${LD_LIBRARY_PATH}
 ```
@@ -259,10 +259,10 @@ The EE should configure the following PATH for all database client binaries:
 
 ```bash
 # Combined PATH for all database clients
-export PATH=/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/bin:/usr/local/bin:$PATH
+export PATH=/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64:/opt/sybase/OCS_16_0/bin:/usr/local/bin:$PATH
 
 # Combined LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/lib:$LD_LIBRARY_PATH
+export LD_LIBRARY_PATH=/usr/lib/oracle/23/client64:/opt/sybase/OCS_16_0/lib:$LD_LIBRARY_PATH
 
 # Oracle-specific
 export ORACLE_HOME=/usr/lib/oracle/23/client64
@@ -271,7 +271,7 @@ export NLS_LANG=AMERICAN_AMERICA.AL32UTF8
 
 # Sybase-specific
 export SYBASE=/opt/sybase
-export SYBASE_OCS=OCS-16_0
+export SYBASE_OCS=OCS_16_0
 ```
 
 ---
@@ -305,11 +305,11 @@ additional_build_steps:
     - COPY scripts/install-db-clients.sh /tmp/
     - RUN chmod +x /tmp/install-db-clients.sh && /tmp/install-db-clients.sh
     - RUN gem install inspec-bin -v 5.22.29 --no-document
-    - ENV PATH="/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/bin:/usr/local/bin:${PATH}"
-    - ENV LD_LIBRARY_PATH="/usr/lib/oracle/23/client64:/opt/sybase/OCS-16_0/lib"
+    - ENV PATH="/opt/mssql-tools18/bin:/usr/lib/oracle/23/client64:/opt/sybase/OCS_16_0/bin:/usr/local/bin:${PATH}"
+    - ENV LD_LIBRARY_PATH="/usr/lib/oracle/23/client64:/opt/sybase/OCS_16_0/lib"
     - ENV ORACLE_HOME="/usr/lib/oracle/23/client64"
     - ENV SYBASE="/opt/sybase"
-    - ENV SYBASE_OCS="OCS-16_0"
+    - ENV SYBASE_OCS="OCS_16_0"
     - ENV NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
 ```
 
@@ -352,7 +352,7 @@ dnf install -y freetds
 
 echo "=== Creating directories ==="
 mkdir -p /usr/lib/oracle/23/client64
-mkdir -p /opt/sybase/OCS-16_0/{bin,lib}
+mkdir -p /opt/sybase/OCS_16_0/{bin,lib}
 mkdir -p /tmp/compliance_scans
 
 echo "=== Setting permissions ==="
@@ -387,7 +387,7 @@ export NLS_LANG="AMERICAN_AMERICA.AL32UTF8"
 
 # Sybase
 export SYBASE="/opt/sybase"
-export SYBASE_OCS="OCS-16_0"
+export SYBASE_OCS="OCS_16_0"
 export PATH="${SYBASE}/${SYBASE_OCS}/bin:${PATH}"
 export LD_LIBRARY_PATH="${SYBASE}/${SYBASE_OCS}/lib:${LD_LIBRARY_PATH}"
 ```
@@ -505,7 +505,7 @@ export CHEF_LICENSE=accept-silent
 ```bash
 # Check library paths
 ldd /usr/lib/oracle/23/client64/sqlplus
-ldd /opt/sybase/OCS-16_0/bin/isql
+ldd /opt/sybase/OCS_16_0/bin/isql
 
 # Add missing library path
 export LD_LIBRARY_PATH=/path/to/libs:$LD_LIBRARY_PATH

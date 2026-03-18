@@ -138,7 +138,7 @@ sybase_password: ""        # Database password
 sybase_database: "master"  # Target database
 sybase_version: "16"       # Sybase ASE version
 sybase_home: "/opt/sybase"    # SYBASE environment variable
-sybase_ocs: "OCS-16_0"     # Open Client version
+sybase_ocs: "OCS_16_0"     # Open Client version
 use_ssh_tunnel: false      # Enable SSH tunnel
 ssh_tunnel_host: ""        # SSH jump server
 ssh_tunnel_user: ""        # SSH username
@@ -389,7 +389,7 @@ sybase_databases:
       sybase_user: "{{ vault_sybase_user }}"
       sybase_password: "{{ vault_sybase_password }}"
       sybase_home: "/opt/sybase"
-      sybase_ocs: "OCS-16_0"
+      sybase_ocs: "OCS_16_0"
       use_ssh_tunnel: false
 ```
 
@@ -537,7 +537,7 @@ tsql -S SERVERNAME -U username -P password
 ### Environment Variables Required
 ```bash
 export SYBASE=/opt/sybase
-export SYBASE_OCS=OCS-16_0
+export SYBASE_OCS=OCS_16_0
 export PATH=$SYBASE/$SYBASE_OCS/bin:$PATH
 export LD_LIBRARY_PATH=$SYBASE/$SYBASE_OCS/lib:$LD_LIBRARY_PATH
 ```
