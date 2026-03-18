@@ -104,7 +104,7 @@ module Inspec::Resources
       end
 
       # Auto-detect: prefer SAP isql (in SYBASE path), then tsql
-      sap_isql = "#{@sybase_home}/OCS-16_0/bin/isql"
+      sap_isql = "#{@sybase_home}/OCS_16_0/bin/isql"
       if inspec.command("test -x #{sap_isql}").exit_status == 0
         @bin = sap_isql
         return :isql

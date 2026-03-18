@@ -55,7 +55,7 @@ export IATEMPDIR=/opt/sybase_tmp
 ### 5. Verify installation
 
 ```bash
-ls /opt/sybase/OCS-16_0/bin/    # Should contain isql, bcp, etc.
+ls /opt/sybase/OCS_16_0/bin/    # Should contain isql, bcp, etc.
 source /opt/sybase/SYBASE.sh
 isql -v                          # Verify isql is available
 ```
@@ -73,8 +73,8 @@ Add to shell profile or Ansible playbook environment:
 ```bash
 export SYBASE=/opt/sybase
 source $SYBASE/SYBASE.sh
-export PATH=$SYBASE/OCS-16_0/bin:$PATH
-export LD_LIBRARY_PATH=$SYBASE/OCS-16_0/lib:$SYBASE/OCS-16_0/lib3p64:$LD_LIBRARY_PATH
+export PATH=$SYBASE/OCS_16_0/bin:$PATH
+export LD_LIBRARY_PATH=$SYBASE/OCS_16_0/lib:$SYBASE/OCS_16_0/lib3p64:$LD_LIBRARY_PATH
 ```
 
 ## Troubleshooting
