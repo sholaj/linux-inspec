@@ -48,13 +48,13 @@ sybase_home_ee: "/opt/sybase"
 sybase_ocs_ee: "OCS_16_0"
 #
 # Delegate host paths: Match the Sybase client on the on-prem delegate/bastion
-sybase_home_delegate: "/tools/ver/sybase"
+sybase_home_delegate: "/opt/sybase"
 sybase_ocs_delegate: "OCS_16_0"
 #
 # Direct override (takes precedence over EE/delegate selection if set)
-sybase_home: ""      # Leave empty for auto-select, or set e.g. "/tools/ver/sybase"
+sybase_home: ""      # Leave empty for auto-select, or set e.g. "/opt/sybase"
 sybase_ocs: ""       # Leave empty for auto-select, or set e.g. "OCS_16_0"
-sybase_isql_bin: ""  # Leave empty to auto-detect, or set full path e.g. "/tools/ver/sybase/OCS_16_0/bin/isql"
+sybase_isql_bin: ""  # Leave empty to auto-detect, or set full path e.g. "/opt/sybase/OCS_16_0/bin/isql"
 
 # Error handling
 create_error_reports: true

@@ -79,7 +79,7 @@ The role maintains **two sets of Oracle client paths** and auto-selects based on
 | `oracle_home_ee` | `/usr/lib/oracle/23/client64` | Localhost mode (AAP2 Execution Environment) |
 | `oracle_extra_path_ee` | `/opt/mssql-tools18/bin` | Localhost mode |
 | `oracle_home_delegate` | `/tools/ver/oracle-client-21.3.0.0-32` | Delegate mode (on-prem bastion) |
-| `oracle_extra_path_delegate` | `/opt/mssql-tools/bin:/tools/ver/sybase/OCS_16_0/bin` | Delegate mode |
+| `oracle_extra_path_delegate` | `/opt/mssql-tools/bin:/opt/sybase/OCS_16_0/bin` | Delegate mode |
 | `ORACLE_HOME` | `""` (empty) | Direct override - bypasses auto-select |
 | `oracle_extra_path` | `""` (empty) | Direct override - bypasses auto-select |
 | `NLS_LANG` | `AMERICAN_AMERICA.AL32UTF8` | Always |

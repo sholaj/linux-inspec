@@ -76,6 +76,18 @@
     {% endif %}
     IFACES_EOF
 
+    {% if sybase_ssl_enabled | default(false) | bool %}
+      # Create temporary libtcl.cfg for SSL driver config.
+      # The permanent file is deployed later by setup.yml.
+      TEMP_LIBTCL=$(mktemp /tmp/sybase_preflight_libtcl.XXXXXX)
+      cat > "$TEMP_LIBTCL" << 'LIBTCL_EOF'
+    [SSL]
+    ssl = libsybssl64.so
+    CIPHER_SUITE = {{ sybase_ssl_cipher_suites | default('TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384') }}
+    LIBTCL_EOF
+      export SYBOCS_CFG="$TEMP_LIBTCL"
+    {% endif %}
+
       echo -e "SELECT 1\ngo" | timeout {{ preflight_auth_timeout | default(10) }} "$ISQL" \
         -S '{{ sybase_service }}' \
         -U '{{ sybase_username }}' \
@@ -84,6 +96,9 @@
         -w 200 {% if sybase_ssl_enabled | default(false) | bool %}-X {% endif %}2>&1
       RC=$?
       rm -f "$TEMP_IFACES"
+    {% if sybase_ssl_enabled | default(false) | bool %}
+      rm -f "$TEMP_LIBTCL"
+    {% endif %}
       exit $RC
     fi
 

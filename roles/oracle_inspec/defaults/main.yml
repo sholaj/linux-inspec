@@ -34,7 +34,7 @@ oracle_extra_path_ee: "/opt/mssql-tools18/bin"
 #
 # Delegate host paths: Match the Oracle client on the on-prem delegate/bastion
 oracle_home_delegate: "/tools/ver/oracle-client-21.3.0.0-32"
-oracle_extra_path_delegate: "/opt/mssql-tools/bin:/tools/ver/sybase/OCS_16_0/bin"
+oracle_extra_path_delegate: "/opt/mssql-tools/bin:/opt/sybase/OCS_16_0/bin"
 #
 # Direct override (takes precedence over EE/delegate selection if set)
 ORACLE_HOME: ""
