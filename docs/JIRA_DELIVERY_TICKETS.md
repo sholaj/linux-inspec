@@ -3234,5 +3234,80 @@ The Sybase SME confirmed that SSL-enabled servers:
 
 ---
 
+## DBSCAN-756: CRD IT Handover - MSSQL and ORACLE Baseline Setup
+
+### Purpose
+**As a** DevOps engineer, **I want to** complete the CRD IT handover tasks for MSSQL and ORACLE, **so that** compliance scanning can begin operating in the CRD IT environment with proper baselines, profiles, and scheduling.
+
+### Description
+Complete the operational setup items handed over from the delivery engineer (Surjeet). This covers baseline gap analysis, profile configuration, inventory pipeline setup, AAP2 template/job creation, and agreeing on a scanning schedule with incremental rollout.
+
+### Acceptance Criteria
+- [ ] Baseline gap analysis completed - missing baselines identified and requested from GCS
+- [ ] Available DB profiles set up under `chf_inspec_cis_database`
+- [ ] Inventory update process established for MSSQL and ORACLE sourced from CMDB
+- [ ] AAP2 templates and jobs configured for CRD IT scanning
+- [ ] Scanning schedule agreed with stakeholders - incremental rollout starting in batches of 50
+- [ ] Handover knowledge captured and documented
+
+### Sub-tasks
+1. Run gap analysis against current baselines vs required CIS benchmarks
+2. Request missing baselines from GCS with tracking reference
+3. Configure DB profiles under `chf_inspec_cis_database` for MSSQL and ORACLE
+4. Set up automated inventory update process from CMDB
+5. Create AAP2 job templates for CRD IT MSSQL scans
+6. Create AAP2 job templates for CRD IT ORACLE scans
+7. Define and document scanning schedule (batch size: 50, incremental rollout)
+
+### Labels
+`crd-it`, `handover`, `mssql`, `oracle`, `aap2`
+
+### Type: Story
+### Priority: High
+### Story Points: 8
+
+### Dependencies
+- **Related:** DBSCAN-100 (MSSQL connectivity), DBSCAN-300 (Oracle connectivity)
+- **Context:** Handover from delivery engineer - time-sensitive
+
+---
+
+## DBSCAN-757: DB CORP - Data Quality Review and Failure Remediation
+
+### Purpose
+**As a** DevOps engineer, **I want to** resolve data discrepancies and scan failures in the DB CORP environment, **so that** ingested compliance data is accurate and scanning runs reliably.
+
+### Description
+Address data quality issues identified in the DB CORP environment. This includes reviewing discrepancies in ingested scan data, validating CMDB numbers against the SOP, and investigating and fixing scan failures.
+
+### Acceptance Criteria
+- [ ] Data discrepancies and gaps for ingested data identified and documented
+- [ ] Root causes for data gaps determined (missing hosts, failed scans, ingestion errors)
+- [ ] CMDB SOP review completed - expected vs actual numbers reconciled
+- [ ] Scan failures catalogued with error codes and affected targets
+- [ ] Fixes applied for identified failures
+- [ ] Post-fix validation confirms data completeness improvement
+
+### Sub-tasks
+1. Pull current ingested data report and identify gaps/discrepancies
+2. Compare ingested data against CMDB SOP expected numbers
+3. Catalogue all scan failures with error codes and timestamps
+4. Root-cause analysis for each failure category
+5. Apply fixes (connectivity, credentials, configuration)
+6. Re-run failed scans and validate results
+7. Document findings and remediation actions
+
+### Labels
+`db-corp`, `data-quality`, `remediation`
+
+### Type: Story
+### Priority: High
+### Story Points: 5
+
+### Dependencies
+- **Related:** DBSCAN-710 (Error Handling for Unreachable Hosts)
+
+---
+
 *Document generated for project planning purposes.*
-*Last Updated: 2026-03-13*
+*Last Updated: 2026-03-23*
