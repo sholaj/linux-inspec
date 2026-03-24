@@ -1,0 +1,122 @@
+---
+# Process single row from MSSQL CMDB CSV export
+# Expected columns (discovered dynamically from header):
+#   Name, Instance Name, Version name, Version, Validation Status,
+#   Permissions Status, Comments, Full version, Edition, CP port,
+#   Class, Business, Support group
+
+# Reset per-row state to prevent stale values from prior iterations
+- name: Reset per-row state
+  set_fact:
+    has_connection_warning: false
+    mssql_fqdn: ''
+    host_id: ''
+
+- name: Parse MSSQL CSV fields
+  set_fact:
+    fields: "{{ item.split(',') | map('trim') | list }}"
+
+- name: Skip rows with insufficient columns
+  when: fields | length < (mssql_col_map.values() | max) + 1
+  block:
+    - debug:
+        msg: "Skipping MSSQL row {{ idx + 1 }}: expected at least {{ (mssql_col_map.values() | max) + 1 }} fields, got {{ fields | length }}"
+    - set_fact:
+        skipped_counts: "{{ skipped_counts | combine({'mssql': skipped_counts.mssql + 1}) }}"
+
+- name: Process MSSQL entry
+  when: fields | length >= (mssql_col_map.values() | max) + 1
+  block:
+    - name: Extract MSSQL fields
+      set_fact:
+        raw_name: "{{ fields[mssql_col_map['Name'] | int] }}"
+        instance_name: "{{ fields[mssql_col_map['Instance Name'] | int] }}"
+        version_name: "{{ fields[mssql_col_map['Version name'] | int] }}"
+        validation_status: "{{ fields[mssql_col_map['Validation Status'] | int] }}"
+        permissions_status: "{{ fields[mssql_col_map['Permissions Status'] | int] }}"
+        comments: "{{ fields[mssql_col_map['Comments'] | int] }}"
+        edition: "{{ fields[mssql_col_map['Edition'] | int] }}"
+        cp_port: "{{ fields[mssql_col_map['CP port'] | int] }}"
+
+    - name: Skip non-validated MSSQL entries
+      when: "'validated' not in validation_status | lower"
+      block:
+        - debug:
+            msg: "Skipping MSSQL row {{ idx + 1 }} ({{ raw_name }}): Validation Status = '{{ validation_status }}'"
+        - set_fact:
+            skipped_counts: "{{ skipped_counts | combine({'mssql': skipped_counts.mssql + 1}) }}"
+
+    - name: Process validated MSSQL entry
+      when: "'validated' in validation_status | lower"
+      block:
+        - name: Parse MSSQL Name field (INSTANCE@SERVER)
+          set_fact:
+            mssql_instance_name: "{{ raw_name.split('@')[0] }}"
+            mssql_fqdn: "{{ raw_name.split('@')[1] | default('') }}"
+
+        - name: Skip entries without valid Name format
+          debug:
+            msg: "Skipping MSSQL row {{ idx + 1 }}: invalid Name format '{{ raw_name }}' (expected INSTANCE@SERVER)"
+          when: mssql_fqdn | length == 0
+
+        - name: Add MSSQL host to inventory
+          when: mssql_fqdn | length > 0
+          block:
+            - name: Determine port
+              set_fact:
+                mssql_port: "{{ cp_port if cp_port | trim | length > 0 else '1433' }}"
+
+            - name: Create MSSQL host ID (server-level dedup)
+              set_fact:
+                host_id: "{{ (mssql_fqdn.split('.')[0] + '_' + mssql_port | string) | replace('.', '_') | replace('-', '_') }}"
+
+            - name: Skip duplicate MSSQL server
+              when: host_id in inventory_data.all.children.mssql_databases.hosts
+              debug:
+                msg: "Duplicate MSSQL: {{ mssql_fqdn }}:{{ mssql_port }} (instance {{ mssql_instance_name }})"
+
+            - name: Add new MSSQL host
+              when: host_id not in inventory_data.all.children.mssql_databases.hosts
+              block:
+                - name: Check for connection warnings
+                  set_fact:
+                    has_connection_warning: "{{ 'unable to connect' in (comments | lower) or 'unable to validate' in (comments | lower) }}"
+
+                - name: Track connection issue
+                  set_fact:
+                    connection_issues: "{{ connection_issues + ['MSSQL: ' + raw_name + ' - ' + comments] }}"
+                  when: has_connection_warning
+
+                # Uses recursive=true to preserve existing vars and hosts in inventory_data
+                - name: Add MSSQL host entry
+                  set_fact:
+                    inventory_data: "{{ inventory_data | combine({
+                      'all': {
+                        'children': {
+                          'mssql_databases': {
+                            'hosts': inventory_data.all.children.mssql_databases.hosts | combine({
+                              host_id: host_entry
+                            })
+                          }
+                        }
+                      }
+                    }, recursive=true) }}"
+                  vars:
+                    base_entry:
+                      mssql_server: "{{ mssql_fqdn }}"
+                      mssql_port: "{{ mssql_port | int }}"
+                      mssql_version: "{{ version_name }}"
+                      mssql_database: master
+                      mssql_instance: "{{ mssql_instance_name }}"
+                      mssql_edition: "{{ edition }}"
+                      database_platform: mssql
+                      db_server: "{{ mssql_fqdn }}"
+                      db_port: "{{ mssql_port | int }}"
+                      db_version: "{{ version_name }}"
+                    warning_entry:
+                      cmdb_connection_warning: "{{ comments }}"
+                    host_entry: "{{ base_entry | combine(warning_entry if has_connection_warning else {}) }}"
+
+                - name: Increment MSSQL count
+                  set_fact:
+                    platform_counts: "{{ platform_counts | combine({'mssql': platform_counts.mssql + 1}) }}"

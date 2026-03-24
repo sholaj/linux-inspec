@@ -1,0 +1,24 @@
+---
+# Close SSH tunnel for [BU_NAME] database connectivity
+
+- name: Find SSH tunnel process on port {{ ssh_tunnel_local_port }}
+  ansible.builtin.shell: >
+    ss -tlnp 2>/dev/null | grep ':{{ ssh_tunnel_local_port }}' | grep -oP 'pid=\K[0-9]+' || echo "0"
+  register: tunnel_pid
+  changed_when: false
+  delegate_to: localhost
+
+- name: Kill SSH tunnel process
+  ansible.builtin.shell: "kill {{ tunnel_pid.stdout }}"
+  delegate_to: localhost
+  when: tunnel_pid.stdout != "0"
+  ignore_errors: yes
+
+- name: Verify tunnel port is released
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: "{{ ssh_tunnel_local_port }}"
+    state: stopped
+    timeout: 5
+  delegate_to: localhost
+  ignore_errors: yes

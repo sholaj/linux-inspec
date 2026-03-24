@@ -212,6 +212,134 @@ all:
 | Sybase | `SYBASE` | `server:database:port` | Per-database scanning |
 | PostgreSQL | `POSTGRES` or `POSTGRESQL` | `server:database:port` | Per-database scanning |
 
+---
+
+## CMDB CSV Converter
+
+Converts CMDB inventory exports (CSV format) from Oracle and MSSQL into Ansible inventory format. Handles the `DATABASE@SERVER` naming convention used by the CMDB system.
+
+### Usage
+
+#### Oracle Only
+```bash
+ansible-playbook convert_cmdb_to_inventory.yml \
+  -e "cmdb_oracle_csv=/path/to/oracle_cmdb.csv" \
+  -e "inventory_output=oracle_inventory.yml"
+```
+
+#### MSSQL Only
+```bash
+ansible-playbook convert_cmdb_to_inventory.yml \
+  -e "cmdb_mssql_csv=/path/to/mssql_cmdb.csv" \
+  -e "inventory_output=mssql_inventory.yml"
+```
+
+#### Both Platforms Combined
+```bash
+ansible-playbook convert_cmdb_to_inventory.yml \
+  -e "cmdb_oracle_csv=/path/to/oracle_cmdb.csv" \
+  -e "cmdb_mssql_csv=/path/to/mssql_cmdb.csv" \
+  -e "inventory_output=combined_inventory.yml"
+```
+
+#### With Delegate Host
+```bash
+ansible-playbook convert_cmdb_to_inventory.yml \
+  -e "cmdb_mssql_csv=/path/to/mssql_cmdb.csv" \
+  -e "inventory_output=mssql_inventory.yml" \
+  -e "inspec_delegate=[DELEGATE_HOST]" \
+  -e "inspec_delegate_address=[DELEGATE_ADDRESS]"
+```
+
+### CMDB CSV Input Formats
+
+**Oracle CSV columns:**
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| Name | `DATABASE@SERVER.DOMAIN` | `CDB1@[DB_SERVER].example.internal` |
+| Category | Resource type | `Resource` |
+| Version | Dotted version string | `19.0.0.0` |
+| Validation Status | CMDB validation state | `Validated` |
+| Permissions Status | Permission assignment state | `Permissions Assigned` |
+| Comments | Additional notes | `CMDB updated` |
+
+**MSSQL CSV columns:**
+
+| Column | Description | Example |
+|--------|-------------|---------|
+| Name | `INSTANCE@SERVER.DOMAIN` | `MSSQLSERVER@[DB_SERVER].example.internal` |
+| Instance Name | SQL Server instance name | `MSSQLSERVER` |
+| Version name | Year version | `2019` |
+| Version | Detailed version number | `15.0.2140.1` |
+| Validation Status | CMDB validation state | `Validated` |
+| Permissions Status | Permission assignment state | `Permissions Applied` |
+| Comments | Connection issues / notes | |
+| Full version | Full SQL Server version string | |
+| Edition | SQL Server edition | `Standard Edition (64-bit)` |
+| CP port | TCP port number | `1433` |
+| Class | CMDB classification | `MSFT SQL Instance` |
+| Business | Business classification | |
+| Support group | Support team | |
+
+### Version Mapping
+
+Oracle CMDB versions are mapped to InSpec short form:
+
+| CMDB Version | InSpec Version |
+|-------------|----------------|
+| `12.x.x.x` | `12c` |
+| `19.x.x.x` | `19c` |
+| `21.x.x.x` | `21c` |
+| `23.x.x.x` | `23c` |
+
+MSSQL uses the `Version name` column directly (e.g., `2019`, `2022`).
+
+### Filtering Behaviour
+
+- Only entries with `Validation Status` containing "Validated" are included
+- Non-validated entries are skipped and counted in the summary
+- Entries with connection warnings (e.g., "Unable to connect") are **included** but flagged with `cmdb_connection_warning` host var
+- MSSQL entries are deduplicated by `server:port` (server-level scanning)
+
+### CMDB Output Example
+```yaml
+all:
+  children:
+    oracle_databases:
+      hosts:
+        CDB1_DBALINORA1:
+          oracle_server: "[DB_SERVER].example.internal"
+          oracle_port: 1521
+          oracle_database: CDB1
+          oracle_service: CDB1
+          oracle_version: "19c"
+          database_platform: oracle
+      vars:
+        oracle_username: nist_scan_user
+        inspec_delegate_host: ""
+
+    mssql_databases:
+      hosts:
+        AUTOWIN463_1433:
+          mssql_server: "[DB_SERVER].example.internal"
+          mssql_port: 1433
+          mssql_version: "2019"
+          mssql_database: master
+          mssql_instance: MSSQLSERVER
+          mssql_edition: "Standard Edition (64-bit)"
+          database_platform: mssql
+          db_server: "[DB_SERVER].example.internal"
+          db_port: 1433
+          db_version: "2019"
+      vars:
+        mssql_username: nist_scan_user
+        business_unit: "[BU_ID]"
+        inspec_delegate_host: ""
+```
+
+---
+
 ## Notes
 
 - MSSQL entries are deduplicated by `server:port` (server-level scanning)

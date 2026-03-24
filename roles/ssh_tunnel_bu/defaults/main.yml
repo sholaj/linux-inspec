@@ -1,0 +1,24 @@
+---
+# SSH Tunnel defaults for [BU_NAME] connectivity
+# Creates local port forward: localhost:local_port -> remote_host:remote_port
+
+# Local port for the tunnel (typically ansible_port from inventory)
+ssh_tunnel_local_port: "{{ ansible_port | default(0) }}"
+
+# Remote database host to tunnel to
+ssh_tunnel_remote_host: "{{ db_server | default(mssql_server | default('')) }}"
+
+# Remote port to forward (database port on the target host)
+ssh_tunnel_remote_port: "{{ target_port | default(winrm_port | default(1433)) }}"
+
+# SSH user for the tunnel connection
+ssh_tunnel_user: "{{ ansible_user | default('ansible_svc') }}"
+
+# SSH key file (optional - uses default if empty)
+ssh_tunnel_key: "{{ ansible_ssh_private_key_file | default('') }}"
+
+# Timeout for tunnel connectivity check
+ssh_tunnel_timeout: 10
+
+# SSH options for tunnel stability
+ssh_tunnel_options: "-o StrictHostKeyChecking=accept-new -o ServerAliveInterval=30 -o ServerAliveCountMax=3"

@@ -1,0 +1,7 @@
+---
+# SSH Tunnel Role for [BU_NAME] Database Connectivity
+# Creates an SSH port forward from localhost to the target database host
+# Used when ansible_host is set to 127.0.0.1 in [BU_NAME] inventory
+
+- name: Open SSH tunnel
+  include_tasks: open_tunnel.yml

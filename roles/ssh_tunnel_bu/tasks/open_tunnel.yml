@@ -1,0 +1,42 @@
+---
+# Open SSH tunnel for [BU_NAME] database connectivity
+# Creates: localhost:ssh_tunnel_local_port -> ssh_tunnel_remote_host:ssh_tunnel_remote_port
+
+- name: Check if SSH tunnel already exists on port {{ ssh_tunnel_local_port }}
+  ansible.builtin.shell: >
+    ss -tlnp 2>/dev/null | grep -q ':{{ ssh_tunnel_local_port }}' && echo "exists" || echo "missing"
+  register: tunnel_check
+  changed_when: false
+  delegate_to: localhost
+
+- name: Create SSH tunnel to {{ ssh_tunnel_remote_host }}:{{ ssh_tunnel_remote_port }}
+  ansible.builtin.shell: >
+    ssh -f -N
+    -L {{ ssh_tunnel_local_port }}:{{ ssh_tunnel_remote_host }}:{{ ssh_tunnel_remote_port }}
+    {{ '-i ' + ssh_tunnel_key if ssh_tunnel_key | length > 0 else '' }}
+    {{ ssh_tunnel_options }}
+    {{ ssh_tunnel_user }}@{{ ssh_tunnel_remote_host }}
+  delegate_to: localhost
+  when: tunnel_check.stdout == "missing"
+  register: tunnel_created
+
+- name: Verify SSH tunnel connectivity on port {{ ssh_tunnel_local_port }}
+  ansible.builtin.wait_for:
+    host: "localhost"
+    port: "{{ ssh_tunnel_local_port }}"
+    state: started
+    timeout: "{{ ssh_tunnel_timeout }}"
+  delegate_to: localhost
+  register: tunnel_verify
+
+- name: Record tunnel PID for cleanup
+  ansible.builtin.shell: >
+    ss -tlnp 2>/dev/null | grep ':{{ ssh_tunnel_local_port }}' | grep -oP 'pid=\K[0-9]+' || echo "0"
+  register: tunnel_pid
+  changed_when: false
+  delegate_to: localhost
+
+- name: Display tunnel status
+  ansible.builtin.debug:
+    msg: "SSH tunnel active: localhost:{{ ssh_tunnel_local_port }} -> {{ ssh_tunnel_remote_host }}:{{ ssh_tunnel_remote_port }} (PID: {{ tunnel_pid.stdout }})"
+  when: tunnel_verify is succeeded

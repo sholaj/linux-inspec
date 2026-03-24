@@ -1,0 +1,304 @@
+---
+# CMDB CSV to Ansible Inventory Converter
+# Produces host metadata only - credentials handled by AAP2
+#
+# Input Format: CSV exports from CMDB (Oracle and/or MSSQL)
+#   Oracle CSV: Name (DB@SERVER), Category, Version, Validation Status, Permissions Status, Comments
+#   MSSQL CSV:  Name (INSTANCE@SERVER), Instance Name, Version name, Version, Validation Status,
+#               Permissions Status, Comments, Full version, Edition, CP port, Class, Business, Support group
+#
+# Usage:
+#   ansible-playbook convert_cmdb_to_inventory.yml \
+#     -e "cmdb_oracle_csv=/path/to/oracle.csv" \
+#     -e "cmdb_mssql_csv=/path/to/mssql.csv" \
+#     -e "inventory_output=cmdb_inventory.yml"
+
+- name: Convert CMDB CSV to Inventory
+  hosts: localhost
+  gather_facts: true
+  vars:
+    oracle_csv_file: "{{ cmdb_oracle_csv | default('') }}"
+    mssql_csv_file: "{{ cmdb_mssql_csv | default('') }}"
+    output_file: "{{ inventory_output | default('cmdb_inventory.yml') }}"
+
+    # Optional: specify a delegate host for remote InSpec execution
+    delegate_host: "{{ inspec_delegate | default('') }}"
+    delegate_address: "{{ inspec_delegate_address | default('') }}"
+    delegate_user: "{{ inspec_delegate_user | default('ansible_svc') }}"
+
+    # Oracle version mapping: CMDB dotted versions to InSpec short form
+    oracle_version_map:
+      "12": "12c"
+      "19": "19c"
+      "21": "21c"
+      "23": "23c"
+
+    # Default Oracle listener port (not present in CMDB export)
+    default_oracle_port: 1521
+
+    # Inventory structure with group vars
+    inventory_data:
+      all:
+        children:
+          oracle_databases:
+            hosts: {}
+            vars:
+              oracle_username: nist_scan_user
+          mssql_databases:
+            hosts: {}
+            vars:
+              mssql_username: nist_scan_user
+              business_unit: "{{ target_bu | default('') }}"
+
+    platform_counts:
+      oracle: 0
+      mssql: 0
+
+    skipped_counts:
+      oracle: 0
+      mssql: 0
+
+    connection_issues: []
+
+  tasks:
+    - name: Validate at least one CSV file provided
+      fail:
+        msg: "At least one CSV file must be provided: cmdb_oracle_csv or cmdb_mssql_csv"
+      when:
+        - oracle_csv_file | length == 0
+        - mssql_csv_file | length == 0
+
+    # ==================== Oracle CSV Processing ====================
+    - name: Check Oracle CSV exists
+      stat:
+        path: "{{ oracle_csv_file }}"
+      register: oracle_stat
+      when: oracle_csv_file | length > 0
+
+    - name: Fail if Oracle CSV not found
+      fail:
+        msg: "Oracle CSV file not found: {{ oracle_csv_file }}"
+      when:
+        - oracle_csv_file | length > 0
+        - oracle_stat is defined
+        - not oracle_stat.stat.exists
+
+    - name: Read Oracle CSV
+      slurp:
+        src: "{{ oracle_csv_file }}"
+      register: oracle_csv_raw
+      when:
+        - oracle_csv_file | length > 0
+        - oracle_stat is defined
+        - oracle_stat.stat.exists
+
+    - name: Parse Oracle CSV lines
+      set_fact:
+        oracle_lines: "{{ (oracle_csv_raw.content | b64decode).split('\n') }}"
+      when:
+        - oracle_csv_file | length > 0
+        - oracle_csv_raw is defined
+        - oracle_csv_raw is not skipped
+
+    - name: Parse Oracle CSV header
+      set_fact:
+        oracle_col_map: "{{ dict(oracle_headers | zip(range(oracle_headers | length) | list)) }}"
+      vars:
+        oracle_headers: "{{ oracle_lines[0].split(',') | map('trim') | list }}"
+      when: oracle_lines is defined and oracle_lines | length > 1
+
+    - name: Validate Oracle CSV required columns
+      fail:
+        msg: "Oracle CSV missing required column '{{ missing_col }}'. Found columns: {{ oracle_col_map.keys() | list }}"
+      loop:
+        - Name
+        - Version
+        - Validation Status
+        - Permissions Status
+        - Comments
+      loop_control:
+        loop_var: missing_col
+      when:
+        - oracle_col_map is defined
+        - missing_col not in oracle_col_map
+
+    - name: Process Oracle CSV rows
+      include_tasks: process_cmdb_oracle_line.yml
+      loop: "{{ oracle_lines[1:] | select('search', '.') | list }}"
+      loop_control:
+        index_var: idx
+        label: "Oracle row {{ idx + 1 }}"
+      when:
+        - oracle_lines is defined
+        - oracle_col_map is defined
+
+    # ==================== MSSQL CSV Processing ====================
+    - name: Check MSSQL CSV exists
+      stat:
+        path: "{{ mssql_csv_file }}"
+      register: mssql_stat
+      when: mssql_csv_file | length > 0
+
+    - name: Fail if MSSQL CSV not found
+      fail:
+        msg: "MSSQL CSV file not found: {{ mssql_csv_file }}"
+      when:
+        - mssql_csv_file | length > 0
+        - mssql_stat is defined
+        - not mssql_stat.stat.exists
+
+    - name: Read MSSQL CSV
+      slurp:
+        src: "{{ mssql_csv_file }}"
+      register: mssql_csv_raw
+      when:
+        - mssql_csv_file | length > 0
+        - mssql_stat is defined
+        - mssql_stat.stat.exists
+
+    - name: Parse MSSQL CSV lines
+      set_fact:
+        mssql_lines: "{{ (mssql_csv_raw.content | b64decode).split('\n') }}"
+      when:
+        - mssql_csv_file | length > 0
+        - mssql_csv_raw is defined
+        - mssql_csv_raw is not skipped
+
+    - name: Parse MSSQL CSV header
+      set_fact:
+        mssql_col_map: "{{ dict(mssql_headers | zip(range(mssql_headers | length) | list)) }}"
+      vars:
+        mssql_headers: "{{ mssql_lines[0].split(',') | map('trim') | list }}"
+      when: mssql_lines is defined and mssql_lines | length > 1
+
+    - name: Validate MSSQL CSV required columns
+      fail:
+        msg: "MSSQL CSV missing required column '{{ missing_col }}'. Found columns: {{ mssql_col_map.keys() | list }}"
+      loop:
+        - Name
+        - Instance Name
+        - Version name
+        - Validation Status
+        - Permissions Status
+        - Comments
+        - Edition
+        - CP port
+      loop_control:
+        loop_var: missing_col
+      when:
+        - mssql_col_map is defined
+        - missing_col not in mssql_col_map
+
+    - name: Process MSSQL CSV rows
+      include_tasks: process_cmdb_mssql_line.yml
+      loop: "{{ mssql_lines[1:] | select('search', '.') | list }}"
+      loop_control:
+        index_var: idx
+        label: "MSSQL row {{ idx + 1 }}"
+      when:
+        - mssql_lines is defined
+        - mssql_col_map is defined
+
+    # ==================== Set Execution Mode ====================
+    - name: Set execution mode to localhost (default)
+      set_fact:
+        inventory_data: "{{ inventory_data | combine({
+          'all': {
+            'children': inventory_data.all.children | combine({
+              'oracle_databases': {
+                'hosts': inventory_data.all.children.oracle_databases.hosts,
+                'vars': inventory_data.all.children.oracle_databases.vars | combine({
+                  'inspec_delegate_host': '',
+                  'inspec_results_dir': '/tmp/inspec_oracle_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
+              },
+              'mssql_databases': {
+                'hosts': inventory_data.all.children.mssql_databases.hosts,
+                'vars': inventory_data.all.children.mssql_databases.vars | combine({
+                  'inspec_delegate_host': '',
+                  'inspec_results_dir': '/tmp/inspec_mssql_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
+              }
+            })
+          }
+        }, recursive=true) }}"
+      when: delegate_host | length == 0
+
+    - name: Add delegate host to inventory (if specified)
+      set_fact:
+        inventory_data: "{{ inventory_data | combine({
+          'all': {
+            'hosts': {
+              delegate_host: {
+                'ansible_host': delegate_address,
+                'ansible_connection': 'ssh',
+                'ansible_user': delegate_user,
+                'ansible_ssh_common_args': '-o StrictHostKeyChecking=accept-new'
+              }
+            },
+            'children': inventory_data.all.children | combine({
+              'oracle_databases': {
+                'hosts': inventory_data.all.children.oracle_databases.hosts,
+                'vars': inventory_data.all.children.oracle_databases.vars | combine({
+                  'inspec_delegate_host': delegate_host,
+                  'inspec_results_dir': '/tmp/inspec_oracle_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
+              },
+              'mssql_databases': {
+                'hosts': inventory_data.all.children.mssql_databases.hosts,
+                'vars': inventory_data.all.children.mssql_databases.vars | combine({
+                  'inspec_delegate_host': delegate_host,
+                  'inspec_results_dir': '/tmp/inspec_mssql_results',
+                  'inspec_debug_mode': false,
+                  'generate_summary_report': true
+                })
+              }
+            })
+          }
+        }, recursive=true) }}"
+      when:
+        - delegate_host | length > 0
+        - delegate_address | length > 0
+
+    # ==================== Write Output ====================
+    - name: Write inventory file
+      copy:
+        content: |
+          ---
+          # Generated Inventory - Database Compliance Scanning (CMDB Source)
+          # Credentials injected by AAP2 Custom Credential at runtime
+          #
+          # Source CMDB files:
+          #   Oracle: {{ oracle_csv_file if oracle_csv_file | length > 0 else 'N/A' }}
+          #   MSSQL:  {{ mssql_csv_file if mssql_csv_file | length > 0 else 'N/A' }}
+          # Generated: {{ ansible_date_time.iso8601 }}
+          #
+          # Entries with connection warnings are flagged with cmdb_connection_warning
+
+          {{ inventory_data | to_nice_yaml(indent=2) }}
+        dest: "{{ output_file }}"
+
+    - name: Summary
+      debug:
+        msg: |
+          Conversion complete: {{ output_file }}
+          - Oracle: {{ platform_counts.oracle }} hosts ({{ skipped_counts.oracle }} skipped)
+          - MSSQL:  {{ platform_counts.mssql }} hosts ({{ skipped_counts.mssql }} skipped)
+          - Total:  {{ platform_counts.oracle + platform_counts.mssql }} hosts
+          {% if connection_issues | length > 0 %}
+          - Connection warnings: {{ connection_issues | length }}
+          {% for issue in connection_issues %}
+            - {{ issue }}
+          {% endfor %}
+          {% endif %}
+          {% if delegate_host | length > 0 %}
+          - Delegate Host: {{ delegate_host }} ({{ delegate_address }})
+          {% else %}
+          - Execution Mode: Localhost
+          {% endif %}
