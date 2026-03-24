@@ -3260,7 +3260,7 @@ Complete the operational setup items handed over from the delivery engineer (Sur
 7. Define and document scanning schedule (batch size: 50, incremental rollout)
 
 ### Labels
-`crd-it`, `handover`, `mssql`, `oracle`, `aap2`
+`bu-handover`, `handover`, `mssql`, `oracle`, `aap2`
 
 ### Type: Story
 ### Priority: High
