@@ -106,13 +106,8 @@
                       mssql_server: "{{ mssql_fqdn }}"
                       mssql_port: "{{ mssql_port | int }}"
                       mssql_version: "{{ version_name }}"
-                      mssql_database: master
                       mssql_instance: "{{ mssql_instance_name }}"
                       mssql_edition: "{{ edition }}"
-                      database_platform: mssql
-                      db_server: "{{ mssql_fqdn }}"
-                      db_port: "{{ mssql_port | int }}"
-                      db_version: "{{ version_name }}"
                     warning_entry:
                       cmdb_connection_warning: "{{ comments }}"
                     host_entry: "{{ base_entry | combine(warning_entry if has_connection_warning else {}) }}"

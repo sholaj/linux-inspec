@@ -95,11 +95,8 @@
               vars:
                 base_entry:
                   oracle_server: "{{ oracle_fqdn }}"
-                  oracle_port: "{{ default_oracle_port | int }}"
                   oracle_database: "{{ oracle_db_name }}"
-                  oracle_service: "{{ oracle_db_name }}"
                   oracle_version: "{{ oracle_mapped_version }}"
-                  database_platform: oracle
                 warning_entry:
                   cmdb_connection_warning: "{{ comments }}"
                 host_entry: "{{ base_entry | combine(warning_entry if has_connection_warning else {}) }}"
