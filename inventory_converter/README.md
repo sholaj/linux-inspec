@@ -322,7 +322,6 @@ all:
           mssql_server: "[DB_SERVER].example.internal"
           mssql_version: "2019"
           mssql_instance: MSSQLSERVER
-          mssql_edition: "Standard Edition (64-bit)"
       vars:
         mssql_username: nist_scan_user
         mssql_database: master

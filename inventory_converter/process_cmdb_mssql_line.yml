@@ -1,7 +1,7 @@
 ---
 # Process single row from MSSQL CMDB CSV export
-# Required columns: Name, Version name, Validation Status, Comments, Edition, CP port
-# Extracts per-host: mssql_server, mssql_version, mssql_instance, mssql_edition
+# Required columns: Name, Version name, Validation Status, Comments, CP port
+# Extracts per-host: mssql_server, mssql_version, mssql_instance
 # mssql_port only included when non-standard (!= 1433, which is the group default)
 
 # Reset per-row state to prevent stale values from prior iterations
@@ -32,7 +32,6 @@
         version_name: "{{ fields[mssql_col_map['Version name'] | int] }}"
         validation_status: "{{ fields[mssql_col_map['Validation Status'] | int] }}"
         comments: "{{ fields[mssql_col_map['Comments'] | int] }}"
-        edition: "{{ fields[mssql_col_map['Edition'] | int] }}"
         cp_port: "{{ fields[mssql_col_map['CP port'] | int] }}"
 
     - name: Skip non-validated MSSQL entries
@@ -103,7 +102,6 @@
                       mssql_server: "{{ mssql_fqdn }}"
                       mssql_version: "{{ version_name }}"
                       mssql_instance: "{{ mssql_instance_name }}"
-                      mssql_edition: "{{ edition }}"
                     port_entry: "{{ {'mssql_port': mssql_port | int} if mssql_port | string != '1433' else {} }}"
                     warning_entry: "{{ {'cmdb_connection_warning': comments} if has_connection_warning else {} }}"
                     host_entry: "{{ base_entry | combine(port_entry) | combine(warning_entry) }}"
