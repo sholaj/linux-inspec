@@ -1,10 +1,7 @@
 ---
 # Process single row from Oracle CMDB CSV export
-# Expected columns (discovered dynamically from header):
-#   Name, Category, Version, Validation Status, Permissions Status, Comments
-# Note: oracle_service is set equal to oracle_db_name as the CMDB export does not
-# include a separate service name column. Override per-host in the generated inventory
-# if the service name differs (e.g. RAC or pluggable database environments).
+# Required columns: Name, Version, Validation Status, Comments
+# Extracts per-host: oracle_server, oracle_database, oracle_version
 
 # Reset per-row state to prevent stale values from prior iterations
 - name: Reset per-row state
@@ -33,7 +30,6 @@
         raw_name: "{{ fields[oracle_col_map['Name'] | int] }}"
         raw_version: "{{ fields[oracle_col_map['Version'] | int] }}"
         validation_status: "{{ fields[oracle_col_map['Validation Status'] | int] }}"
-        permissions_status: "{{ fields[oracle_col_map['Permissions Status'] | int] }}"
         comments: "{{ fields[oracle_col_map['Comments'] | int] }}"
 
     - name: Skip non-validated Oracle entries
