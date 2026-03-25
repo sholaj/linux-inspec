@@ -1,9 +1,8 @@
 ---
 # Process single row from MSSQL CMDB CSV export
-# Expected columns (discovered dynamically from header):
-#   Name, Instance Name, Version name, Version, Validation Status,
-#   Permissions Status, Comments, Full version, Edition, CP port,
-#   Class, Business, Support group
+# Required columns: Name, Version name, Validation Status, Comments, Edition, CP port
+# Extracts per-host: mssql_server, mssql_version, mssql_instance, mssql_edition
+# mssql_port only included when non-standard (!= 1433, which is the group default)
 
 # Reset per-row state to prevent stale values from prior iterations
 - name: Reset per-row state
@@ -30,10 +29,8 @@
     - name: Extract MSSQL fields
       set_fact:
         raw_name: "{{ fields[mssql_col_map['Name'] | int] }}"
-        instance_name: "{{ fields[mssql_col_map['Instance Name'] | int] }}"
         version_name: "{{ fields[mssql_col_map['Version name'] | int] }}"
         validation_status: "{{ fields[mssql_col_map['Validation Status'] | int] }}"
-        permissions_status: "{{ fields[mssql_col_map['Permissions Status'] | int] }}"
         comments: "{{ fields[mssql_col_map['Comments'] | int] }}"
         edition: "{{ fields[mssql_col_map['Edition'] | int] }}"
         cp_port: "{{ fields[mssql_col_map['CP port'] | int] }}"
@@ -104,13 +101,12 @@
                   vars:
                     base_entry:
                       mssql_server: "{{ mssql_fqdn }}"
-                      mssql_port: "{{ mssql_port | int }}"
                       mssql_version: "{{ version_name }}"
                       mssql_instance: "{{ mssql_instance_name }}"
                       mssql_edition: "{{ edition }}"
-                    warning_entry:
-                      cmdb_connection_warning: "{{ comments }}"
-                    host_entry: "{{ base_entry | combine(warning_entry if has_connection_warning else {}) }}"
+                    port_entry: "{{ {'mssql_port': mssql_port | int} if mssql_port | string != '1433' else {} }}"
+                    warning_entry: "{{ {'cmdb_connection_warning': comments} if has_connection_warning else {} }}"
+                    host_entry: "{{ base_entry | combine(port_entry) | combine(warning_entry) }}"
 
                 - name: Increment MSSQL count
                   set_fact:
