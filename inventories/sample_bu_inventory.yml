@@ -24,32 +24,15 @@ all:
         DBSERVER01_1433:
           mssql_server: "[DB_SERVER].example.internal"
           mssql_version: "2019"
-          mssql_edition: "Standard Edition (64-bit)"
 
         DBSERVER02_1433:
           mssql_server: "[DB_SERVER].example.internal"
-          mssql_version: "2019"
-          mssql_edition: "Enterprise Edition (64-bit)"
-
-        DBSERVER03_1433:
-          mssql_server: "[DB_SERVER].example.internal"
           mssql_version: "2022"
 
-        DBSERVER04_51525:
+        DBSERVER03_51525:
           mssql_server: "[DB_SERVER].example.internal"
           mssql_port: 51525
           mssql_version: "2017"
-          mssql_instance: NAMED_INSTANCE
-
-        DEVSERVER01_1433:
-          mssql_server: "[DB_SERVER].example.internal"
-          mssql_version: "2019"
-          mssql_edition: "Developer Edition (64-bit)"
-
-        DBSERVER05_1433:
-          mssql_server: "[DB_SERVER].example.internal"
-          mssql_version: "2019"
-          cmdb_connection_warning: "Unable to connect using Default ID's"
 
     oracle_databases:
       vars:
@@ -63,22 +46,12 @@ all:
           oracle_database: CDB1
           oracle_version: "19c"
 
-        APPDB01_ORASERVER01:
+        APPDB01_ORASERVER02:
           oracle_server: "[DB_SERVER].example.internal"
           oracle_database: APPDB01
-          oracle_version: "19c"
-
-        DEVDB01_ORASERVER02:
-          oracle_server: "[DB_SERVER].example.internal"
-          oracle_database: DEVDB01
           oracle_version: "23c"
 
         LEGACYDB_ORASERVER03:
           oracle_server: "[DB_SERVER].example.internal"
           oracle_database: LEGACYDB
           oracle_version: "12c"
-
-        REPORTDB_ORASERVER04:
-          oracle_server: "[DB_SERVER].example.internal"
-          oracle_database: REPORTDB
-          oracle_version: "21c"

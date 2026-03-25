@@ -181,7 +181,6 @@
         - Version name
         - Validation Status
         - Comments
-        - Edition
         - CP port
       loop_control:
         loop_var: missing_col
