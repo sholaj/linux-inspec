@@ -44,10 +44,13 @@
             hosts: {}
             vars:
               oracle_username: nist_scan_user
+              oracle_port: 1521
           mssql_databases:
             hosts: {}
             vars:
               mssql_username: nist_scan_user
+              mssql_database: master
+              mssql_port: 1433
               business_unit: "{{ target_bu | default('') }}"
 
     platform_counts:

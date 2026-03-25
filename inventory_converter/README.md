@@ -310,32 +310,24 @@ all:
       hosts:
         CDB1_DBALINORA1:
           oracle_server: "[DB_SERVER].example.internal"
-          oracle_port: 1521
           oracle_database: CDB1
-          oracle_service: CDB1
           oracle_version: "19c"
-          database_platform: oracle
       vars:
         oracle_username: nist_scan_user
-        inspec_delegate_host: ""
+        oracle_port: 1521
 
     mssql_databases:
       hosts:
         AUTOWIN463_1433:
           mssql_server: "[DB_SERVER].example.internal"
-          mssql_port: 1433
           mssql_version: "2019"
-          mssql_database: master
           mssql_instance: MSSQLSERVER
           mssql_edition: "Standard Edition (64-bit)"
-          database_platform: mssql
-          db_server: "[DB_SERVER].example.internal"
-          db_port: 1433
-          db_version: "2019"
       vars:
         mssql_username: nist_scan_user
+        mssql_database: master
+        mssql_port: 1433
         business_unit: "[BU_ID]"
-        inspec_delegate_host: ""
 ```
 
 ---
