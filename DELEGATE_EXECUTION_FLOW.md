@@ -293,3 +293,48 @@ All scenarios are properly covered:
 - ✅ Both MSSQL, Oracle, and Sybase roles follow same pattern
 
 The implementation is production-ready for both localhost and delegate execution modes.
+
+
+Hi Team,
+
+    Thank you for the progress on the service account creation. To move forward with the POC, there are a
+    few remaining items we need to address:
+
+    1. Test Environment Access
+    As confirmed by the architect, we cannot conduct the POC in the Alpha environment. We need:
+    - Confirmation that a Test environment is available for our use
+    - The service accounts (aims_aap2) granted access to the Test environment
+    - Access granted for Michael L to the Test env as well
+
+    2. Test Database Instances
+    We need the following database instances provisioned or identified in the Test environment for POC:
+    - MSSQL instance - for SQL Server compliance scanning validation
+    - Oracle instance - for Oracle compliance scanning validation
+
+    3. Database Privileges
+    As outlined previously, the service accounts require minimum read-only permissions to perform InSpec
+    compliance scanning. Specifically:
+
+    - SQL Server: VIEW SERVER STATE, VIEW ANY DATABASE, VIEW ANY DEFINITION (read-only, no data
+    modification)
+    - Oracle: SELECT_CATALOG_ROLE, CREATE SESSION (read-only catalog access)
+    - No write, update, or DDL permissions required
+
+    4. Connection Approach
+    We need to confirm the connectivity path for the Test environment:
+    - Is there a delegate/bastion host available in the Test environment?
+    - Can the AAP2 controller reach the Test database instances via the delegate host pattern (AAP2 → SSH
+    → Delegate Host → DB Protocol → Target DB)?
+    - If not, what is the approved network path?
+
+    Rakesh - now that the service accounts have been created, could you confirm the remaining items on
+    your side? As Bukola mentioned, the accounts were the main blocker, so we'd like to move quickly on
+    the outstanding pieces.
+
+    Michael - could you advise on the timeline for re-submission and approval, and confirm Test
+    environment access?
+
+    Happy to schedule a call to align on any of the above.
+
+    Kind Regards,
+    Shola
