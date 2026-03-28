@@ -1,5 +1,5 @@
 ---
-# CMDB CSV to Ansible Inventory Converter
+# CMDB CSV to Ansible Inventory Converter (fully self-contained)
 # Produces host metadata only - credentials handled by AAP2
 #
 # Input Format: CSV exports from CMDB (Oracle and/or MSSQL)
@@ -125,14 +125,49 @@
         - missing_col not in oracle_col_map
 
     - name: Process Oracle CSV rows
-      include_tasks: "{{ playbook_dir }}/process_cmdb_oracle_line.yml"
-      loop: "{{ oracle_lines[1:] | select('search', '.') | list }}"
-      loop_control:
-        index_var: idx
-        label: "Oracle row {{ idx + 1 }}"
       when:
         - oracle_lines is defined
         - oracle_col_map is defined
+      block:
+        - name: Process each Oracle row
+          vars:
+            fields: "{{ item.split(',') | map('trim') | list }}"
+            raw_name: "{{ (item.split(',') | map('trim') | list)[oracle_col_map['Name'] | int] | default('') }}"
+            raw_version: "{{ (item.split(',') | map('trim') | list)[oracle_col_map['Version'] | int] | default('') }}"
+            validation_status: "{{ (item.split(',') | map('trim') | list)[oracle_col_map['Validation Status'] | int] | default('') }}"
+            comments: "{{ (item.split(',') | map('trim') | list)[oracle_col_map['Comments'] | int] | default('') }}"
+            oracle_db_name: "{{ (item.split(',') | map('trim') | list)[oracle_col_map['Name'] | int].split('@')[0] | default('') }}"
+            oracle_fqdn: "{{ (item.split(',') | map('trim') | list)[oracle_col_map['Name'] | int].split('@')[1] | default('') }}"
+            oracle_mapped_version: "{{ oracle_version_map[(item.split(',') | map('trim') | list)[oracle_col_map['Version'] | int].split('.')[0]] | default((item.split(',') | map('trim') | list)[oracle_col_map['Version'] | int].split('.')[0] + 'c') }}"
+            host_id: "{{ ((item.split(',') | map('trim') | list)[oracle_col_map['Name'] | int].split('@')[0] + '_' + (item.split(',') | map('trim') | list)[oracle_col_map['Name'] | int].split('@')[1].split('.')[0] | default('unknown')) | replace('.', '_') | replace('-', '_') }}"
+            has_warning: "{{ ('unable to connect' in ((item.split(',') | map('trim') | list)[oracle_col_map['Comments'] | int] | default('') | lower)) or ('unable to validate' in ((item.split(',') | map('trim') | list)[oracle_col_map['Comments'] | int] | default('') | lower)) }}"
+          ansible.builtin.set_fact:
+            inventory_data: >-
+              {{ inventory_data | combine({
+                'all': {
+                  'children': {
+                    'oracle_databases': {
+                      'hosts': inventory_data.all.children.oracle_databases.hosts | combine({
+                        host_id: (
+                          {'oracle_server': oracle_fqdn, 'oracle_database': oracle_db_name, 'oracle_version': oracle_mapped_version}
+                          | combine({'cmdb_connection_warning': comments} if (has_warning | bool) else {})
+                        )
+                      })
+                    }
+                  }
+                }
+              }, recursive=true) }}
+            platform_counts: "{{ platform_counts | combine({'oracle': platform_counts.oracle + 1}) }}"
+            connection_issues: "{{ connection_issues + (['Oracle: ' + raw_name + ' - ' + comments] if (has_warning | bool) else []) }}"
+          loop: "{{ oracle_lines[1:] | select('search', '.') | list }}"
+          loop_control:
+            index_var: idx
+            label: "Oracle row {{ idx + 1 }}"
+          when:
+            - (item.split(',') | map('trim') | list) | length >= (oracle_col_map.values() | max) + 1
+            - "'validated' in ((item.split(',') | map('trim') | list)[oracle_col_map['Validation Status'] | int] | default('') | lower)"
+            - "'@' in (item.split(',') | map('trim') | list)[oracle_col_map['Name'] | int] | default('')"
+            - "((item.split(',') | map('trim') | list)[oracle_col_map['Name'] | int].split('@')[1] | default('')) | length > 0"
 
     # ==================== MSSQL CSV Processing ====================
     - name: Check MSSQL CSV exists
@@ -189,14 +224,52 @@
         - missing_col not in mssql_col_map
 
     - name: Process MSSQL CSV rows
-      include_tasks: "{{ playbook_dir }}/process_cmdb_mssql_line.yml"
-      loop: "{{ mssql_lines[1:] | select('search', '.') | list }}"
-      loop_control:
-        index_var: idx
-        label: "MSSQL row {{ idx + 1 }}"
       when:
         - mssql_lines is defined
         - mssql_col_map is defined
+      block:
+        - name: Process each MSSQL row
+          vars:
+            fields: "{{ item.split(',') | map('trim') | list }}"
+            raw_name: "{{ (item.split(',') | map('trim') | list)[mssql_col_map['Name'] | int] | default('') }}"
+            version_name: "{{ (item.split(',') | map('trim') | list)[mssql_col_map['Version name'] | int] | default('') }}"
+            validation_status: "{{ (item.split(',') | map('trim') | list)[mssql_col_map['Validation Status'] | int] | default('') }}"
+            comments: "{{ (item.split(',') | map('trim') | list)[mssql_col_map['Comments'] | int] | default('') }}"
+            cp_port: "{{ (item.split(',') | map('trim') | list)[mssql_col_map['TCP port(s)'] | int] | default('') }}"
+            mssql_instance_name: "{{ (item.split(',') | map('trim') | list)[mssql_col_map['Name'] | int].split('@')[0] | default('') }}"
+            mssql_fqdn: "{{ (item.split(',') | map('trim') | list)[mssql_col_map['Name'] | int].split('@')[1] | default('') }}"
+            mssql_port: "{{ ((item.split(',') | map('trim') | list)[mssql_col_map['TCP port(s)'] | int] | default('')) if ((item.split(',') | map('trim') | list)[mssql_col_map['TCP port(s)'] | int] | default('') | trim | length > 0) else '1433' }}"
+            host_id: "{{ ((item.split(',') | map('trim') | list)[mssql_col_map['Name'] | int].split('@')[1].split('.')[0] | default('unknown') + '_' + (((item.split(',') | map('trim') | list)[mssql_col_map['TCP port(s)'] | int] | default('')) if ((item.split(',') | map('trim') | list)[mssql_col_map['TCP port(s)'] | int] | default('') | trim | length > 0) else '1433')) | replace('.', '_') | replace('-', '_') }}"
+            has_warning: "{{ ('unable to connect' in ((item.split(',') | map('trim') | list)[mssql_col_map['Comments'] | int] | default('') | lower)) or ('unable to validate' in ((item.split(',') | map('trim') | list)[mssql_col_map['Comments'] | int] | default('') | lower)) }}"
+          ansible.builtin.set_fact:
+            inventory_data: >-
+              {{ inventory_data | combine({
+                'all': {
+                  'children': {
+                    'mssql_databases': {
+                      'hosts': inventory_data.all.children.mssql_databases.hosts | combine({
+                        host_id: (
+                          {'mssql_server': mssql_fqdn, 'mssql_version': version_name, 'mssql_instance': mssql_instance_name}
+                          | combine({'mssql_port': mssql_port | int} if (mssql_port | string != '1433') else {})
+                          | combine({'cmdb_connection_warning': comments} if (has_warning | bool) else {})
+                        )
+                      })
+                    }
+                  }
+                }
+              }, recursive=true) }}
+            platform_counts: "{{ platform_counts | combine({'mssql': platform_counts.mssql + 1}) }}"
+            connection_issues: "{{ connection_issues + (['MSSQL: ' + raw_name + ' - ' + comments] if (has_warning | bool) else []) }}"
+          loop: "{{ mssql_lines[1:] | select('search', '.') | list }}"
+          loop_control:
+            index_var: idx
+            label: "MSSQL row {{ idx + 1 }}"
+          when:
+            - (item.split(',') | map('trim') | list) | length >= (mssql_col_map.values() | max) + 1
+            - "'validated' in ((item.split(',') | map('trim') | list)[mssql_col_map['Validation Status'] | int] | default('') | lower)"
+            - "'@' in (item.split(',') | map('trim') | list)[mssql_col_map['Name'] | int] | default('')"
+            - "((item.split(',') | map('trim') | list)[mssql_col_map['Name'] | int].split('@')[1] | default('')) | length > 0"
+            - "host_id not in inventory_data.all.children.mssql_databases.hosts"
 
     # ==================== Set Execution Mode ====================
     - name: Set execution mode to localhost (default)
