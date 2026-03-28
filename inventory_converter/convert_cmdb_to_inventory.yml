@@ -125,7 +125,7 @@
         - missing_col not in oracle_col_map
 
     - name: Process Oracle CSV rows
-      include_tasks: process_cmdb_oracle_line.yml
+      include_tasks: "{{ playbook_dir }}/process_cmdb_oracle_line.yml"
       loop: "{{ oracle_lines[1:] | select('search', '.') | list }}"
       loop_control:
         index_var: idx
@@ -189,7 +189,7 @@
         - missing_col not in mssql_col_map
 
     - name: Process MSSQL CSV rows
-      include_tasks: process_cmdb_mssql_line.yml
+      include_tasks: "{{ playbook_dir }}/process_cmdb_mssql_line.yml"
       loop: "{{ mssql_lines[1:] | select('search', '.') | list }}"
       loop_control:
         index_var: idx
