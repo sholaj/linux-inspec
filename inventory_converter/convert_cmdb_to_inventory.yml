@@ -61,7 +61,6 @@
       oracle: 0
       mssql: 0
 
-    connection_issues: []
 
   tasks:
     - name: Validate at least one CSV file provided
@@ -116,15 +115,10 @@
 
         - name: Process each Oracle row
           vars:
-            raw_name: "{{ item['Name'] | default('') }}"
-            raw_version: "{{ item['Version'] | default('') }}"
-            validation_status: "{{ item['Validation Status'] | default('') }}"
-            comments: "{{ item['Comments'] | default('') }}"
             oracle_db_name: "{{ item['Name'].split('@')[0] | default('') }}"
             oracle_fqdn: "{{ item['Name'].split('@')[1] | default('') }}"
             oracle_mapped_version: "{{ oracle_version_map[item['Version'].split('.')[0]] | default(item['Version'].split('.')[0] + 'c') }}"
             host_id: "{{ (item['Name'].split('@')[0] + '_' + item['Name'].split('@')[1].split('.')[0] | default('unknown')) | replace('.', '_') | replace('-', '_') }}"
-            has_warning: "{{ ('unable to connect' in (item['Comments'] | default('') | lower)) or ('unable to validate' in (item['Comments'] | default('') | lower)) }}"
           ansible.builtin.set_fact:
             inventory_data: >-
               {{ inventory_data | combine({
@@ -134,7 +128,6 @@
                       'hosts': inventory_data.all.children.oracle_databases.hosts | combine({
                         host_id: (
                           {'oracle_server': oracle_fqdn, 'oracle_database': oracle_db_name, 'oracle_version': oracle_mapped_version}
-                          | combine({'cmdb_connection_warning': comments} if (has_warning | bool) else {})
                         )
                       })
                     }
@@ -142,7 +135,6 @@
                 }
               }, recursive=true) }}
             platform_counts: "{{ platform_counts | combine({'oracle': platform_counts.oracle + 1}) }}"
-            connection_issues: "{{ connection_issues + (['Oracle: ' + raw_name + ' - ' + comments] if (has_warning | bool) else []) }}"
           loop: "{{ oracle_rows }}"
           loop_control:
             index_var: idx
@@ -197,16 +189,11 @@
 
         - name: Process each MSSQL row
           vars:
-            raw_name: "{{ item['Name'] | default('') }}"
             version_name: "{{ item['Version name'] | default('') }}"
-            validation_status: "{{ item['Validation Status'] | default('') }}"
-            comments: "{{ item['Comments'] | default('') }}"
-            cp_port: "{{ item['TCP port(s)'] | default('') }}"
             mssql_instance_name: "{{ item['Name'].split('@')[0] | default('') }}"
             mssql_fqdn: "{{ item['Name'].split('@')[1] | default('') }}"
             mssql_port: "{{ item['TCP port(s)'] | default('') if (item['TCP port(s)'] | default('') | trim | length > 0) else '1433' }}"
             host_id: "{{ (item['Name'].split('@')[1].split('.')[0] | default('unknown') + '_' + (item['TCP port(s)'] | default('') if (item['TCP port(s)'] | default('') | trim | length > 0) else '1433')) | replace('.', '_') | replace('-', '_') }}"
-            has_warning: "{{ ('unable to connect' in (item['Comments'] | default('') | lower)) or ('unable to validate' in (item['Comments'] | default('') | lower)) }}"
           ansible.builtin.set_fact:
             inventory_data: >-
               {{ inventory_data | combine({
@@ -217,7 +204,6 @@
                         host_id: (
                           {'mssql_server': mssql_fqdn, 'mssql_version': version_name, 'mssql_instance': mssql_instance_name}
                           | combine({'mssql_port': mssql_port | int} if (mssql_port | string != '1433') else {})
-                          | combine({'cmdb_connection_warning': comments} if (has_warning | bool) else {})
                         )
                       })
                     }
@@ -225,7 +211,6 @@
                 }
               }, recursive=true) }}
             platform_counts: "{{ platform_counts | combine({'mssql': platform_counts.mssql + 1}) }}"
-            connection_issues: "{{ connection_issues + (['MSSQL: ' + raw_name + ' - ' + comments] if (has_warning | bool) else []) }}"
           loop: "{{ mssql_rows }}"
           loop_control:
             index_var: idx
@@ -323,7 +308,6 @@
           #   MSSQL:  {{ mssql_csv_file if mssql_csv_file | length > 0 else 'N/A' }}
           # Generated: {{ ansible_date_time.iso8601 }}
           #
-          # Entries with connection warnings are flagged with cmdb_connection_warning
 
           {{ inventory_data | to_nice_yaml(indent=2) }}
         dest: "{{ output_file }}"
@@ -335,12 +319,6 @@
           - Oracle: {{ platform_counts.oracle }} hosts ({{ skipped_counts.oracle }} skipped)
           - MSSQL:  {{ platform_counts.mssql }} hosts ({{ skipped_counts.mssql }} skipped)
           - Total:  {{ platform_counts.oracle + platform_counts.mssql }} hosts
-          {% if connection_issues | length > 0 %}
-          - Connection warnings: {{ connection_issues | length }}
-          {% for issue in connection_issues %}
-            - {{ issue }}
-          {% endfor %}
-          {% endif %}
           {% if delegate_host | length > 0 %}
           - Delegate Host: {{ delegate_host }} ({{ delegate_address }})
           {% else %}
