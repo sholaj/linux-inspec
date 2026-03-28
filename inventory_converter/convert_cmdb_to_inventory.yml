@@ -266,6 +266,13 @@
         - delegate_address | length > 0
 
     # ==================== Write Output ====================
+    - name: Ensure output directory exists
+      ansible.builtin.file:
+        path: "{{ output_file | dirname }}"
+        state: directory
+        mode: '0755'
+      when: output_file | dirname | length > 0 and output_file | dirname != '.'
+
     - name: Write inventory file
       copy:
         content: |
