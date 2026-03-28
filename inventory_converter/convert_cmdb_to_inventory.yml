@@ -5,7 +5,7 @@
 # Input Format: CSV exports from CMDB (Oracle and/or MSSQL)
 #   Oracle CSV: Name (DB@SERVER), Category, Version, Validation Status, Permissions Status, Comments
 #   MSSQL CSV:  Name (INSTANCE@SERVER), Instance Name, Version name, Version, Validation Status,
-#               Permissions Status, Comments, Full version, Edition, CP port, Class, Business, Support group
+#               Permissions Status, Comments, Full version, Edition, TCP port(s), Class, Business Unit, Support group
 #
 # Usage:
 #   ansible-playbook convert_cmdb_to_inventory.yml \
@@ -181,7 +181,7 @@
         - Version name
         - Validation Status
         - Comments
-        - CP port
+        - TCP port(s)
       loop_control:
         loop_var: missing_col
       when:
