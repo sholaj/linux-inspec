@@ -3,7 +3,7 @@ title: CIS Microsoft SQL Server 2019 Benchmark
 maintainer: InSpec Compliance Team
 copyright: Copyright 2024
 license: Apache-2.0
-summary: InSpec profile for CIS Microsoft SQL Server 2019 compliance
+summary: InSpec profile for CIS Microsoft SQL Server 2019 compliance. CIS Benchmark Version v1.3.0.
 version: 1.0.0
 
 inputs:

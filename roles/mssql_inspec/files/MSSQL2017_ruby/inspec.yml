@@ -3,7 +3,7 @@ title: CIS Microsoft SQL Server 2017 Benchmark
 maintainer: InSpec Compliance Team
 copyright: Copyright 2024
 license: Apache-2.0
-summary: InSpec profile for CIS Microsoft SQL Server 2017 compliance with NIST SP 800-53 mappings
+summary: InSpec profile for CIS Microsoft SQL Server 2017 compliance with NIST SP 800-53 mappings. CIS Benchmark Version v1.3.0.
 version: 2.0.0
 inspec_version: ">= 5.0"
 
