@@ -3,7 +3,7 @@ title: CIS Oracle Database 12c Compliance
 maintainer: InSpec Compliance Team
 copyright: Copyright 2024
 license: Apache-2.0
-summary: InSpec profile for CIS Oracle Database 12c compliance
+summary: InSpec profile for CIS Oracle Database 12c compliance. CIS Benchmark Version v1.1.0.
 version: 1.0.0
 inspec_version: ">= 5.0"
 
