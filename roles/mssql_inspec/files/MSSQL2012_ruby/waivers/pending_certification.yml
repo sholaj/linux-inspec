@@ -1,0 +1,17 @@
+---
+# Waiver file for controls not yet internally certified
+# Controls listed here will NOT run or affect compliance scores
+#
+# Current certified version: CIS Microsoft SQL Server 2012 Benchmark
+# Remove entries once controls are formally certified by Security/Compliance team
+#
+# Format:
+#   control-id:
+#     justification: "Reason for waiver and JIRA ticket"
+#     run: false
+#
+# Example (uncomment when pre-building controls for a newer CIS version):
+#
+# mssql-2012-1.01:
+#   justification: "Pending internal certification (DBSCAN-XXX)"
+#   run: false
