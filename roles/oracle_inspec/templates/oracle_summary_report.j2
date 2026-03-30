@@ -12,6 +12,11 @@ Database: {{ oracle_database }}
 Version: Oracle {{ oracle_version }}
 Service: {{ oracle_service | default('Default Service') }}
 
+CIS Benchmark Information:
+--------------------------
+Profile: {{ _inspec_profile_name | default('unknown') }} v{{ _inspec_profile_version | default('unknown') }}
+CIS Benchmark Version: {{ _cis_benchmark_version | default('Not specified') }}
+
 Scan Results Summary:
 ---------------------
 {%- if oracle_inspec_results is defined and oracle_inspec_results.results is defined and oracle_inspec_results.results | length > 0 %}

@@ -81,14 +81,33 @@ Record version changes here when a new CIS benchmark is evaluated.
 Use InSpec waiver files to include pre-built controls that are not yet internally certified.
 This allows controls to exist in code without affecting compliance scores.
 
-### Waiver File Location
+### Waiver File Locations
+
+Every InSpec profile has a waiver directory:
 
 ```
-roles/mssql_inspec/files/MSSQL2019_ruby/waivers/
-└── pending_certification.yml
+roles/mssql_inspec/files/
+├── MSSQL2008_ruby/waivers/pending_certification.yml
+├── MSSQL2012_ruby/waivers/pending_certification.yml
+├── MSSQL2014_ruby/waivers/pending_certification.yml
+├── MSSQL2016_ruby/waivers/pending_certification.yml
+├── MSSQL2017_ruby/waivers/pending_certification.yml
+├── MSSQL2018_ruby/waivers/pending_certification.yml
+├── MSSQL2019_ruby/waivers/pending_certification.yml
+└── MSSQL2022_ruby/waivers/pending_certification.yml
 
-roles/oracle_inspec/files/ORACLE19_ruby/waivers/
-└── pending_certification.yml
+roles/oracle_inspec/files/
+├── ORACLE11_ruby/waivers/pending_certification.yml
+├── ORACLE12_ruby/waivers/pending_certification.yml
+├── ORACLE18_ruby/waivers/pending_certification.yml
+└── ORACLE19_ruby/waivers/pending_certification.yml
+
+roles/postgres_inspec/files/
+└── POSTGRES15_ruby/waivers/pending_certification.yml
+
+roles/sybase_inspec/files/
+├── SYBASE15_ruby/waivers/pending_certification.yml
+└── SYBASE16_ruby/waivers/pending_certification.yml
 ```
 
 ### Waiver File Format
@@ -150,6 +169,41 @@ summary: >
   InSpec profile for CIS Microsoft SQL Server 2019 compliance.
   CIS Benchmark Version: v1.3.0 (internally certified YYYY-MM-DD).
 ```
+
+---
+
+## Runtime CIS Version Display
+
+The CIS benchmark version is extracted from the `inspec.yml` summary field at runtime and displayed in two places:
+
+### 1. Scan Start Banner (in Ansible output)
+
+```
+╔══════════════════════════════════════════════════════════════════╗
+║  MSSQL InSpec Compliance Scan                                    ║
+╠══════════════════════════════════════════════════════════════════╣
+║  Server:          [DB_SERVER]:1433
+║  Database:        master
+║  MSSQL Version:   2019
+║  Profile:         mssql-2019-cis v1.0.0
+║  CIS Benchmark:   v1.3.0
+╚══════════════════════════════════════════════════════════════════╝
+```
+
+### 2. Summary Report (written to file)
+
+The summary report (`summary_*.txt`) includes a CIS Benchmark Information section showing the profile name, version, and CIS benchmark version.
+
+### Implementation
+
+The version is extracted in each role's `setup.yml` using:
+- `roles/mssql_inspec/tasks/setup.yml` — reads `inspec.yml`, extracts `CIS Benchmark Version vX.Y.Z` from summary
+- `roles/oracle_inspec/tasks/setup.yml` — same pattern for Oracle
+
+The extracted facts are:
+- `_cis_benchmark_version` — e.g., `v1.3.0`
+- `_inspec_profile_name` — e.g., `mssql-2019-cis`
+- `_inspec_profile_version` — e.g., `1.0.0`
 
 ---
 

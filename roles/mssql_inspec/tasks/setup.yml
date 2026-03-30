@@ -9,6 +9,32 @@
     _local_controls_path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
     _remote_controls_path: "/tmp/inspec_mssql_{{ mssql_version }}"
 
+# Extract CIS benchmark version from profile metadata
+- name: Read InSpec profile metadata
+  ansible.builtin.slurp:
+    src: "{{ _local_controls_path }}/inspec.yml"
+  register: _inspec_profile_raw
+  delegate_to: localhost
+
+- name: Extract CIS benchmark version
+  ansible.builtin.set_fact:
+    _cis_benchmark_version: "{{ (_inspec_profile_raw.content | b64decode | regex_search('CIS Benchmark Version (v[\\d.]+)', '\\1')) | first | default('Not specified') }}"
+    _inspec_profile_name: "{{ (_inspec_profile_raw.content | b64decode | from_yaml).name | default('unknown') }}"
+    _inspec_profile_version: "{{ (_inspec_profile_raw.content | b64decode | from_yaml).version | default('unknown') }}"
+
+- name: Display CIS benchmark version
+  ansible.builtin.debug:
+    msg: |
+      ╔══════════════════════════════════════════════════════════════════╗
+      ║  MSSQL InSpec Compliance Scan                                    ║
+      ╠══════════════════════════════════════════════════════════════════╣
+      ║  Server:          {{ mssql_server }}:{{ mssql_port }}
+      ║  Database:        {{ mssql_database }}
+      ║  MSSQL Version:   {{ mssql_version }}
+      ║  Profile:         {{ _inspec_profile_name }} v{{ _inspec_profile_version }}
+      ║  CIS Benchmark:   {{ _cis_benchmark_version }}
+      ╚══════════════════════════════════════════════════════════════════╝
+
 # Create results directory on execution host
 - name: Create results directory
   ansible.builtin.file:
