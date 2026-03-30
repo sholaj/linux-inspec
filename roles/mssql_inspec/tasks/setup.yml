@@ -18,7 +18,7 @@
 
 - name: Extract CIS benchmark version
   ansible.builtin.set_fact:
-    _cis_benchmark_version: "{{ (_inspec_profile_raw.content | b64decode | regex_search('CIS Benchmark Version (v[\\d.]+)', '\\1')) | first | default('Not specified') }}"
+    _cis_benchmark_version: "{{ (_inspec_profile_raw.content | b64decode | regex_search('CIS Benchmark Version (v[\\d.]+)', '\\1')) | default(['Not specified'], true) | first }}"
     _inspec_profile_name: "{{ (_inspec_profile_raw.content | b64decode | from_yaml).name | default('unknown') }}"
     _inspec_profile_version: "{{ (_inspec_profile_raw.content | b64decode | from_yaml).version | default('unknown') }}"
 
