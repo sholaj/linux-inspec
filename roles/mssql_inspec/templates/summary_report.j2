@@ -12,6 +12,11 @@ Database: {{ mssql_database }}
 Version: MSSQL {{ mssql_version }}
 Service: {{ mssql_service | default('Default Instance') }}
 
+CIS Benchmark Information:
+--------------------------
+Profile: {{ _inspec_profile_name | default('unknown') }} v{{ _inspec_profile_version | default('unknown') }}
+CIS Benchmark Version: {{ _cis_benchmark_version | default('Not specified') }}
+
 Scan Results Summary:
 ---------------------
 {%- if inspec_results is defined and inspec_results.results is defined and inspec_results.results | length > 0 %}
