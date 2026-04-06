@@ -85,13 +85,12 @@
   ignore_errors: true
   delegate_to: "{{ _delegate_host }}"
 
-# Clean up SSL temporary files (only when SSL used /tmp paths)
-- name: Clean up SSL temporary files
+# Clean up SSL temporary trusted cert (only when deployed to /tmp)
+# Note: libtcl64.cfg is deployed to the standard OCS config path and not cleaned up
+- name: Clean up SSL temporary trusted cert
   ansible.builtin.file:
-    path: "{{ item }}"
+    path: "{{ _ssl_trusted_cert_dest | default('/tmp/sybase_trusted.txt') }}"
     state: absent
-  loop:
-    - /tmp/sybase_trusted.txt
   when:
     - preflight_passed
     - sybase_ssl_enabled | default(false) | bool
