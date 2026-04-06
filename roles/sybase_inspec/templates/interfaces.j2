@@ -4,11 +4,17 @@
 # Host: {{ sybase_server }}
 # Port: {{ sybase_ssl_port if (sybase_ssl_enabled | default(false) | bool) else sybase_port }}
 # SSL: {{ 'enabled' if (sybase_ssl_enabled | default(false) | bool) else 'disabled' }}
+#
+# Note: On Linux, "ssl" is a network FILTER on tcp, not a separate protocol.
+# The isql -X flag selects the ssl-filtered entry from the interfaces file.
+# Both tcp and ssl entries must be present for the client to work correctly.
 
 {{ sybase_service }}
 {% if sybase_ssl_enabled | default(false) | bool %}
-	query ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
-	master ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
+	query tcp ether {{ sybase_server }} {{ sybase_port }}
+	master tcp ether {{ sybase_server }} {{ sybase_port }}
+	query tcp ether {{ sybase_server }} {{ sybase_ssl_port }} ssl
+	master tcp ether {{ sybase_server }} {{ sybase_ssl_port }} ssl
 {% else %}
 	query tcp ether {{ sybase_server }} {{ sybase_port }}
 	master tcp ether {{ sybase_server }} {{ sybase_port }}

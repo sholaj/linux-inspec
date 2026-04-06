@@ -53,7 +53,6 @@
       SYBASE: "{{ sybase_environment_base.SYBASE }}"
       SYBASE_OCS: "{{ sybase_environment_base.SYBASE_OCS }}"
       SSH_AUTH_SOCK: "{{ _target_env.SSH_AUTH_SOCK | default('') }}"
-      SYBOCS_CFG: "{{ _ssl_libtcl_cfg_dest | default('') }}"
 
 # Route to appropriate execution based on mode
 - name: "[Execute] Run SSH-based execution (legacy)"

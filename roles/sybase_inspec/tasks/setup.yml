@@ -94,8 +94,7 @@
                  else sybase_environment_base.SYBASE + '/' + sybase_environment_base.SYBASE_OCS + '/config/trusted.txt') }}
             _ssl_libtcl_cfg_dest: >-
               {{ sybase_ssl_libtcl_cfg_path if sybase_ssl_libtcl_cfg_path | default('') != ''
-                 else ('/tmp/sybase_libtcl.cfg' if _sybase_env_exists.stat.exists
-                 else sybase_environment_base.SYBASE + '/' + sybase_environment_base.SYBASE_OCS + '/config/libtcl.cfg') }}
+                 else sybase_environment_base.SYBASE + '/' + sybase_environment_base.SYBASE_OCS + '/config/libtcl64.cfg' }}
 
         - name: Create SSL config directory (fresh environment)
           ansible.builtin.file:

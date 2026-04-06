@@ -37,6 +37,7 @@ sybase_ssl_cipher_suites: "TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384"
 sybase_ssl_trusted_cert_file: ""   # Source path on controller (required when SSL enabled)
 sybase_ssl_trusted_cert_dest: ""   # Auto-selected if empty
 sybase_ssl_libtcl_cfg_path: ""     # Auto-selected if empty
+sybase_ssl_filter_lib: "libsybfssl64.so"  # SSL filter library (libsybfssl64.so for ASE 16.x)
 
 # Sybase client environment paths
 # ================================

@@ -196,8 +196,10 @@ sybase_inspec/
 │       └── libraries/
 │           └── sybase_session_local.rb  # Custom InSpec resource
 ├── templates/
-│   ├── interfaces.j2         # Sybase interfaces file template
+│   ├── interfaces.j2         # Sybase interfaces file template (tcp + ssl filter)
+│   ├── libtcl.cfg.j2         # OCS SSL driver configuration template
 │   ├── SYBASE.sh.j2          # Environment script template
+│   ├── skip_report.j2        # Skip report for failed preflight checks
 │   └── sybase_summary_report.j2  # Summary report template
 └── README.md
 ```
@@ -357,6 +359,7 @@ sybase_ssl_cipher_suites: "TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384"  # Cipher suite
 sybase_ssl_trusted_cert_file: ""             # Source path to trusted.txt on controller (required)
 sybase_ssl_trusted_cert_dest: ""             # Override destination path (auto-selected if empty)
 sybase_ssl_libtcl_cfg_path: ""               # Override libtcl.cfg path (auto-selected if empty)
+sybase_ssl_filter_lib: "libsybfssl64.so"     # SSL filter library (varies by ASE version/platform)
 ```
 
 ### SSL Playbook Example
@@ -408,11 +411,18 @@ all:
 
 ### How SSL Works
 
-1. **Interfaces file**: Uses `ssl` protocol instead of `tcp` with the SSL port
-2. **libtcl.cfg**: Tells the Open Client library to load `libsybssl64.so` with the configured cipher suite
-3. **trusted.txt**: CA certificate file deployed to the delegate host for certificate validation
-4. **isql -X flag**: Tells isql to use the SSL module for the connection
-5. **SYBOCS_CFG**: Environment variable pointing to `libtcl.cfg` location
+On Linux, SSL is implemented as a **network filter** on top of TCP, not a separate protocol. The role configures four components:
+
+1. **Interfaces file**: Contains both standard `tcp` entries and `ssl`-filtered entries (e.g., `master tcp ether host port ssl`). The isql `-X` flag selects the ssl-filtered entry.
+2. **libtcl64.cfg**: Deployed to the standard OCS config path (`$SYBASE/$SYBASE_OCS/config/libtcl64.cfg`). Configures the `[FILTERS]` section to load the SSL library (`libsybfssl64.so` for ASE 16.x).
+3. **trusted.txt**: Server CA certificate file deployed to the delegate host for certificate validation.
+4. **isql -X flag**: Tells isql to prefer SSL-filtered entries from the interfaces file and use the SSL module.
+
+**Important implementation notes:**
+- The interfaces file must contain **both** tcp and ssl entries. An interfaces file with only ssl entries will fail.
+- The `libtcl64.cfg` must include `[DIRECTORY]`, `[SECURITY]`, `[FILTERS]`, and `[DEFAULT]` sections. Missing sections cause `Configuration section not found` errors.
+- The SSL filter library is `libsybfssl64.so` on ASE 16.x (FIPS-capable). Older versions may use `libsybssl64.so`. Override with `sybase_ssl_filter_lib` if needed.
+- SSL is only supported with SAP isql. FreeTDS tsql does not support SAP ASE SSL.
 
 ### SSL Troubleshooting
 
@@ -438,7 +448,7 @@ Error: SSL_CERT_INVALID
 
 #### SSL on FreeTDS (Not Supported)
 
-SSL is only supported with the SAP isql client. FreeTDS tsql does not support SAP ASE SSL natively. If SSL is enabled and only tsql is available, the role will log a warning.
+SSL is only supported with the SAP isql client. FreeTDS tsql does not support SAP ASE SSL natively. If SSL is enabled, ensure the SAP isql client is available on the execution host.
 
 ## Output
 
@@ -465,13 +475,24 @@ Results are saved as JSON files in `base_results_dir`:
 
 ## Interfaces File
 
-The role automatically generates a Sybase interfaces file for server connectivity:
+The role automatically generates a Sybase interfaces file for server connectivity.
 
+**Non-SSL:**
 ```
 # /opt/sybase/interfaces (generated)
 SYBASESVR
-    master tcp ether sybase.example.com 5000
     query tcp ether sybase.example.com 5000
+    master tcp ether sybase.example.com 5000
+```
+
+**SSL-enabled:**
+```
+# /opt/sybase/interfaces (generated) — note: both tcp and ssl entries required
+SYBASESVR
+    query tcp ether sybase.example.com 5000
+    master tcp ether sybase.example.com 5000
+    query tcp ether sybase.example.com 1063 ssl
+    master tcp ether sybase.example.com 1063 ssl
 ```
 
 ## Environment Setup

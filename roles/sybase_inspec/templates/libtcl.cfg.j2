@@ -1,7 +1,17 @@
 ; SAP ASE Open Client SSL driver configuration
 ; Deployed by sybase_inspec Ansible role
-[SSL]
-ssl = libsybssl64.so
-{% if sybase_ssl_cipher_suites | default('') %}
-CIPHER_SUITE = {{ sybase_ssl_cipher_suites }}
-{% endif %}
+;
+; Note: The ssl filter library name varies by platform and SDK version:
+;   libsybfssl64.so  - SAP ASE 16.x (64-bit, FIPS-capable)
+;   libsybfssl.so    - SAP ASE 16.x (32-bit, FIPS-capable)
+;   libsybssl64.so   - Older SAP ASE versions
+; Use sybase_ssl_filter_lib variable to override if needed.
+
+[DIRECTORY]
+
+[SECURITY]
+
+[FILTERS]
+ssl = {{ sybase_ssl_filter_lib | default('libsybfssl64.so') }}
+
+[DEFAULT]

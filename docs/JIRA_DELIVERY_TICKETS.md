@@ -3147,13 +3147,13 @@ The Sybase SME confirmed that SSL-enabled servers:
 
 ### Acceptance Criteria
 - [ ] New Ansible variables for SSL configuration (`sybase_ssl_enabled`, `sybase_ssl_port`, `sybase_ssl_cipher_suites`, `sybase_ssl_trusted_cert_file`)
-- [ ] Interfaces file template conditionally uses `ssl` protocol when SSL enabled
+- [x] Interfaces file template includes both tcp and ssl-filtered entries when SSL enabled
 - [ ] `libtcl.cfg` template created and deployed for SSL driver configuration
 - [ ] InSpec `sybase_session_local` resource supports `-X` flag via `ssl_enabled` option
 - [ ] InSpec profiles accept `ssl_enabled` input and pass it to the resource
 - [ ] Preflight checks use correct port (SSL port vs standard port) and add `-X` flag
 - [ ] SSL certificate (`trusted.txt`) and `libtcl.cfg` deployed to delegate host
-- [ ] `SYBOCS_CFG` environment variable set during InSpec execution for SSL
+- [x] SSL libtcl64.cfg deployed to standard OCS config path (SYBOCS_CFG env var removed — it breaks isql)
 - [ ] SSL-specific error detection: `SSL_HANDSHAKE_FAILED`, `SSL_CERT_INVALID`
 - [ ] Validation fails if `sybase_ssl_enabled=true` without `sybase_ssl_trusted_cert_file`
 - [ ] Terraform test infrastructure exposes port 1063 with SSL placeholder config
@@ -3173,7 +3173,7 @@ The Sybase SME confirmed that SSL-enabled servers:
 8. Add SSL parameter validation in `validate.yml`
 9. SSL-aware preflight checks in `preflight.yml`
 10. Deploy SSL config files in `setup.yml`
-11. Pass SSL input and `SYBOCS_CFG` env in `execute.yml`
+11. Pass SSL input in `execute.yml` (SYBOCS_CFG removed — deploy libtcl64.cfg to standard OCS path instead)
 12. Add SSL error messages in `vars/main.yml`
 13. Add SSL temp file cleanup in `cleanup.yml`
 14. Add Terraform port 1063 and NSG rules
@@ -3181,9 +3181,13 @@ The Sybase SME confirmed that SSL-enabled servers:
 
 ### Technical Notes
 - SSL is **isql-only**; FreeTDS tsql does not support SAP ASE SSL natively
-- On-prem environments may have read-only `/opt/sybase`; use `/tmp` paths with `SYBOCS_CFG` env var override
-- The `libtcl.cfg` file tells the Open Client library which SSL shared object to load and which cipher suites to use
+- On Linux, `ssl` is a **network filter** on tcp, not a separate protocol. Interfaces entries use `master tcp ether host port ssl` format.
+- The interfaces file **must** contain both tcp and ssl entries — isql `-X` flag selects the ssl-filtered entry. SSL-only interfaces files cause connection failures.
+- The `libtcl64.cfg` must include `[DIRECTORY]`, `[SECURITY]`, `[FILTERS]`, and `[DEFAULT]` sections. Missing sections cause `Configuration section not found` errors.
+- The SSL filter library is `libsybfssl64.so` on ASE 16.x (FIPS-capable). Older versions may use `libsybssl64.so`.
+- `SYBOCS_CFG` env var **should not** be used — it overrides the OCS config location and causes `Configuration section isql not found` errors. Deploy `libtcl64.cfg` to the standard OCS path instead.
 - `trusted.txt` contains the CA certificate chain for the Sybase server's SSL certificate
+- Verified locally against `datagrip/sybase:16.0` Docker image with SSL enabled (port 5002, self-signed cert)
 
 ### Labels
 `sybase-16`, `ssl`, `security`, `ansible`, `role-enhancement`
