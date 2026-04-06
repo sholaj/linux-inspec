@@ -1,0 +1,105 @@
+---
+# Compliance Scan Summary Playbook
+# =================================
+# Generates a consolidated summary report from all platform scan results.
+# Designed to run as the final node in the AAP2 Full Compliance Workflow.
+#
+# Usage:
+#   ansible-playbook test_playbooks/compliance_scan_summary.yml \
+#     -e "base_results_dir=/tmp/compliance_scans"
+#
+# In AAP2: Runs on the delegate host (or localhost) after all platform scans complete.
+
+- name: Generate Compliance Scan Summary
+  hosts: localhost
+  gather_facts: true
+  connection: local
+
+  vars:
+    base_results_dir: "{{ override_results_dir | default('/tmp/compliance_scans') }}"
+    summary_output_dir: "{{ base_results_dir }}/summary"
+    job_id: "{{ tower_job_id | default('local') }}"
+
+  tasks:
+    - name: Ensure summary output directory exists
+      ansible.builtin.file:
+        path: "{{ summary_output_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Find all JSON result files across platforms
+      ansible.builtin.find:
+        paths: "{{ base_results_dir }}"
+        patterns: "*_NIST_*.json"
+        recurse: true
+      register: all_result_files
+
+    - name: Find all skip reports across platforms
+      ansible.builtin.find:
+        paths: "{{ base_results_dir }}"
+        patterns: "SKIPPED_*.json"
+        recurse: true
+      register: all_skip_files
+
+    - name: Read result files
+      ansible.builtin.slurp:
+        src: "{{ item.path }}"
+      loop: "{{ all_result_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      register: result_contents
+      when: all_result_files.files | length > 0
+
+    - name: Read skip files
+      ansible.builtin.slurp:
+        src: "{{ item.path }}"
+      loop: "{{ all_skip_files.files }}"
+      loop_control:
+        label: "{{ item.path | basename }}"
+      register: skip_contents
+      when: all_skip_files.files | length > 0
+
+    - name: Generate consolidated summary
+      ansible.builtin.copy:
+        content: |
+          ╔═══════════════════════════════════════════════════════════════════╗
+          ║           DATABASE COMPLIANCE SCAN - CONSOLIDATED SUMMARY        ║
+          ╠═══════════════════════════════════════════════════════════════════╣
+          ║  Generated: {{ ansible_date_time.iso8601 }}
+          ║  Job ID:    {{ job_id }}
+          ║  Results:   {{ base_results_dir }}
+          ╠═══════════════════════════════════════════════════════════════════╣
+          ║  SCAN RESULTS
+          ║  ─────────────────────────────────────────────────────────────────
+          ║  Total result files:  {{ all_result_files.files | length }}
+          ║  Skipped databases:   {{ all_skip_files.files | length }}
+          ║
+          {% for platform in ['MSSQL', 'ORACLE', 'SYBASE', 'POSTGRES'] %}
+          ║  {{ platform }}:
+          ║    Scanned: {{ all_result_files.files | map(attribute='path') | select('search', platform) | list | length }}
+          ║    Skipped: {{ all_skip_files.files | map(attribute='path') | select('search', platform | lower) | list | length }}
+          {% endfor %}
+          ╠═══════════════════════════════════════════════════════════════════╣
+          {% if all_skip_files.files | length > 0 %}
+          ║  SKIPPED DATABASES
+          ║  ─────────────────────────────────────────────────────────────────
+          {% for skip in all_skip_files.files %}
+          ║    - {{ skip.path | basename }}
+          {% endfor %}
+          ╠═══════════════════════════════════════════════════════════════════╣
+          {% endif %}
+          ║  Result files location: {{ base_results_dir }}
+          ╚═══════════════════════════════════════════════════════════════════╝
+        dest: "{{ summary_output_dir }}/consolidated_summary_{{ ansible_date_time.epoch }}.txt"
+        mode: "0644"
+
+    - name: Display consolidated summary
+      ansible.builtin.debug:
+        msg: |
+          ═══════════════════════════════════════════════════════════════════
+           COMPLIANCE SCAN COMPLETE
+          ═══════════════════════════════════════════════════════════════════
+           Databases scanned:  {{ all_result_files.files | length }}
+           Databases skipped:  {{ all_skip_files.files | length }}
+           Summary saved to:   {{ summary_output_dir }}
+          ═══════════════════════════════════════════════════════════════════

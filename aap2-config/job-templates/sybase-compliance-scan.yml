@@ -43,8 +43,17 @@ job_template:
         default: "false"
         required: false
       - question_name: "Use SSH Tunnel"
-        question_description: "Connect via SSH tunnel to Sybase server"
+        question_description: "Connect via SSH tunnel to Sybase server (legacy mode)"
         variable: "sybase_use_ssh"
+        type: "multiplechoice"
+        choices:
+          - "true"
+          - "false"
+        default: "false"
+        required: false
+      - question_name: "Enable SSL/TLS"
+        question_description: "Use SSL/TLS encrypted connection to Sybase (requires SSL credential config)"
+        variable: "sybase_ssl_enabled"
         type: "multiplechoice"
         choices:
           - "true"

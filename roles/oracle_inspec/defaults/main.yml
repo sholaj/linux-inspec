@@ -44,6 +44,7 @@ NLS_LANG: "AMERICAN_AMERICA.AL32UTF8"
 # Error handling
 create_error_reports: true
 continue_on_errors: true
+cleanup_temp_files: true
 
 # Pre-flight Check Configuration
 # ==============================
