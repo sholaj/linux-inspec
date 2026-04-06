@@ -60,6 +60,7 @@ sybase_isql_bin: ""  # Leave empty to auto-detect, or set full path e.g. "/opt/s
 # Error handling
 create_error_reports: true
 continue_on_errors: true
+cleanup_temp_files: true
 
 # Pre-flight Check Configuration
 # ==============================

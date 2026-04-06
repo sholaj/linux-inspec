@@ -1,6 +1,6 @@
 {
   "name": "Sybase Database Credential",
-  "description": "Credentials for Sybase/SAP ASE database compliance scanning with InSpec (includes optional SSH tunnel)",
+  "description": "Credentials for Sybase/SAP ASE database compliance scanning with InSpec (includes optional SSH tunnel and SSL/TLS)",
   "kind": "cloud",
   "inputs": {
     "fields": [
@@ -16,6 +16,26 @@
         "label": "Database Password",
         "secret": true,
         "help_text": "Password for the Sybase scan account"
+      },
+      {
+        "id": "ssl_enabled",
+        "type": "boolean",
+        "label": "SSL/TLS Enabled",
+        "default": false,
+        "help_text": "Enable SSL/TLS encrypted connection to Sybase server"
+      },
+      {
+        "id": "ssl_port",
+        "type": "string",
+        "label": "SSL Port",
+        "default": "1063",
+        "help_text": "Sybase SSL listener port (default: 1063)"
+      },
+      {
+        "id": "ssl_trusted_cert_file",
+        "type": "string",
+        "label": "Trusted Certificate File",
+        "help_text": "Path to CA certificate file on Ansible controller (required when SSL enabled)"
       }
     ],
     "required": ["username", "password"]
@@ -27,7 +47,10 @@
     },
     "extra_vars": {
       "sybase_username": "{{ username }}",
-      "sybase_password": "{{ password }}"
+      "sybase_password": "{{ password }}",
+      "sybase_ssl_enabled": "{{ ssl_enabled | default(false) }}",
+      "sybase_ssl_port": "{{ ssl_port | default('1063') }}",
+      "sybase_ssl_trusted_cert_file": "{{ ssl_trusted_cert_file | default('') }}"
     }
   }
 }

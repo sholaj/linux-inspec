@@ -1,0 +1,28 @@
+---
+# AAP2 Job Template Configuration: Compliance Scan Summary
+# Referenced by the Full Database Compliance Workflow as the final node.
+# Collects results from all platform scans and generates a consolidated report.
+
+job_template:
+  name: "Compliance Scan Summary"
+  description: "Generate consolidated summary report from all database compliance scans"
+  job_type: run
+  inventory: "Database Compliance Inventory"
+  project: "CHF"
+  playbook: "test_playbooks/compliance_scan_summary.yml"
+  execution_environment: "db-compliance-ee"
+
+  credentials:
+    - name: "Delegate Host SSH Key"
+      credential_type: "Machine"
+    # Optional - uncomment to forward summary to Splunk:
+    # - name: "Splunk HEC"
+    #   credential_type: "Splunk HEC Credential"
+
+  extra_vars:
+    base_results_dir: "/tmp/compliance_scans"
+
+  limit: "localhost"
+  verbosity: 0
+  forks: 1
+  timeout: 300
