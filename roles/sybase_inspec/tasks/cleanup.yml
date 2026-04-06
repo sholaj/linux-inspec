@@ -92,7 +92,6 @@
     state: absent
   loop:
     - /tmp/sybase_trusted.txt
-    - /tmp/sybase_libtcl.cfg
   when:
     - preflight_passed
     - sybase_ssl_enabled | default(false) | bool

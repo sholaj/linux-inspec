@@ -68,8 +68,10 @@
       cat > "$TEMP_IFACES" << 'IFACES_EOF'
     {{ sybase_service }}
     {% if sybase_ssl_enabled | default(false) | bool %}
-    	master ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
-    	query ssl ether {{ sybase_server }} {{ sybase_ssl_port }}
+    	master tcp ether {{ sybase_server }} {{ sybase_port }}
+    	query tcp ether {{ sybase_server }} {{ sybase_port }}
+    	master tcp ether {{ sybase_server }} {{ sybase_ssl_port }} ssl
+    	query tcp ether {{ sybase_server }} {{ sybase_ssl_port }} ssl
     {% else %}
     	master tcp ether {{ sybase_server }} {{ sybase_port }}
     	query tcp ether {{ sybase_server }} {{ sybase_port }}
@@ -81,9 +83,14 @@
       # The permanent file is deployed later by setup.yml.
       TEMP_LIBTCL=$(mktemp /tmp/sybase_preflight_libtcl.XXXXXX)
       cat > "$TEMP_LIBTCL" << 'LIBTCL_EOF'
-    [SSL]
-    ssl = libsybssl64.so
-    CIPHER_SUITE = {{ sybase_ssl_cipher_suites | default('TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384') }}
+    [DIRECTORY]
+
+    [SECURITY]
+
+    [FILTERS]
+    ssl = {{ sybase_ssl_filter_lib | default('libsybfssl64.so') }}
+
+    [DEFAULT]
     LIBTCL_EOF
       export SYBOCS_CFG="$TEMP_LIBTCL"
     {% endif %}

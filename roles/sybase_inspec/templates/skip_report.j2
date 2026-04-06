@@ -4,7 +4,7 @@
   "version": "{{ sybase_version }}",
   "server": {
     "host": "{{ sybase_server }}",
-    "port": {{ sybase_port }},
+    "port": {{ _effective_port | default(sybase_port) }},
     "database": "{{ sybase_database }}",
     "service": "{{ sybase_service | default('') }}"
   },
