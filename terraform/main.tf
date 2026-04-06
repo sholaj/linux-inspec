@@ -303,20 +303,28 @@ MYSYBASE
 INTERFACES
 
 
-# Add SSL interfaces entry
+# Add SSL entries to interfaces (ssl is a filter on tcp, not a separate protocol)
 cat >> /opt/sybase/interfaces << 'INTERFACES_SSL'
+
 MYSYBASE_SSL
-	query ssl ether 10.0.2.5 1063
-	master ssl ether 10.0.2.5 1063
+	query tcp ether 10.0.2.5 5000
+	master tcp ether 10.0.2.5 5000
+	query tcp ether 10.0.2.5 1063 ssl
+	master tcp ether 10.0.2.5 1063 ssl
 INTERFACES_SSL
 
 # Create SSL configuration directory and files
 mkdir -p /opt/sybase/OCS_16_0/config
-cat > /opt/sybase/OCS_16_0/config/libtcl.cfg << 'LIBTCL'
+cat > /opt/sybase/OCS_16_0/config/libtcl64.cfg << 'LIBTCL'
 ; SAP ASE Open Client SSL driver configuration
-[SSL]
-ssl = libsybssl64.so
-CIPHER_SUITE = TLS_ECDHE_RSA_WITH_AES256_GCM_SHA384
+[DIRECTORY]
+
+[SECURITY]
+
+[FILTERS]
+ssl = libsybfssl64.so
+
+[DEFAULT]
 LIBTCL
 
 # Create placeholder trusted.txt (replace with real CA cert for SSL testing)
