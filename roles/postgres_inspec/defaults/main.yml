@@ -15,6 +15,11 @@ postgres_version: "15"
 # - "<hostname>": Run InSpec on remote delegate host via SSH
 inspec_delegate_host: "localhost"
 
+# Controls source: path to the imported inspec_cis_database role
+# AAP2: auto-resolved from requirements_roles
+# Local: ansible-galaxy role install -r requirements.yml -p requirements_roles/
+inspec_controls_role_path: ""
+
 # Results Configuration
 inspec_results_dir: "/tmp/inspec_postgres_results"
 generate_summary_report: true

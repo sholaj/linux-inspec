@@ -36,18 +36,19 @@
     - name: Display scan configuration
       ansible.builtin.debug:
         msg: |
-          🚀 Multi-Platform Database Compliance Scans Starting
+          Multi-Platform Database Compliance Scans Starting
           ===================================================
           Total hosts: {{ ansible_play_hosts | length }}
-          MSSQL servers: {{ groups.get('mssql_databases', []) | length }}
-          Oracle databases: {{ groups.get('oracle_databases', []) | length }}
-          Sybase databases: {{ groups.get('sybase_databases', []) | length }}
+          MSSQL servers: {{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'mssql') | list | length }}
+          Oracle databases: {{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'oracle') | list | length }}
+          Sybase databases: {{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'sybase') | list | length }}
+          PostgreSQL databases: {{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'postgres') | list | length }}
           Results directory: {{ base_results_dir }}
           Timestamp: {{ scan_timestamp }}
           Debug mode: {{ enable_debug }}
           Batch size: {{ batch_size | default(5) }}
       run_once: true
-      when: enable_debug
+      when: enable_debug | default(false) | bool
 
     - name: Check if InSpec is installed
       ansible.builtin.command: which inspec
@@ -86,7 +87,7 @@
           Version: {{ sybase_version }}
           SSH: {{ sybase_use_ssh | default(true) | ternary('Enabled', 'Disabled') }}
           {% endif %}
-      when: enable_debug
+      when: enable_debug | default(false) | bool
 
     # MSSQL Server Scanning (server-level, not database-level)
     - name: Execute MSSQL InSpec compliance scan
@@ -121,6 +122,17 @@
         inspec_command_timeout: "{{ inspec_timeout }}"
       when: database_platform == 'sybase'
 
+    # PostgreSQL Database Scanning
+    - name: Execute PostgreSQL InSpec compliance scan
+      ansible.builtin.include_role:
+        name: postgres_inspec
+      vars:
+        inspec_results_dir: "{{ base_results_dir }}/{{ postgres_server | replace('.', '_') }}_{{ postgres_database }}_{{ scan_timestamp }}"
+        inspec_debug_mode: "{{ enable_debug | default(false) }}"
+        generate_summary_report: true
+        inspec_command_timeout: "{{ inspec_timeout }}"
+      when: database_platform == 'postgres'
+
   post_tasks:
     - name: Generate consolidated report
       block:
@@ -136,9 +148,10 @@
         - name: Generate platform summary
           ansible.builtin.set_fact:
             platform_summary:
-              mssql_count: "{{ groups.get('mssql_databases', []) | length }}"
-              oracle_count: "{{ groups.get('oracle_databases', []) | length }}"
-              sybase_count: "{{ groups.get('sybase_databases', []) | length }}"
+              mssql_count: "{{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'mssql') | list | length }}"
+              oracle_count: "{{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'oracle') | list | length }}"
+              sybase_count: "{{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'sybase') | list | length }}"
+              postgres_count: "{{ ansible_play_hosts | map('extract', hostvars, 'database_platform') | select('equalto', 'postgres') | list | length }}"
               total_hosts: "{{ ansible_play_hosts | length }}"
               total_results: "{{ json_files.files | length }}"
           run_once: true
@@ -152,19 +165,19 @@
               MSSQL servers scanned: {{ platform_summary.mssql_count }}
               Oracle databases scanned: {{ platform_summary.oracle_count }}
               Sybase databases scanned: {{ platform_summary.sybase_count }}
+              PostgreSQL databases scanned: {{ platform_summary.postgres_count }}
               Total hosts: {{ platform_summary.total_hosts }}
               Result files generated: {{ platform_summary.total_results }}
               Results location: {{ base_results_dir }}
-
-              Platform-specific file patterns:
-              - MSSQL: MSSQL_NIST_*_*.json (server-level scans)
-              - Oracle: ORACLE_NIST_*_*.json
-              - Sybase: SYBASE_NIST_*_*.json
+              Business Unit: {{ ssc_sn_bu | default('N/A') }}
+              Environment: {{ ssc_sn_environment | default('N/A') }}
+              Region: {{ ssc_sn_region | default('N/A') }}
 
               To view results by platform:
               find {{ base_results_dir }}/ -name "MSSQL_NIST_*.json"
               find {{ base_results_dir }}/ -name "ORACLE_NIST_*.json"
               find {{ base_results_dir }}/ -name "SYBASE_NIST_*.json"
+              find {{ base_results_dir }}/ -name "POSTGRES_NIST_*.json"
               =====================================
           run_once: true
           delegate_to: localhost

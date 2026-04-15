@@ -124,3 +124,14 @@ output "rdp_command" {
   description = "RDP connection info for Windows MSSQL VM"
   value       = var.deploy_windows_mssql ? "xfreerdp /u:${var.windows_admin_username} /v:${azurerm_public_ip.windows_mssql[0].ip_address}" : "Not deployed"
 }
+
+# Automation Runbook Outputs
+output "automation_account_name" {
+  description = "Name of the Azure Automation Account"
+  value       = azurerm_automation_account.main.name
+}
+
+output "runbook_schedule_info" {
+  description = "Nightly shutdown schedule details"
+  value       = "Runbook '${azurerm_automation_runbook.stop_resources.name}' runs daily at 9 PM ${var.runbook_timezone}"
+}

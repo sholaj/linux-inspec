@@ -1,0 +1,14 @@
+---
+# Ansible Galaxy Requirements - Database Compliance Scanning
+#
+# Install roles:
+#   ansible-galaxy role install -r requirements.yml -p requirements_roles/
+#
+# In AAP2, these are installed automatically when the project syncs.
+
+roles:
+  # CIS InSpec database profiles (MSSQL, Oracle, Sybase, PostgreSQL)
+  - name: cis
+    src: git+ssh://git@github.com/sholaj/inspec_cis_database.git
+    version: main
+    scm: git

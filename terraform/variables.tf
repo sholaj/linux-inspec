@@ -164,3 +164,10 @@ variable "windows_vm_size" {
   type        = string
   default     = "Standard_B2s"
 }
+
+# Automation Runbook Variables
+variable "runbook_timezone" {
+  description = "Timezone for the nightly shutdown schedule (e.g. 'America/New_York', 'Europe/London', 'UTC')"
+  type        = string
+  default     = "America/New_York"
+}

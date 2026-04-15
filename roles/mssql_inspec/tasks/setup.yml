@@ -3,10 +3,30 @@
 # Control files are copied ONCE per version to a fixed path, then reused
 # This avoids redundant copies when scanning multiple hosts
 
-# Set fixed paths (deterministic, not temp)
+# Resolve controls path: requirements role (new) or embedded files (legacy fallback)
+- name: Resolve controls role path
+  ansible.builtin.set_fact:
+    _controls_role_path: >-
+      {{ inspec_controls_role_path
+         | default(
+             (lookup('env', 'AWX_PRIVATE_DATA_DIR') + '/requirements_roles/cis')
+             if lookup('env', 'AWX_PRIVATE_DATA_DIR') != ''
+             else (playbook_dir + '/../requirements_roles/cis')
+           )
+      }}
+
+- name: Check if controls exist in requirements role
+  ansible.builtin.stat:
+    path: "{{ _controls_role_path }}/files/profiles/ssc-cis-mssql{{ mssql_version }}-1.0.0-1/inspec.yml"
+  register: _requirements_controls
+  delegate_to: localhost
+
 - name: Set control paths
   ansible.builtin.set_fact:
-    _local_controls_path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
+    _local_controls_path: >-
+      {{ _controls_role_path + '/files/profiles/ssc-cis-mssql' + mssql_version + '-1.0.0-1'
+         if _requirements_controls.stat.exists
+         else role_path + '/files/MSSQL' + mssql_version + '_ruby' }}
     _remote_controls_path: "/tmp/inspec_mssql_{{ mssql_version }}"
 
 # Extract CIS benchmark version from profile metadata

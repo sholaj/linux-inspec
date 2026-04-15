@@ -7,6 +7,11 @@ oracle_port: 1521
 oracle_version: "19c"
 oracle_password: ""  # AAP2 injects via extra vars (single credential for all DBs with RBAC)
 
+# Controls source: path to the imported inspec_cis_database role
+# AAP2: auto-resolved from requirements_roles
+# Local: ansible-galaxy role install -r requirements.yml -p requirements_roles/
+inspec_controls_role_path: ""
+
 # Default paths and directories
 base_results_dir: "/tmp/compliance_scans"
 oracle_controls_base_dir: "{{ role_path }}/files"

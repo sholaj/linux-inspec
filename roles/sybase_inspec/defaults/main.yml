@@ -15,6 +15,11 @@ sybase_ssh_user: "oracle"
 sybase_ssh_port: 22
 sybase_ssh_key_path: "~oracle/.ssh/id_rsa"
 
+# Controls source: path to the imported inspec_cis_database role
+# AAP2: auto-resolved from requirements_roles
+# Local: ansible-galaxy role install -r requirements.yml -p requirements_roles/
+inspec_controls_role_path: ""
+
 # Default paths and directories
 base_results_dir: "/tmp/compliance_scans"
 sybase_controls_base_dir: "{{ role_path }}/files"
