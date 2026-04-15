@@ -1,5 +1,15 @@
 ---
 # AAP2 Job Template Configuration: Multi-Platform Compliance Scan
+#
+# PROJECT REQUIREMENTS:
+#   This project uses requirements.yml to pull InSpec profiles from the
+#   inspec_cis_database repository. AAP2 resolves these at project sync.
+#   Profiles are installed to $AWX_PRIVATE_DATA_DIR/requirements_roles/cis/
+#
+# INVENTORY:
+#   Uses BU-based inventory from oar_tower_inventories repository.
+#   Each host must have a 'database_platform' variable (mssql/oracle/sybase/postgres).
+#   The playbook conditionally includes the appropriate role per host.
 
 job_template:
   name: "Multi-Platform Compliance Scan"
@@ -31,7 +41,8 @@ job_template:
     generate_summary_report: true
     cleanup_temp_files: true
 
-  # No limit - runs against all database groups
+  # No limit - runs against all hosts; database_platform determines the role
+  # To scan a specific BU: use limit "db_corp" or "db_uatcorp"
   verbosity: 0
   forks: 5
   timeout: 7200  # 2 hours for full scan
@@ -41,6 +52,19 @@ job_template:
     name: "Multi-Platform Scan Options"
     description: "Configure compliance scan options for all platforms"
     spec:
+      - question_name: "Business Unit"
+        question_description: "Limit scan to a specific business unit (leave blank for all)"
+        variable: "limit_bu"
+        type: "multiplechoice"
+        choices:
+          - ""
+          - "db_corp"
+          - "db_uatcorp"
+          - "db_imswestuat"
+          - "db_imswestprod"
+          - "db_crdit"
+        default: ""
+        required: false
       - question_name: "Enable Debug Mode"
         question_description: "Show detailed scan progress and InSpec output"
         variable: "inspec_debug_mode"

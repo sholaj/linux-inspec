@@ -95,6 +95,9 @@ terraform/.terraform.lock.hcl
 # Ansible logs
 logs/
 
+# Galaxy-installed roles (pulled via requirements.yml)
+requirements_roles/
+
 # Vault password
 .vaultpass
 test_results/

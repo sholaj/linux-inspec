@@ -1,11 +1,23 @@
 ---
 # AAP2 Compatible Inventory for Database Compliance Scanning
-# This is an example inventory - generate your own using the inventory converter:
-#   ansible-playbook inventory_converter/convert_flatfile_to_inventory.yml \
-#     -e "flatfile_input=databases.txt" \
-#     -e "inventory_output=inventory.yml"
 #
-# Credentials are NOT stored in this inventory - they are injected by AAP2 Custom Credentials
+# INVENTORY STRUCTURE:
+#   Production inventories are stored in the oar_tower_inventories repository,
+#   organized by business unit (CORP, UATCORP, IMSWESTUAT, IMSWESTPROD, CRDIT).
+#   This file is an example template showing the required format.
+#
+# KEY CHANGES (State Street workflow adoption):
+#   - Groups are BU-based (db_corp, db_uatcorp) not technology-based (mssql_databases)
+#   - Each host has 'database_platform' variable (mssql/oracle/sybase/postgres)
+#   - Group vars include ssc_sn_environment, ssc_sn_region, ssc_sn_bu
+#   - Playbooks use database_platform to determine which role to apply
+#
+# CREDENTIALS:
+#   NOT stored in this inventory - they are injected by AAP2 Custom Credentials
+#
+# CONTROLS:
+#   InSpec profiles are pulled from the inspec_cis_database repository via
+#   requirements.yml. AAP2 resolves them at project sync time.
 
 all:
   vars:
@@ -21,98 +33,95 @@ all:
     delegate_hosts:
       hosts:
         inspec-runner:
-          ansible_host: 10.0.1.4
+          ansible_host: "[DELEGATE_HOST]"
           ansible_user: azureuser
           ansible_connection: ssh
           ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
 
-    # MSSQL Databases
-    # Note: MSSQL is scanned at server level (one entry per server:port)
-    mssql_databases:
+    # =========================================================================
+    # CORP Business Unit
+    # =========================================================================
+    db_corp:
+      vars:
+        ssc_sn_environment: test
+        ssc_sn_region: na
+        ssc_sn_bu: corp
+        ansible_connection: local
+        inspec_delegate_host: ""  # Empty or "localhost" = run on AAP2 execution node
+        # Credentials injected by AAP2 Custom Credentials:
+        # mssql_username, mssql_password, oracle_username, oracle_password, etc.
       hosts:
-        mssql_prod_01:
-          mssql_server: 10.0.2.4
+        # MSSQL Servers (scanned at server level)
+        mssql_corp_01:
+          database_platform: mssql
+          mssql_server: "[DB_SERVER].example.internal"
           mssql_port: 1433
           mssql_version: "2019"
           mssql_database: master
-          database_platform: mssql
-      vars:
-        ansible_connection: local
-        inspec_delegate_host: ""  # Empty or "localhost" = run on AAP2 execution node
-        inspec_results_dir: /tmp/compliance_scans/mssql
-        # mssql_username: injected by AAP2 Custom Credential
-        # mssql_password: injected by AAP2 Custom Credential
 
-    # Oracle Databases
-    # Note: Oracle is scanned per database/service
-    oracle_databases:
-      hosts:
-        oracle_prod_01:
-          oracle_server: 10.0.2.6
+        # Oracle Databases (scanned per database/service)
+        oracle_corp_01:
+          database_platform: oracle
+          oracle_server: "[DB_SERVER].example.internal"
           oracle_port: 1521
           oracle_service: ORCLCDB
           oracle_database: ORCLCDB
-          oracle_version: "19c"
-          database_platform: oracle
-      vars:
-        ansible_connection: local
-        inspec_delegate_host: ""
-        inspec_results_dir: /tmp/compliance_scans/oracle
-        # oracle_username: injected by AAP2 Custom Credential
-        # oracle_password: injected by AAP2 Custom Credential
+          oracle_version: "19"
 
-    # Sybase Databases
-    # Note: Sybase is scanned per database
-    # SSL is configured per-host when sybase_ssl_enabled: true
-    sybase_databases:
-      hosts:
-        sybase_prod_01:
-          sybase_server: 10.0.2.5
+        # Sybase Databases (scanned per database)
+        sybase_corp_01:
+          database_platform: sybase
+          sybase_server: "[DB_SERVER].example.internal"
           sybase_port: 5000
           sybase_service: MYSYBASE
           sybase_database: master
           sybase_version: "16"
-          database_platform: sybase
           sybase_use_ssh: false
-        # Example: SSL-enabled Sybase host
-        # sybase_prod_02_ssl:
-        #   sybase_server: 10.0.2.5
-        #   sybase_port: 5000
-        #   sybase_service: MYSYBASE_SSL
-        #   sybase_database: master
-        #   sybase_version: "16"
-        #   database_platform: sybase
-        #   sybase_ssl_enabled: true
-        #   sybase_ssl_port: 1063
-        #   sybase_ssl_trusted_cert_file: "files/sybase_trusted.txt"
-      vars:
-        ansible_connection: local
-        inspec_delegate_host: ""  # Empty or "localhost" = run on AAP2 execution node
-        inspec_results_dir: /tmp/compliance_scans/sybase
-        # sybase_username: injected by AAP2 Custom Credential
-        # sybase_password: injected by AAP2 Custom Credential
 
-    # PostgreSQL Databases
-    # Note: PostgreSQL is scanned per database
-    postgres_databases:
-      hosts:
-        postgres_prod_01:
-          postgres_server: 10.0.2.4
+        # PostgreSQL Databases (scanned per database)
+        postgres_corp_01:
+          database_platform: postgres
+          postgres_server: "[DB_SERVER].example.internal"
           postgres_port: 5432
           postgres_database: testdb
           postgres_version: "15"
-          database_platform: postgres
+
+    # =========================================================================
+    # UATCORP Business Unit
+    # =========================================================================
+    db_uatcorp:
       vars:
+        ssc_sn_environment: test
+        ssc_sn_region: na
+        ssc_sn_bu: uatcorp
         ansible_connection: local
         inspec_delegate_host: ""
-        inspec_results_dir: /tmp/compliance_scans/postgres
-        # postgres_username: injected by AAP2 Custom Credential
-        # postgres_password: injected by AAP2 Custom Credential
+      hosts:
+        mssql_uatcorp_01:
+          database_platform: mssql
+          mssql_server: "[DB_SERVER].example.internal"
+          mssql_port: 1433
+          mssql_version: "2022"
+          mssql_database: master
 
-    # Combined group for multi-platform scans
-    all_databases:
+    # =========================================================================
+    # Legacy compatibility: technology-based groups (deprecated)
+    # These groups reference the BU groups above for backward compatibility
+    # with existing job templates during migration. Remove after full rollout.
+    # =========================================================================
+    mssql_databases:
       children:
-        mssql_databases:
-        oracle_databases:
-        sybase_databases:
-        postgres_databases:
+        db_corp:
+        db_uatcorp:
+
+    oracle_databases:
+      children:
+        db_corp:
+
+    sybase_databases:
+      children:
+        db_corp:
+
+    postgres_databases:
+      children:
+        db_corp:

@@ -1,416 +1,170 @@
-# Database Compliance Scanning with Ansible and InSpec
+# Database Compliance Scanning — Execution Repository
 
-Automated compliance scanning solution for MSSQL, Oracle, and Sybase databases using Ansible and InSpec. Supports multi-region architectures with jump servers and delegate execution patterns.
+Automated CIS benchmark compliance scanning for MSSQL, Oracle, Sybase, and PostgreSQL databases using Ansible and InSpec. Part of a 3-repository architecture following State Street enterprise patterns.
 
-## Overview
+## Repository Architecture
 
-This project provides production-ready Ansible roles and playbooks for executing compliance scans on database servers across multiple platforms. It implements delegate execution patterns to support:
+| Repository | Purpose | Contents |
+|------------|---------|----------|
+| **linux-inspec** (this repo) | Execution roles and playbooks | Ansible roles, playbooks, AAP2 config, Terraform test infra |
+| **inspec_cis_database** | CIS InSpec profiles | 15 profiles across 4 platforms, organized as `cis/files/profiles/` |
+| **oar_tower_inventories** | Inventory by business unit | BU-based inventory files (CORP, UATCORP, IMSWESTUAT, IMSWESTPROD, CRDIT) |
 
-- Single region deployments (direct connection)
-- Multi-region deployments (with jump servers/bastions)
-- Ansible Automation Platform (AAP) mesh architectures
-- Non-interactive SSH sessions with proper environment variable loading
+Profiles are pulled from `inspec_cis_database` via `requirements.yml`. Inventories are stored in `oar_tower_inventories` organized by business unit and environment branch.
 
 ## Project Structure
 
 ```
-.
-├── ansible.cfg                    # Ansible configuration
-├── inventories/                   # Inventory files by environment
-│   ├── production/
-│   │   └── hosts.yml             # Production database inventory
-│   └── staging/
-│       └── hosts.yml             # Staging/test database inventory
-├── roles/                        # Ansible roles for database scanning
-│   ├── mssql_inspec/            # MSSQL compliance scanning role
-│   │   ├── defaults/            # Default variables
-│   │   ├── tasks/               # Task files
-│   │   ├── files/               # InSpec control files
-│   │   └── templates/           # Report templates
-│   ├── oracle_inspec/           # Oracle compliance scanning role
-│   │   ├── defaults/
-│   │   ├── tasks/
-│   │   ├── files/
-│   │   └── templates/
-│   └── sybase_inspec/           # Sybase compliance scanning role
-│       ├── defaults/
-│       ├── tasks/
-│       ├── files/
-│       └── templates/
-├── test_playbooks/              # Test and validation playbooks
-│   ├── test_delegate_execution_flow.yml
-│   ├── test_delegate_connection.yml
-│   ├── test_mssql_implementation.yml
-│   ├── run_compliance_scans.yml
-│   ├── run_mssql_inspec.yml
-│   ├── run_oracle_inspec.yml
-│   └── run_sybase_inspec.yml
-├── docs/                        # Documentation
-├── scripts/                     # Utility scripts
-├── convert_flatfile_to_inventory.py  # Inventory conversion tool
-├── LICENSE
-└── README.md                    # This file
+linux-inspec/
+├── requirements.yml               # Pulls CIS profiles from inspec_cis_database
+├── roles/
+│   ├── mssql_inspec/              # MSSQL server-level scanning (8 versions: 2008-2022)
+│   ├── oracle_inspec/             # Oracle database-level scanning (4 versions: 11-19)
+│   ├── sybase_inspec/             # Sybase/SAP ASE scanning (2 versions: 15-16)
+│   └── postgres_inspec/           # PostgreSQL scanning (version 15)
+├── aap2-config/                   # AAP2 configuration templates
+│   ├── credential-types/          # Custom credential type definitions (5 types)
+│   ├── inventories/               # AAP2 inventory examples (BU-based)
+│   ├── job-templates/             # Per-platform and multi-platform scan templates
+│   └── workflows/                 # Full compliance workflow definition
+├── test_playbooks/                # Playbooks for scanning and testing
+├── terraform/                     # Azure test infrastructure
+├── inventories/                   # Local test inventories
+├── inventory_converter/           # CMDB/flat file to inventory converter
+└── docs/                          # Documentation
 ```
-
-## Features
-
-### Multi-Platform Support
-- **MSSQL**: Server-level compliance scanning (all databases on server)
-- **Oracle**: Database-level compliance scanning
-- **Sybase**: Database-level compliance scanning with SSH support
-
-### Execution Patterns
-- **Delegate Execution**: InSpec runs on delegate host, connects to databases remotely
-- **Direct Execution**: InSpec runs locally (for testing)
-- **Jump Server Support**: Transparent jump server/bastion integration
-
-### Architecture Support
-- Single region (no jump servers)
-- Multi-region (with jump servers)
-- AAP Automation Mesh
-- Non-interactive SSH sessions with environment variable loading
-
-### Enterprise Features
-- Vault-encrypted credential management
-- Splunk integration for results
-- Batch execution with configurable concurrency
-- Comprehensive error handling and reporting
-- Check mode (dry-run) support
-- Retry logic for transient failures
 
 ## Quick Start
 
 ### Prerequisites
 
-1. **Ansible**: Version 2.9 or higher
-   ```bash
-   pip install ansible
-   ```
+- Ansible 2.14+
+- InSpec 5.x (on delegate host or execution environment)
+- Database client tools: `sqlcmd` (MSSQL), `sqlplus` (Oracle), `isql` (Sybase), `psql` (PostgreSQL)
 
-2. **InSpec**: Installed on delegate host(s)
-   ```bash
-   curl https://omnitruck.chef.io/install.sh | sudo bash -s -- -P inspec
-   ```
+### Setup
 
-3. **Database Client Tools**: Installed on delegate host(s)
-   - MSSQL: `sqlcmd` (MSSQL tools)
-   - Oracle: `sqlplus` (Oracle client)
-   - Sybase: `isql` (Sybase client)
-
-### Installation
-
-1. Clone the repository:
-   ```bash
-   git clone <repository-url>
-   cd linux-inspec
-   ```
-
-2. Configure inventory:
-   ```bash
-   # Edit hosts.yml with your database server details
-   vi inventories/production/hosts.yml
-   ```
-
-3. Set up vault for credentials:
-   ```bash
-   echo "your_vault_password" > .vaultpass
-   chmod 600 .vaultpass
-   ansible-vault create inventories/production/vault.yml
-   ```
-
-4. Add database credentials to vault:
-   ```yaml
-   ---
-   vault_sqlserver01_password: "secure_password"
-   vault_oracledb01_password: "secure_password"
-   vault_sybasedb01_password: "secure_password"
-   ```
-
-### Running Tests
-
-Before running production scans, validate your configuration:
-
-1. **Test Delegate Execution Pattern**:
-   ```bash
-   ansible-playbook -i inventories/production test_playbooks/test_delegate_execution_flow.yml
-   ```
-
-2. **Test Connection Patterns**:
-   ```bash
-   ansible-playbook -i inventories/production test_playbooks/test_delegate_connection.yml
-   ```
-
-3. **Test MSSQL Implementation**:
-   ```bash
-   ansible-playbook -i inventories/production test_playbooks/test_mssql_implementation.yml --check
-   ```
-
-### Running Compliance Scans
-
-#### All Platforms
 ```bash
-ansible-playbook -i inventories/production test_playbooks/run_compliance_scans.yml \
-  -e @inventories/production/vault.yml --vault-password-file .vaultpass
+# 1. Clone and install profile dependencies
+git clone <repository-url>
+cd linux-inspec
+ansible-galaxy role install -r requirements.yml -p requirements_roles/
+
+# 2. Run a compliance scan (using BU-based inventory)
+ansible-playbook -i <inventory-file> test_playbooks/run_compliance_scans.yml \
+  -e @vault.yml --vault-password-file .vaultpass
 ```
 
-#### MSSQL Only
-```bash
-ansible-playbook -i inventories/production test_playbooks/run_mssql_inspec.yml \
-  -e @inventories/production/vault.yml --vault-password-file .vaultpass
-```
+### Inventory Format
 
-#### Oracle Only
-```bash
-ansible-playbook -i inventories/production test_playbooks/run_oracle_inspec.yml \
-  -e @inventories/production/vault.yml --vault-password-file .vaultpass
-```
-
-#### Sybase Only
-```bash
-ansible-playbook -i inventories/production test_playbooks/run_sybase_inspec.yml \
-  -e @inventories/production/vault.yml --vault-password-file .vaultpass
-```
-
-#### With Extra Options
-```bash
-# Limit to specific hosts
-ansible-playbook -i inventories/production test_playbooks/run_compliance_scans.yml \
-  --limit "sqlserver01" -e @inventories/production/vault.yml --vault-password-file .vaultpass
-
-# Enable debug mode
-ansible-playbook -i inventories/production test_playbooks/run_compliance_scans.yml \
-  -e "enable_debug=true" -e @inventories/production/vault.yml --vault-password-file .vaultpass
-
-# Custom batch size
-ansible-playbook -i inventories/production test_playbooks/run_compliance_scans.yml \
-  -e "batch_size=10" -e @inventories/production/vault.yml --vault-password-file .vaultpass
-
-# Check mode (dry-run)
-ansible-playbook -i inventories/production test_playbooks/run_compliance_scans.yml \
-  --check -e @inventories/production/vault.yml --vault-password-file .vaultpass
-```
-
-## Configuration
-
-### Inventory Configuration
-
-Example inventory structure for mixed platforms:
+Inventories use business-unit groups with `database_platform` per host:
 
 ```yaml
 all:
-  vars:
-    base_results_dir: "/var/compliance_results"
-    enable_debug: false
-
   children:
-    delegate_hosts:
-      hosts:
-        inspec-delegate-host:
-          ansible_host: delegate.example.com
-          ansible_connection: ssh
-
-    mssql_databases:
+    db_corp:                        # BU-based group (not technology-based)
       vars:
-        database_platform: "mssql"
-        inspec_delegate_host: inspec-delegate-host
+        ssc_sn_environment: test    # Required: environment identifier
+        ssc_sn_region: na           # Required: region identifier
+        ssc_sn_bu: corp             # Required: business unit identifier
+        ansible_connection: local
       hosts:
-        sqlserver01:
-          ansible_host: sqlserver01.example.com
-          mssql_server: sqlserver01.example.com
+        DBSERVER01_1433:
+          database_platform: mssql  # Determines which role to apply
+          mssql_server: "[DB_SERVER].example.internal"
           mssql_port: 1433
           mssql_version: "2019"
           mssql_username: nist_scan_user
-          mssql_password: "{{ vault_sqlserver01_password }}"
-
-    oracle_databases:
-      vars:
-        database_platform: "oracle"
-        inspec_delegate_host: inspec-delegate-host
-      hosts:
-        oracledb01:
-          ansible_host: oracledb01.example.com
-          oracle_server: oracledb01.example.com
-          oracle_port: 1521
-          oracle_database: ORCL
-          oracle_service: ORCL
-          oracle_version: "19c"
-          oracle_username: nist_scan_user
-          oracle_password: "{{ vault_oracledb01_password }}"
-
-    sybase_databases:
-      vars:
-        database_platform: "sybase"
-        inspec_delegate_host: inspec-delegate-host
-        sybase_use_ssh: true
-      hosts:
-        sybasedb01:
-          ansible_host: sybasedb01.example.com
-          sybase_server: sybasedb01.example.com
-          sybase_port: 5000
-          sybase_database: master
-          sybase_version: "16"
-          sybase_username: nist_scan_user
-          sybase_password: "{{ vault_sybasedb01_password }}"
 ```
 
-### Jump Server Configuration
+The playbook `run_compliance_scans.yml` uses `database_platform` to conditionally include the correct role per host.
 
-For multi-region deployments with jump servers:
-
-```yaml
-# Option 1: Per-host configuration
-sqlserver01:
-  ansible_host: sqlserver01.example.com
-  ansible_ssh_common_args: '-o ProxyJump=jumpserver.example.com'
-
-# Option 2: Group-level configuration
-mssql_databases:
-  vars:
-    ansible_ssh_common_args: '-o ProxyJump=jumpserver.example.com'
-```
-
-Or in `ansible.cfg`:
-```ini
-[ssh_connection]
-ssh_args = -o ProxyJump=jumpserver.example.com -o StrictHostKeyChecking=no
-```
-
-### Environment Variables for Non-Interactive SSH
-
-The roles handle environment variable loading for non-interactive SSH sessions automatically. If needed, customize in role defaults:
-
-```yaml
-# roles/mssql_inspec/defaults/main.yml
-mssql_env:
-  PATH: "/opt/mssql-tools/bin:/usr/local/bin:/usr/bin:/bin"
-  LD_LIBRARY_PATH: "/opt/mssql-tools/lib"
-```
-
-## Ansible Automation Platform (AAP) Integration
-
-### Setup in AAP
-
-1. **Create Project**: Point to this Git repository
-2. **Add Inventory**: Upload production inventory or sync from source
-3. **Add Credentials**:
-   - Machine credential (SSH)
-   - Vault credential (for encrypted variables)
-   - Optional: Splunk token credential
-
-4. **Create Job Template**:
-   - Name: "Database Compliance Scans"
-   - Inventory: Production Databases
-   - Project: This repository
-   - Playbook: `test_playbooks/run_compliance_scans.yml`
-   - Credentials: Machine + Vault
-   - Extra Variables:
-     ```yaml
-     enable_debug: false
-     batch_size: 5
-     splunk_enabled: true
-     splunk_hec_url: "https://splunk.example.com:8088"
-     ```
-
-5. **Schedule**: Configure regular scan schedule (e.g., weekly)
-
-### AAP Mesh Architecture
-
-The delegate execution pattern works seamlessly with AAP mesh:
-
-- Controller nodes run the playbook
-- Execution nodes (delegate hosts) run InSpec
-- Database connections from execution nodes to database servers
-- Results collected back to controller
-
-## Troubleshooting
-
-### Common Issues
-
-1. **InSpec not found on delegate host**
-   ```bash
-   # Install InSpec on delegate host
-   curl https://omnitruck.chef.io/install.sh | sudo bash -s -- -P inspec
-   ```
-
-2. **Database client tools not found**
-   ```bash
-   # MSSQL tools
-   # Download from Microsoft and add to PATH
-
-   # Oracle client
-   export ORACLE_HOME=/opt/oracle/instantclient
-   export PATH=$ORACLE_HOME:$PATH
-
-   # Sybase tools
-   export SYBASE=/opt/sybase
-   export PATH=$SYBASE/OCS/bin:$PATH
-   ```
-
-3. **Environment variables not loading in SSH sessions**
-   - The roles explicitly set PATH and LD_LIBRARY_PATH
-   - Verify delegate host has tools in expected locations
-   - Check role defaults and override if needed
-
-4. **Jump server connection issues**
-   - Verify SSH keys are configured for jump server
-   - Test manually: `ssh -J jumpserver.com target.com`
-   - Check `ansible_ssh_common_args` in inventory
-
-5. **Delegation not working**
-   - Ensure delegate host has `ansible_connection: ssh`
-   - Verify `ansible_host` is set correctly
-   - Run test playbook: `test_delegate_execution_flow.yml`
-
-### Debug Mode
-
-Enable verbose output:
+### Running Scans
 
 ```bash
-# Playbook level
-ansible-playbook ... -e "enable_debug=true"
+# Multi-platform scan (all databases in inventory)
+ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml
 
-# Ansible level
-ansible-playbook ... -vvv
+# Limit to a specific business unit
+ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml --limit "db_corp"
+
+# Single platform scan
+ansible-playbook -i inventory.yml test_playbooks/run_mssql_inspec.yml
+
+# Debug mode
+ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml -e "enable_debug=true"
 ```
 
-### Check Mode (Dry Run)
+## Controls (InSpec Profiles)
 
-Validate without making changes:
+Profiles are stored in `inspec_cis_database` and pulled via `requirements.yml`:
+
+| Platform | Versions | Profile Naming | Controls |
+|----------|----------|----------------|----------|
+| MSSQL | 2008-2022 (8 profiles) | `ssc-cis-mssql{ver}-1.0.0-1` | 40-72 per version |
+| Oracle | 11, 12, 18, 19 (4 profiles) | `ssc-cis-oracle{ver}-1.0.0-1` | 91 per version |
+| Sybase | 15, 16 (2 profiles) | `ssc-cis-sybase{ver}-1.0.0-1` | 7-84 per version |
+| PostgreSQL | 15 (1 profile) | `ssc-cis-postgres15-1.0.0-1` | 59 |
+
+Roles auto-resolve profiles from `requirements_roles/cis/` (installed via `ansible-galaxy`) with fallback to legacy embedded `roles/*/files/` paths.
+
+## AAP2 Integration
+
+AAP2 configuration templates are in `aap2-config/`:
+
+- **Credential Types**: MSSQL, Oracle, Sybase, PostgreSQL, Splunk HEC
+- **Job Templates**: Per-platform scans with BU survey selectors
+- **Workflow**: Sequential multi-platform scan with error handling
+
+AAP2 automatically installs `requirements.yml` roles at project sync. Profiles resolve to `$AWX_PRIVATE_DATA_DIR/requirements_roles/cis/`.
+
+## Azure Test Infrastructure
+
+Terraform templates in `terraform/` provision a complete test environment:
 
 ```bash
-ansible-playbook -i inventories/production test_playbooks/run_compliance_scans.yml --check
+cd terraform
+terraform init && terraform apply
+
+# Resources:
+# - Linux runner VM (RHEL 8 with InSpec + all DB clients)
+# - MSSQL container (ACI)
+# - Oracle, Sybase, PostgreSQL containers (optional)
+# - Nightly shutdown runbook (9 PM, saves ~50% compute costs)
+
+terraform destroy   # When done
 ```
+
+Cost analysis: `./terraform/azure-cost-analysis.sh [resource-group]`
+
+## Execution Modes
+
+All roles support two execution modes:
+
+| Mode | Config | Use Case |
+|------|--------|----------|
+| **Localhost** | `inspec_delegate_host: ""` | InSpec runs on AAP2 EE container |
+| **Delegate** | `inspec_delegate_host: "runner-host"` | InSpec runs on remote bastion/jump server |
 
 ## Security
 
-- **Never commit credentials**: Use Ansible Vault
-- **Secure vault password file**: `chmod 600 .vaultpass`
-- **Use SSH keys**: Avoid password authentication
-- **Rotate credentials**: Regular credential rotation
-- **Audit logs**: Review ansible.log regularly
-- **Network security**: Use jump servers for multi-region
-- **Principle of least privilege**: Use dedicated scan user accounts
+- Never commit credentials — use Ansible Vault or AAP2 Custom Credentials
+- Production inventories are in `oar_tower_inventories` (not this repo)
+- All placeholder data uses `[DB_SERVER]`, `[DELEGATE_HOST]`, `example.internal`
+- See `docs/SECURITY_PASSWORD_HANDLING.md`
 
-## License
+## Documentation
 
-See LICENSE file for details.
+See `docs/` directory for detailed guides:
 
-## Support
-
-For issues, questions, or contributions:
-- Create GitHub issue
-- Review documentation in `docs/` directory
-- Check test validation reports
-
-## Acknowledgments
-
-- Based on NIST database compliance requirements
-- Implements patterns from Ansible best practices
-- InSpec framework by Chef/Progress
-- AAP mesh architecture support
+- `QUICK_START_GUIDE.md` — Getting started
+- `AAP2_DEPLOYMENT_GUIDE.md` — AAP2 setup and configuration
+- `INVENTORY_USAGE.md` — Inventory format reference
+- `ANSIBLE_VARIABLES_REFERENCE.md` — All configurable variables
+- `LOCAL_TESTING_GUIDE.md` — Local development testing
 
 ---
 
-**Last Updated**: 2025-12-14
-**Version**: 2.0.0
+**Last Updated**: 2026-04-15
+**Version**: 3.0.0
 **Maintainer**: DevOps Team

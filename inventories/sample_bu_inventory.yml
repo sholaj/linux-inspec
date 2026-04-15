@@ -1,57 +1,80 @@
 ---
 # Sample Business Unit Inventory - Database Compliance Scanning
 #
-# Real inventories are generated from CMDB CSV exports and must NOT be committed.
-# See: inventory_converter/README.md for usage instructions.
+# This demonstrates the BU-based inventory format used with oar_tower_inventories.
+# Real inventories are stored in the oar_tower_inventories repo, organized by BU.
+#
+# Key changes from legacy format:
+#   - Groups are BU-based (db_corp) not technology-based (mssql_databases)
+#   - Each host has a 'database_platform' variable (mssql/oracle/sybase/postgres)
+#   - Group vars include ssc_sn_environment, ssc_sn_region, ssc_sn_bu
 #
 # Usage:
-#   ansible-playbook test_playbooks/run_mssql_inspec.yml \
-#     -i inventories/sample_bu_inventory.yml \
-#     -e "host_group=mssql_databases" -e "target_bu=sample"
+#   ansible-playbook test_playbooks/run_compliance_scans.yml \
+#     -i inventories/sample_bu_inventory.yml
 
 all:
   children:
 
-    mssql_databases:
+    db_corp:
       vars:
-        mssql_username: nist_scan_user
-        mssql_database: master
-        mssql_port: 1433
-        business_unit: "[BU_ID]"
+        ssc_sn_environment: test
+        ssc_sn_region: na
+        ssc_sn_bu: corp
         ansible_connection: local
+        inspec_delegate_host: "[DELEGATE_HOST]"
 
       hosts:
+        # MSSQL Servers
         DBSERVER01_1433:
+          database_platform: mssql
           mssql_server: "[DB_SERVER].example.internal"
+          mssql_port: 1433
           mssql_version: "2019"
+          mssql_username: nist_scan_user
+          mssql_database: master
 
         DBSERVER02_1433:
+          database_platform: mssql
           mssql_server: "[DB_SERVER].example.internal"
+          mssql_port: 1433
           mssql_version: "2022"
+          mssql_username: nist_scan_user
+          mssql_database: master
 
-        DBSERVER03_51525:
-          mssql_server: "[DB_SERVER].example.internal"
-          mssql_port: 51525
-          mssql_version: "2017"
+        # Oracle Databases
+        CDB1_ORASERVER01:
+          database_platform: oracle
+          oracle_server: "[DB_SERVER].example.internal"
+          oracle_port: 1521
+          oracle_database: CDB1
+          oracle_service: CDB1
+          oracle_version: "19"
+          oracle_username: nist_scan_user
 
-    oracle_databases:
+        # Sybase Databases
+        SYBPROD01_5000:
+          database_platform: sybase
+          sybase_server: "[DB_SERVER].example.internal"
+          sybase_port: 5000
+          sybase_service: SYBPROD01
+          sybase_version: "16"
+          sybase_username: nist_scan_user
+          sybase_database: master
+
+    db_uatcorp:
       vars:
-        oracle_username: nist_scan_user
-        oracle_port: 1521
+        ssc_sn_environment: test
+        ssc_sn_region: na
+        ssc_sn_bu: uatcorp
         ansible_connection: local
+        inspec_delegate_host: "[DELEGATE_HOST]"
 
       hosts:
-        CDB1_ORASERVER01:
-          oracle_server: "[DB_SERVER].example.internal"
-          oracle_database: CDB1
-          oracle_version: "19c"
-
-        APPDB01_ORASERVER02:
-          oracle_server: "[DB_SERVER].example.internal"
-          oracle_database: APPDB01
-          oracle_version: "23c"
-
-        LEGACYDB_ORASERVER03:
-          oracle_server: "[DB_SERVER].example.internal"
-          oracle_database: LEGACYDB
-          oracle_version: "12c"
+        UATDB01_1433:
+          database_platform: mssql
+          mssql_server: "[DB_SERVER].example.internal"
+          mssql_port: 1433
+          mssql_version: "2017"
+          mssql_username: nist_scan_user
+          mssql_database: master

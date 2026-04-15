@@ -1,6 +1,9 @@
 ---
 # AAP2 Job Template Configuration: MSSQL Compliance Scan
 # Use this as reference when creating the job template in AAP2 UI
+#
+# CONTROLS: Pulled from inspec_cis_database repo via requirements.yml
+# INVENTORY: BU-based groups from oar_tower_inventories repo
 
 job_template:
   name: "MSSQL Compliance Scan"
@@ -25,8 +28,12 @@ job_template:
     inspec_debug_mode: false
     generate_summary_report: true
     cleanup_temp_files: true
+    # Filter: only scan MSSQL hosts from the selected BU group
+    host_group: "all"
 
-  limit: "mssql_databases"
+  # Use BU-based limit (e.g., db_corp) or leave blank for all BUs
+  # Legacy "mssql_databases" still works via compatibility group
+  limit: ""
   verbosity: 0
   forks: 5
   timeout: 3600
@@ -36,6 +43,19 @@ job_template:
     name: "MSSQL Scan Options"
     description: "Configure MSSQL compliance scan options"
     spec:
+      - question_name: "Business Unit"
+        question_description: "Limit scan to a specific business unit (leave blank for all)"
+        variable: "host_group"
+        type: "multiplechoice"
+        choices:
+          - "all"
+          - "db_corp"
+          - "db_uatcorp"
+          - "db_imswestuat"
+          - "db_imswestprod"
+          - "db_crdit"
+        default: "all"
+        required: false
       - question_name: "Enable Debug Mode"
         question_description: "Show detailed scan progress and InSpec output"
         variable: "inspec_debug_mode"

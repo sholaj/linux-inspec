@@ -17,7 +17,6 @@
     mssql_server: "{{ 'localhost' if business_unit == target_bu else db_server }}"
     mssql_port: "{{ ansible_port if business_unit == target_bu else db_port }}"
     mssql_version: "{{ db_version }}"
-    _local_controls_path: "{{ role_path }}/files/MSSQL{{ mssql_version }}_ruby"
     base_results_dir: "/tmp"
     results_dir: "{{ base_results_dir }}/{{ mssql_server | replace('.', '_') }}_{{ mssql_version }}_{{ scan_timestamp }}"
     json_file_path: "{{ inventory_hostname }}_{{ db_port }}_{{ scan_timestamp }}.json"

@@ -22,7 +22,8 @@ job_template:
     generate_summary_report: true
     cleanup_temp_files: true
 
-  limit: "oracle_databases"
+  # Use BU-based limit (e.g., db_corp) or leave blank for all BUs
+  limit: ""
   verbosity: 0
   forks: 5
   timeout: 3600
@@ -32,6 +33,19 @@ job_template:
     name: "Oracle Scan Options"
     description: "Configure Oracle compliance scan options"
     spec:
+      - question_name: "Business Unit"
+        question_description: "Limit scan to a specific business unit (leave blank for all)"
+        variable: "host_group"
+        type: "multiplechoice"
+        choices:
+          - "all"
+          - "db_corp"
+          - "db_uatcorp"
+          - "db_imswestuat"
+          - "db_imswestprod"
+          - "db_crdit"
+        default: "all"
+        required: false
       - question_name: "Enable Debug Mode"
         question_description: "Show detailed scan progress and InSpec output"
         variable: "inspec_debug_mode"
