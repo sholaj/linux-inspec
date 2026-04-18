@@ -177,31 +177,23 @@ Minimum database permissions for InSpec compliance scanning.
 
 ---
 
-## Inventory Converter (Location: inventory_converter/)
+## Inventory Converters (Location: oar_tower_inventories/tools/)
+
+The inventory tooling lives in the sibling `oar_tower_inventories` repo and
+emits **BU-based** inventories with per-host `database_platform`.
 
 ### Converter Playbooks
 
-1. **convert_flatfile_to_inventory.yml**
-   - Main converter playbook
-   - Converts 6-field flat file to Ansible inventory
-   - Generates vault file templates
+1. **convert_flatfile_to_inventory.yml** — flat-file → BU inventory
+2. **convert_cmdb_to_inventory.yml** — CMDB CSV → BU inventory
+3. **process_flatfile_line.yml** — flat-file row processor
+4. **process_cmdb_oracle_line.yml** / **process_cmdb_mssql_line.yml** — CMDB row processors
 
-2. **process_flatfile_line.yml**
-   - Line processing logic
-   - Platform-specific parsing (MSSQL, Oracle, Sybase)
+Required parameters: `target_bu`, `ssc_environment`, `ssc_region`,
+`inventory_output`. Credentials are injected by AAP2 Custom Credential at
+runtime — no vault file is generated.
 
-### Converter Templates
-
-3. **templates/vault_template.j2**
-   - Vault file generation template
-   - Platform-specific password placeholders
-
-### Converter Documentation
-
-4. **README.md**
-   - Converter usage guide
-   - Input/output formats
-   - Integration examples
+See `oar_tower_inventories/tools/README.md` for full usage.
 
 ---
 
@@ -275,12 +267,7 @@ linux-inspec/
 │   ├── test_mssql_inventory.yml
 │   ├── test_vault.yml
 │   └── azure_test_inventory.yml
-├── inventory_converter/            # Flat file conversion tools
-│   ├── README.md
-│   ├── convert_flatfile_to_inventory.yml
-│   ├── process_flatfile_line.yml
-│   └── templates/
-│       └── vault_template.j2
+├── (inventory tooling lives in oar_tower_inventories/tools/)
 ├── roles/                          # Ansible roles
 │   ├── mssql_inspec/
 │   ├── oracle_inspec/
@@ -342,7 +329,7 @@ Check git history for changes and rationale.
 3. **Security questions**: SECURITY_PASSWORD_HANDLING.md
 4. **Architecture decisions**: AAP_MESH_ARCHITECTURE_GUIDE.md
 5. **Testing problems**: test_playbooks/README.md
-6. **Inventory conversion**: inventory_converter/README.md
+6. **Inventory conversion**: oar_tower_inventories/tools/README.md
 
 ---
 

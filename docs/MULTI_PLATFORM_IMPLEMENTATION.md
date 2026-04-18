@@ -52,14 +52,11 @@ aks-gitops/
 ├── run_mssql_inspec.yml    # MSSQL playbook (server-level)
 ├── run_oracle_inspec.yml   # Oracle playbook (database-level)
 ├── run_sybase_inspec.yml   # Sybase playbook (database-level)
-├── run_compliance_scans.yml # Multi-platform playbook
-└── inventory_converter/    # Converter directory (NEW)
-    ├── convert_flatfile_to_inventory.yml # Main converter
-    ├── process_flatfile_line.yml         # Line processor
-    ├── templates/
-    │   └── vault_template.j2             # Vault template
-    └── README.md                          # Converter docs
+└── run_compliance_scans.yml # Multi-platform playbook (dispatches by database_platform)
 ```
+
+> **Inventory tooling** lives in the `oar_tower_inventories/tools/` repo
+> (BU-based output; credentials injected by AAP2 — no vault file needed).
 
 ## 🎯 Platform-Specific Features
 
@@ -85,30 +82,30 @@ aks-gitops/
 
 ## 🔧 Usage Patterns
 
-### Separate Platform Execution (Recommended)
-Each platform uses its own flat file and inventory:
+### BU-based Inventory Generation (Recommended)
+
+A single inventory per business unit drives all platforms via the
+`database_platform` per-host var. The converter lives in
+`oar_tower_inventories/tools/`:
 
 ```bash
-# MSSQL Server Scanning (server-level, scans all databases)
-echo "MSSQL server01 db01 service 1433 2019" > mssql_databases.txt
-cd inventory_converter
-ansible-playbook convert_flatfile_to_inventory.yml -e "flatfile_input=../mssql_databases.txt" -e "inventory_output=../mssql_inventory.yml" -e "vault_output=../mssql_vault.yml"
-cd ..
-ansible-playbook -i mssql_inventory.yml run_mssql_inspec.yml -e @mssql_vault.yml
+# Build a flat file (any mix of platforms) for the BU
+cat > [BU_ID]_databases.txt <<EOF
+MSSQL [DB_SERVER] master svc1 1433 2019
+ORACLE [DB_SERVER] orcl XE 1521 19
+SYBASE [DB_SERVER] master SAP_ASE 5000 16
+EOF
 
-# Oracle Database Scanning (database-level)
-echo "ORACLE server01 orcl XE 1521 19c" > oracle_databases.txt
-cd inventory_converter
-ansible-playbook convert_flatfile_to_inventory.yml -e "flatfile_input=../oracle_databases.txt" -e "inventory_output=../oracle_inventory.yml" -e "vault_output=../oracle_vault.yml"
-cd ..
-ansible-playbook -i oracle_inventory.yml run_oracle_inspec.yml -e @oracle_vault.yml
+# Generate the BU inventory (db_<bu> group with database_platform per host)
+ansible-playbook ../oar_tower_inventories/tools/convert_flatfile_to_inventory.yml \
+  -e "target_bu=[BU_ID]" \
+  -e "ssc_environment=test" \
+  -e "ssc_region=na" \
+  -e "flatfile_input=[BU_ID]_databases.txt" \
+  -e "inventory_output=[BU_ID_UPPER]_DEVTEST_NA_Inv_InSpec_Database"
 
-# Sybase Database Scanning (database-level)
-echo "SYBASE server01 master SAP_ASE 5000 16" > sybase_databases.txt
-cd inventory_converter
-ansible-playbook convert_flatfile_to_inventory.yml -e "flatfile_input=../sybase_databases.txt" -e "inventory_output=../sybase_inventory.yml" -e "vault_output=../sybase_vault.yml"
-cd ..
-ansible-playbook -i sybase_inventory.yml run_sybase_inspec.yml -e @sybase_vault.yml
+# Run the multi-platform scan; credentials are injected by AAP2 at runtime
+ansible-playbook -i [BU_ID_UPPER]_DEVTEST_NA_Inv_InSpec_Database run_compliance_scans.yml
 ```
 
 ### File Format (6 fields, NO credentials)

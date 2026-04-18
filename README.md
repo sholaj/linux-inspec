@@ -30,8 +30,10 @@ linux-inspec/
 ├── test_playbooks/                # Playbooks for scanning and testing
 ├── terraform/                     # Azure test infrastructure
 ├── inventories/                   # Local test inventories
-├── inventory_converter/           # CMDB/flat file to inventory converter
 └── docs/                          # Documentation
+
+# Inventory tooling lives in the oar_tower_inventories repo:
+#   oar_tower_inventories/tools/   # CMDB/flat file → BU-based inventory converters
 ```
 
 ## Quick Start

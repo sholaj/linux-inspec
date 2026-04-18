@@ -361,12 +361,7 @@ roles/
 │   │   └── SYBASE16_ruby/
 │   └── README.md
 │
-├── inventory_converter/             # Flat file converter
-│   ├── convert_flatfile_to_inventory.yml
-│   ├── process_flatfile_line.yml
-│   ├── templates/
-│   │   └── vault_template.j2
-│   └── README.md
+│   # NOTE: inventory tooling lives in the oar_tower_inventories/tools/ repo
 │
 ├── playbooks/
 │   ├── run_mssql_inspec.yml         # MSSQL scanning playbook
