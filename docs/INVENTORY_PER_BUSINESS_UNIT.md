@@ -153,12 +153,14 @@ Job Template: "[BU_NAME] MSSQL Compliance Scan"
 ### Inventory Generation Workflow
 
 ```bash
-# Per business unit, run the CMDB converter
-ansible-playbook inventory_converter/convert_cmdb_to_inventory.yml \
+# Per business unit, run the CMDB converter (lives in oar_tower_inventories/tools/)
+ansible-playbook ../oar_tower_inventories/tools/convert_cmdb_to_inventory.yml \
+  -e "target_bu=[BU_ID]" \
+  -e "ssc_environment=test" \
+  -e "ssc_region=na" \
   -e "cmdb_mssql_csv=/path/to/bu1_mssql.csv" \
   -e "cmdb_oracle_csv=/path/to/bu1_oracle.csv" \
-  -e "inventory_output=bu1_inventory.yml" \
-  -e "target_bu=[BU_ID]"
+  -e "inventory_output=[BU_ID_UPPER]/[BU_ID_UPPER]_DEVTEST_NA_Inv_InSpec_Database"
 ```
 
 The generated inventory is then uploaded to AAP2 as a static inventory source, or synced via SCM if stored in the project repository (with sensitive hostnames excluded via `.gitignore`).

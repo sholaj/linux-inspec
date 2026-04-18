@@ -8,7 +8,6 @@ categories/
 # Sensitive data - NEVER commit real credentials or hostnames
 # Vault files (contain passwords)
 *vault*.yml
-!inventory_converter/templates/vault_template.j2
 
 # Inventory files at root (may contain real hostnames)
 /test_inventory.yml

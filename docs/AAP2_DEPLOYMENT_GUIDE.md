@@ -187,10 +187,13 @@ SYBASE prod-syb-01 master MYSYBASE 5000 16
 POSTGRES prod-pg-01 appdb null 5432 15
 EOF
 
-# Run the converter
-ansible-playbook inventory_converter/convert_flatfile_to_inventory.yml \
+# Run the converter (lives in oar_tower_inventories/tools/)
+ansible-playbook ../oar_tower_inventories/tools/convert_flatfile_to_inventory.yml \
+  -e "target_bu=[BU_ID]" \
+  -e "ssc_environment=test" \
+  -e "ssc_region=na" \
   -e "flatfile_input=databases.txt" \
-  -e "inventory_output=aap2-inventory.yml"
+  -e "inventory_output=[BU_ID_UPPER]_DEVTEST_NA_Inv_InSpec_Database"
 
 # Upload the generated inventory to AAP2
 ```
