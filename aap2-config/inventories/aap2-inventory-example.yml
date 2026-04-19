@@ -3,11 +3,13 @@
 #
 # INVENTORY STRUCTURE:
 #   Production inventories are stored in the oar_tower_inventories repository,
-#   organized by business unit (CORP, UATCORP, IMSWESTUAT, IMSWESTPROD, CRDIT).
+#   organized by business unit. BU directory names in the public-facing
+#   repo use NATO-phonetic placeholders (ALPHA, BRAVO, CHARLIE, DELTA, ECHO);
+#   real BU identifiers are not committed.
 #   This file is an example template showing the required format.
 #
 # KEY CHANGES (State Street workflow adoption):
-#   - Groups are BU-based (db_corp, db_uatcorp) not technology-based (mssql_databases)
+#   - Groups are BU-based (db_alpha, db_bravo) not technology-based (mssql_databases)
 #   - Each host has 'database_platform' variable (mssql/oracle/sybase/postgres)
 #   - Group vars include ssc_sn_environment, ssc_sn_region, ssc_sn_bu
 #   - Playbooks use database_platform to determine which role to apply
@@ -39,20 +41,20 @@ all:
           ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
 
     # =========================================================================
-    # CORP Business Unit
+    # ALPHA Business Unit (placeholder name)
     # =========================================================================
-    db_corp:
+    db_alpha:
       vars:
         ssc_sn_environment: test
         ssc_sn_region: na
-        ssc_sn_bu: corp
+        ssc_sn_bu: alpha
         ansible_connection: local
         inspec_delegate_host: ""  # Empty or "localhost" = run on AAP2 execution node
         # Credentials injected by AAP2 Custom Credentials:
         # mssql_username, mssql_password, oracle_username, oracle_password, etc.
       hosts:
         # MSSQL Servers (scanned at server level)
-        mssql_corp_01:
+        mssql_alpha_01:
           database_platform: mssql
           mssql_server: "[DB_SERVER].example.internal"
           mssql_port: 1433
@@ -60,7 +62,7 @@ all:
           mssql_database: master
 
         # Oracle Databases (scanned per database/service)
-        oracle_corp_01:
+        oracle_alpha_01:
           database_platform: oracle
           oracle_server: "[DB_SERVER].example.internal"
           oracle_port: 1521
@@ -68,7 +70,7 @@ all:
           oracle_version: "19"
 
         # Sybase Databases (scanned per database)
-        sybase_corp_01:
+        sybase_alpha_01:
           database_platform: sybase
           sybase_server: "[DB_SERVER].example.internal"
           sybase_port: 5000
@@ -78,7 +80,7 @@ all:
           sybase_use_ssh: false
 
         # PostgreSQL Databases (scanned per database)
-        postgres_corp_01:
+        postgres_alpha_01:
           database_platform: postgres
           postgres_server: "[DB_SERVER].example.internal"
           postgres_port: 5432
@@ -86,17 +88,17 @@ all:
           postgres_version: "15"
 
     # =========================================================================
-    # UATCORP Business Unit
+    # BRAVO Business Unit (placeholder name)
     # =========================================================================
-    db_uatcorp:
+    db_bravo:
       vars:
         ssc_sn_environment: test
         ssc_sn_region: na
-        ssc_sn_bu: uatcorp
+        ssc_sn_bu: bravo
         ansible_connection: local
         inspec_delegate_host: ""
       hosts:
-        mssql_uatcorp_01:
+        mssql_bravo_01:
           database_platform: mssql
           mssql_server: "[DB_SERVER].example.internal"
           mssql_port: 1433
@@ -110,17 +112,17 @@ all:
     # =========================================================================
     mssql_databases:
       children:
-        db_corp:
-        db_uatcorp:
+        db_alpha:
+        db_bravo:
 
     oracle_databases:
       children:
-        db_corp:
+        db_alpha:
 
     sybase_databases:
       children:
-        db_corp:
+        db_alpha:
 
     postgres_databases:
       children:
-        db_corp:
+        db_alpha:

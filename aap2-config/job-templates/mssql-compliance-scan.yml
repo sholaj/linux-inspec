@@ -31,7 +31,7 @@ job_template:
     # Filter: only scan MSSQL hosts from the selected BU group
     host_group: "all"
 
-  # Use BU-based limit (e.g., db_corp) or leave blank for all BUs
+  # Use BU-based limit (e.g., db_alpha) or leave blank for all BUs
   # Legacy "mssql_databases" still works via compatibility group
   limit: ""
   verbosity: 0
@@ -49,11 +49,11 @@ job_template:
         type: "multiplechoice"
         choices:
           - "all"
-          - "db_corp"
-          - "db_uatcorp"
-          - "db_imswestuat"
-          - "db_imswestprod"
-          - "db_crdit"
+          - "db_alpha"
+          - "db_bravo"
+          - "db_charlie"
+          - "db_delta"
+          - "db_echo"
         default: "all"
         required: false
       - question_name: "Enable Debug Mode"

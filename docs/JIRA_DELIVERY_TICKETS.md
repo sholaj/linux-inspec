@@ -3276,13 +3276,13 @@ Complete the operational setup items handed over from the delivery engineer (Sur
 
 ---
 
-## DBSCAN-757: DB CORP - Data Quality Review and Failure Remediation
+## DBSCAN-757: DB [BU] - Data Quality Review and Failure Remediation
 
 ### Purpose
-**As a** DevOps engineer, **I want to** resolve data discrepancies and scan failures in the DB CORP environment, **so that** ingested compliance data is accurate and scanning runs reliably.
+**As a** DevOps engineer, **I want to** resolve data discrepancies and scan failures in the DB [BU] environment, **so that** ingested compliance data is accurate and scanning runs reliably.
 
 ### Description
-Address data quality issues identified in the DB CORP environment. This includes reviewing discrepancies in ingested scan data, validating CMDB numbers against the SOP, and investigating and fixing scan failures.
+Address data quality issues identified in the DB [BU] environment. This includes reviewing discrepancies in ingested scan data, validating CMDB numbers against the SOP, and investigating and fixing scan failures.
 
 ### Acceptance Criteria
 - [ ] Data discrepancies and gaps for ingested data identified and documented

@@ -36,7 +36,7 @@ Authentication (Trusted Connection) for SQL Server access. This leverages the
 use_winrm: true
 mssql_server: "sqlserver.example.com"  # Target SQL Server
 # Username MUST include domain - use UPN format (recommended) or down-level
-winrm_username: "svc_inspec@corp.example.com"  # AD service account
+winrm_username: "svc_inspec@example.internal"  # AD service account
 winrm_password: "{{ vault_ad_password }}"
 ```
 
@@ -168,8 +168,8 @@ winrm_password: ""                       # AD password
 ```
 
 **Important:** Username MUST include domain context for AD authentication:
-- UPN format (recommended): `svc_inspec@corp.example.com`
-- Down-level format: `CORP\\svc_inspec`
+- UPN format (recommended): `svc_inspec@example.internal`
+- Down-level format: `EXAMPLE\\svc_inspec`
 
 A bare username (e.g., `svc_inspec`) will fail with `WinRM::WinRMAuthorizationError`.
 
@@ -335,7 +335,7 @@ all:
         # WinRM/AD settings apply to all SQL Servers
         use_winrm: true
         # Username MUST include domain (UPN format recommended)
-        winrm_username: "svc_inspec@corp.example.com"
+        winrm_username: "svc_inspec@example.internal"
         winrm_password: "{{ vault_ad_password }}"
         inspec_delegate_host: "inspec-runner"
 ```
@@ -405,7 +405,7 @@ sqlcmd -S server,port -U user -P password -Q "SELECT @@VERSION"
 --user 'svc_inspec'
 
 # Correct
---user 'svc_inspec@corp.example.com'
+--user 'svc_inspec@example.internal'
 ```
 
 ### WinRM Connection Failed

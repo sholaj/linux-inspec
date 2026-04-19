@@ -42,7 +42,7 @@ job_template:
     cleanup_temp_files: true
 
   # No limit - runs against all hosts; database_platform determines the role
-  # To scan a specific BU: use limit "db_corp" or "db_uatcorp"
+  # To scan a specific BU: use limit "db_alpha" or "db_bravo"
   verbosity: 0
   forks: 5
   timeout: 7200  # 2 hours for full scan
@@ -58,11 +58,11 @@ job_template:
         type: "multiplechoice"
         choices:
           - ""
-          - "db_corp"
-          - "db_uatcorp"
-          - "db_imswestuat"
-          - "db_imswestprod"
-          - "db_crdit"
+          - "db_alpha"
+          - "db_bravo"
+          - "db_charlie"
+          - "db_delta"
+          - "db_echo"
         default: ""
         required: false
       - question_name: "Enable Debug Mode"

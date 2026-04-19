@@ -22,7 +22,7 @@ job_template:
     generate_summary_report: true
     cleanup_temp_files: true
 
-  # Use BU-based limit (e.g., db_corp) or leave blank for all BUs
+  # Use BU-based limit (e.g., db_alpha) or leave blank for all BUs
   limit: ""
   verbosity: 0
   forks: 5
@@ -39,11 +39,11 @@ job_template:
         type: "multiplechoice"
         choices:
           - "all"
-          - "db_corp"
-          - "db_uatcorp"
-          - "db_imswestuat"
-          - "db_imswestprod"
-          - "db_crdit"
+          - "db_alpha"
+          - "db_bravo"
+          - "db_charlie"
+          - "db_delta"
+          - "db_echo"
         default: "all"
         required: false
       - question_name: "Enable Debug Mode"
