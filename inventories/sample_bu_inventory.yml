@@ -5,7 +5,8 @@
 # Real inventories are stored in the oar_tower_inventories repo, organized by BU.
 #
 # Key changes from legacy format:
-#   - Groups are BU-based (db_corp) not technology-based (mssql_databases)
+#   - Groups are BU-based (db_alpha) not technology-based (mssql_databases)
+#   - BU directory names use NATO-phonetic placeholders (alpha, bravo, ...)
 #   - Each host has a 'database_platform' variable (mssql/oracle/sybase/postgres)
 #   - Group vars include ssc_sn_environment, ssc_sn_region, ssc_sn_bu
 #
@@ -16,11 +17,11 @@
 all:
   children:
 
-    db_corp:
+    db_alpha:
       vars:
         ssc_sn_environment: test
         ssc_sn_region: na
-        ssc_sn_bu: corp
+        ssc_sn_bu: alpha
         ansible_connection: local
         inspec_delegate_host: "[DELEGATE_HOST]"
 
@@ -61,11 +62,11 @@ all:
           sybase_username: nist_scan_user
           sybase_database: master
 
-    db_uatcorp:
+    db_bravo:
       vars:
         ssc_sn_environment: test
         ssc_sn_region: na
-        ssc_sn_bu: uatcorp
+        ssc_sn_bu: bravo
         ansible_connection: local
         inspec_delegate_host: "[DELEGATE_HOST]"
 

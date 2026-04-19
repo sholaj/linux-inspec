@@ -29,8 +29,8 @@ This guide covers the prerequisites and setup for running InSpec compliance scan
 
 | Format | Example | Notes |
 |--------|---------|-------|
-| **UPN (recommended)** | `svc_inspec@corp.example.com` | User Principal Name - most reliable |
-| **Down-level** | `CORP\\svc_inspec` | Escape backslash in YAML with `\\` |
+| **UPN (recommended)** | `svc_inspec@example.internal` | User Principal Name - most reliable |
+| **Down-level** | `EXAMPLE\\svc_inspec` | Escape backslash in YAML with `\\` |
 
 **Common Error:**
 ```
@@ -62,7 +62,7 @@ mssql_databases:
       winrm_host: 10.0.1.5
       winrm_port: 5985
       # NOTE: Username MUST include domain - use UPN format (user@domain) or down-level (DOMAIN\\user)
-      winrm_username: azureadmin@corp.example.com
+      winrm_username: azureadmin@example.internal
       winrm_password: "{{ lookup('env', 'WINDOWS_ADMIN_PASSWORD') }}"
 ```
 
@@ -230,10 +230,10 @@ cat /tmp/compliance_scans/mssql/winrm/*.json | jq '.statistics'
 winrm_username: p882789
 
 # Correct - UPN format (recommended)
-winrm_username: p882789@corp.example.com
+winrm_username: p882789@example.internal
 
 # Correct - Down-level format (escape backslash in YAML)
-winrm_username: "CORP\\p882789"
+winrm_username: "EXAMPLE\\p882789"
 ```
 
 ---

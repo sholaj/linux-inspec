@@ -570,10 +570,10 @@ export CHEF_LICENSE="accept-silent"
 winrm_username: svc_inspec
 
 # Correct - UPN format (recommended)
-winrm_username: svc_inspec@corp.example.com
+winrm_username: svc_inspec@example.internal
 
 # Correct - Down-level format
-winrm_username: "CORP\\svc_inspec"
+winrm_username: "EXAMPLE\\svc_inspec"
 ```
 
 See [WINRM_PREREQUISITES.md](WINRM_PREREQUISITES.md#winrm-username-format) for complete details.
