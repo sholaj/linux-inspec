@@ -8,9 +8,9 @@
     _controls_role_path: >-
       {{ inspec_controls_role_path
          | default(
-             (lookup('env', 'AWX_PRIVATE_DATA_DIR') + '/requirements_roles/cis')
+             (lookup('env', 'AWX_PRIVATE_DATA_DIR') + '/requirements_roles/cis/cis')
              if lookup('env', 'AWX_PRIVATE_DATA_DIR') != ''
-             else (playbook_dir + '/../requirements_roles/cis')
+             else (playbook_dir + '/../requirements_roles/cis/cis')
            )
       }}
 
