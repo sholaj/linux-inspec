@@ -8,8 +8,7 @@
         oracle_connection:
           server: "{{ oracle_server }}"
           port: "{{ oracle_port }}"
-          database: "{{ oracle_database }}"
-          service: "{{ oracle_service | default('') }}"
+          service: "{{ oracle_service }}"
           username: "{{ oracle_username }}"
           password: "{{ oracle_password }}"
           version: "{{ oracle_version }}"
@@ -19,7 +18,7 @@
         that:
           - oracle_server is defined and oracle_server | length > 0
           - oracle_port is defined and oracle_port | int > 0
-          - oracle_database is defined and oracle_database | length > 0
+          - oracle_service is defined and oracle_service | length > 0
           - oracle_version is defined and oracle_version | length > 0
           - oracle_username is defined and oracle_username | length > 0
           - oracle_password is defined and oracle_password | length > 0

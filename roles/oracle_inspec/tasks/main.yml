@@ -33,7 +33,6 @@
       Oracle InSpec Compliance Scan
       ================================
       Server: {{ oracle_server }}:{{ oracle_port }}
-      Database: {{ oracle_database }}
       Service: {{ oracle_service }}
       Version: {{ oracle_version }}
       Username: {{ oracle_username }}
@@ -61,7 +60,6 @@
           ╠══════════════════════════════════════════════════════════════════╣
           ║  Server:   {{ oracle_server }}:{{ oracle_port }}
           ║  Service:  {{ oracle_service }}
-          ║  Database: {{ oracle_database }}
           ║  Reason:   {{ preflight_skip_reason }}
           ║  Code:     {{ preflight_error_code }}
           ╚══════════════════════════════════════════════════════════════════╝
@@ -102,6 +100,6 @@
       [OK] Oracle InSpec scan completed successfully!
       Results directory: {{ inspec_results_dir }}
       Platform: ORACLE
-      Database: {{ oracle_database }}
+      Service: {{ oracle_service }}
       Version: {{ oracle_version }}
   when: preflight_passed | default(true)

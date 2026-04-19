@@ -33,7 +33,7 @@ splunk_time_format: "%Y-%m-%d %H:%M:%S"
 
 # File naming patterns matching original script
 # Original: ${platform}_NIST_$$_${servernm}_${dbname}_${dbversion}_${now}_${file_prefix}.json
-file_name_template: "ORACLE_NIST_{{ ansible_process_id }}_{{ oracle_server }}_{{ oracle_database }}_{{ oracle_version }}_{{ timestamp }}"
+file_name_template: "ORACLE_NIST_{{ ansible_process_id }}_{{ oracle_server }}_{{ oracle_service }}_{{ oracle_version }}_{{ timestamp }}"
 temp_dir_template: "ORACLE_NIST_{{ ansible_process_id }}_{{ timestamp }}_temp_files"
 
 # Directory structure matching original script
@@ -65,9 +65,9 @@ error_messages:
 # JSON error templates matching original script exactly
 json_templates:
   connection_error: |
-    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect","statistics":{"duration":0},"version":"N/A"}]}
+    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_service }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect","statistics":{"duration":0},"version":"N/A"}]}
   cloakware_unreachable: |
-    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Not able to retrieve Cloakware Password for Database Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
+    {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_service }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Not able to retrieve Cloakware Password for Database Account","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"N/A","statistics":{"duration":0},"version":"N/A"}]}
 
 # InSpec execution settings
 inspec_settings:

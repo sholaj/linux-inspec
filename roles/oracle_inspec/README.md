@@ -39,8 +39,7 @@ inspec_delegate_host: "inspec-runner"  # Inventory hostname of delegate
 ```yaml
 oracle_server: ""           # Oracle server hostname/IP
 oracle_port: 1521           # Oracle listener port
-oracle_database: ""         # Database name (SID or service name)
-oracle_service: ""          # Oracle service name (for connection string)
+oracle_service: ""          # Oracle service name (used for connection AND filename)
 oracle_username: "nist_scan_user"  # Database username
 oracle_password: ""         # Database password (use vault/AAP credential)
 oracle_version: "19c"       # Oracle version (11g, 12c, 18c, 19c)
@@ -177,7 +176,6 @@ oracle_inspec/
   vars:
     oracle_server: "oracledb.example.com"
     oracle_port: 1521
-    oracle_database: "ORCL"
     oracle_service: "ORCL.example.com"
     oracle_username: "scan_user"
     oracle_password: "{{ vault_oracle_password }}"
@@ -201,7 +199,6 @@ When `oracle_use_tns: true` is set, the role automatically generates a `tnsnames
   vars:
     oracle_server: "oracledb.example.com"
     oracle_port: 1521
-    oracle_database: "ORCL"
     oracle_service: "ORCL.example.com"
     oracle_username: "scan_user"
     oracle_password: "{{ vault_oracle_password }}"
@@ -273,13 +270,11 @@ all:
           oracle_server: oraprod01.example.com
           oracle_port: 1521
           oracle_service: "ORCLPRD"
-          oracle_database: "ORCLPRD"
           oracle_version: "19c"
         ORAPROD02_1521:
           oracle_server: oraprod02.example.com
           oracle_port: 1521
           oracle_service: "ORCLPRD2"
-          oracle_database: "ORCLPRD2"
           oracle_version: "12c"
       vars:
         inspec_delegate_host: "inspec-runner"

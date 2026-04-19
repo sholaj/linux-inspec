@@ -5,7 +5,7 @@
   "server": {
     "host": "{{ oracle_server }}",
     "port": {{ oracle_port }},
-    "database": "{{ oracle_database }}",
+    "database": "{{ oracle_service }}",
     "service": "{{ oracle_service | default('') }}"
   },
   "skip_details": {
