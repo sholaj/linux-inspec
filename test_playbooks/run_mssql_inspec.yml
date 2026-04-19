@@ -1,120 +1,134 @@
 ---
 # MSSQL InSpec Compliance Scanning Playbook
 # Compatible with Ansible Automation Platform (AAP)
+#
+# Connection model: direct sqlcmd from the InSpec execution host (delegate or
+# local). For WinRM-based MSSQL scans see run_mssql_inspec_winrm.yml.
+#
+# Inventory contract (per host):
+#   database_platform: mssql
+#   mssql_server, mssql_port, mssql_version, mssql_username, mssql_database
+#   inspec_delegate_host  (group-level; "" or "localhost" = run on EE)
+
 - name: Execute InSpec MSSQL Compliance Scans
-  hosts: "{{ host_group }}"
+  hosts: mssql_databases
   gather_facts: false
-  connection: local
   strategy: "{{ execution_strategy | default('linear') }}"
   serial: "{{ batch_size | default(5) }}"
 
   vars:
-    # Global settings - can be overridden by AAP extra vars
-    inspec_delegate_host: "{{ delegate_host }}"
+    # NOTE: inspec_delegate_host comes from inventory group_vars (e.g., "inspec-runner").
+    # Do NOT override here - it breaks the role's delegate-host connection lookup.
     scan_timestamp: "{{ controller_time.epoch | default(ansible_date_time.epoch) }}"
-    enable_debug: "{{ debug_mode }}"
-    # BU-specific: connect via SSH tunnel to localhost; otherwise use inventory host vars
-    mssql_server: "{{ 'localhost' if business_unit == target_bu else db_server }}"
-    mssql_port: "{{ ansible_port if business_unit == target_bu else db_port }}"
-    mssql_version: "{{ db_version }}"
-    base_results_dir: "/tmp"
-    results_dir: "{{ base_results_dir }}/{{ mssql_server | replace('.', '_') }}_{{ mssql_version }}_{{ scan_timestamp }}"
-    json_file_path: "{{ inventory_hostname }}_{{ db_port }}_{{ scan_timestamp }}.json"
-    # Timeout settings for lengthy scans
-    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}" # Default 30 minutes per control
-    async_timeout: "{{ async_scan_timeout | default(3600) }}" # Default 1 hour for async execution
-    poll_interval: "{{ async_poll_interval | default(30) }}" # Check status every 30 seconds
+    enable_debug: false
+    inspec_timeout: "{{ inspec_scan_timeout | default(1800) }}"  # 30 min/control
+    base_results_dir: "{{ override_results_dir | default('/tmp/compliance_scans') }}"
     # AAP compatibility
     job_id: "{{ tower_job_id | default('local') }}"
     project_name: "{{ project_name | default('mssql_compliance') }}"
-    # Splunk integration
+    # Splunk integration (handled by role's splunk_integration.yml)
     send_to_splunk: "{{ splunk_enabled | default(false) }}"
+    splunk_hec_url: "{{ splunk_hec_url | default('') }}"
+    splunk_hec_token: "{{ splunk_hec_token | default('') }}"
+    splunk_index: "{{ splunk_index | default('compliance_scans') }}"
 
   pre_tasks:
-
-      # Please note, ansible_host is configured to 127.0.0.1 for the [BU_NAME] inventory group variables
-    - name: "[BU_NAME] | Create SSH tunnel for each host"
-      include_tasks:
-        file: "{{ requirements_roles_dir }}/cis_win/ssh_tunnel_bu/tasks/open_tunnel.yml"
-      vars:
-        target_port: "{{ winrm_port }}"
-        requirements_roles_dir: "{{ ('/runner/requirements_roles' if lookup('env', 'DESCRIPTION') is defined and 'Red Hat Ansible Automation Platform' in lookup('env', 'DESCRIPTION') else lookup('env', 'AWX_PRIVATE_DATA_DIR') + '/requirements_roles') }}"
-      when: business_unit == target_bu
-      tags: ["inspec_exec_db"]
-
-    - name: Test SSH network port connectivity to {{ ansible_port }}
-      wait_for:
-        host: "localhost"
-        port: "{{ ansible_port }}"
-        state: started
-        timeout: 10
-      ignore_errors: yes
+    - name: Gather controller facts for timestamps
+      ansible.builtin.setup:
+        gather_subset:
+          - min
       delegate_to: localhost
-      tags: ["inspec_exec_db"]
+      run_once: true
+      register: controller_facts
 
-    - name: Display scan configuration
-      debug:
+    - name: Set controller time fact
+      ansible.builtin.set_fact:
+        controller_time: "{{ controller_facts.ansible_facts.ansible_date_time }}"
+      run_once: true
+
+    # Compute safe delegate target per host (same logic as the role)
+    - name: Determine execution target for pre-tasks
+      ansible.builtin.set_fact:
+        _playbook_delegate_host: "{{ inspec_delegate_host if (inspec_delegate_host | default('')) not in ['', 'localhost'] else 'localhost' }}"
+
+    - name: Ensure base results directory exists
+      ansible.builtin.file:
+        path: "{{ base_results_dir }}"
+        state: directory
+        mode: "0755"
+      delegate_to: "{{ _playbook_delegate_host }}"
+
+    - name: Display MSSQL scan configuration
+      ansible.builtin.debug:
         msg: |
-          Starting MSSQL Compliance Scans
-          ================================
-          Total servers in group: {{ groups['mssql_databases'] | length }}
+          MSSQL InSpec Compliance Scans Starting
+          ===========================================
+          Total MSSQL hosts: {{ ansible_play_hosts | length }}
+          Execution target: {{ _playbook_delegate_host }}
           Results directory: {{ base_results_dir }}
           Timestamp: {{ scan_timestamp }}
           Debug mode: {{ enable_debug }}
           Batch size: {{ batch_size | default(5) }}
       run_once: true
-      when: enable_debug
-      tags: ["inspec_exec_db"]
+      when: enable_debug | bool
 
   tasks:
-    - name: Display current server being scanned
-      debug:
-        msg: "Scanning {{ mssql_server }}:{{ mssql_port }}-({{ mssql_version }}) - Server-level scan"
-      when: enable_debug
-      tags: ["inspec_exec_db"]
+    - name: Display current MSSQL server being scanned
+      ansible.builtin.debug:
+        msg: "🔍 Scanning MSSQL {{ mssql_server }}:{{ mssql_port }} (version {{ mssql_version }}) - server-level scan"
+      when: enable_debug | bool
 
     - name: Execute MSSQL InSpec compliance scan for server
-      include_role:
+      ansible.builtin.include_role:
         name: mssql_inspec
       vars:
-        # Pass all server-specific variables from inventory host
-        inspec_results_dir: "{{ results_dir }}"
-        _result_file: "{{ json_file_path }}"
+        # Connection parameters (mssql_server, mssql_port, mssql_version,
+        # mssql_username, mssql_password, mssql_database) come from inventory
+        # host vars; credentials are injected by AAP2 Custom Credentials.
+        inspec_results_dir: "{{ base_results_dir }}/{{ mssql_server | replace('.', '_') }}_{{ mssql_port }}_{{ scan_timestamp }}"
         inspec_debug_mode: "{{ enable_debug | default(false) }}"
         generate_summary_report: true
         inspec_command_timeout: "{{ inspec_timeout }}"
-        # Server connection parameters come from inventory host variables:
-        # mssql_server, mssql_port, mssql_version, mssql_username, mssql_password
-        # Note: InSpec scans all databases on the server, not individual databases
-      tags: ["inspec_exec_db"]
-
-    - name: Send InSpec scan results to Splunk
-      include_role:
-        name: splunk_ingest
-        tasks_from: splunk_ingest.yml
-      vars:
-        event: "{{ lookup('file', results_dir + '/' + json_file_path) }}"
-      tags: ["inspec_exec_db"]
 
   post_tasks:
-    - name: Generate consolidated report
+    - name: Generate MSSQL consolidated report
       block:
-        - name: Find all JSON result files
-          find:
+        - name: Find all MSSQL JSON result files
+          ansible.builtin.find:
             paths: "{{ base_results_dir }}"
-            patterns: "*.json"
-            recurse: yes
-          register: json_files
-          delegate_to: "{{ inspec_delegate_host }}"
+            patterns: "MSSQL_NIST_*.json"
+            recurse: true
+          register: mssql_json_files
+          delegate_to: "{{ _playbook_delegate_host }}"
           run_once: true
 
-        - name: Display scan completion summary
-          debug:
+        - name: Display MSSQL scan completion summary
+          ansible.builtin.debug:
             msg: |
               =====================================
               MSSQL Compliance Scan Complete
               =====================================
-              Total servers scanned: {{ groups['mssql_databases'] | length }}
-              Result files generated: {{ json_files.files | length }}
+              Total MSSQL hosts scanned: {{ ansible_play_hosts | length }}
+              Result files generated: {{ mssql_json_files.files | length }}
               Results location: {{ base_results_dir }}
+
+              To view results:
+              find {{ base_results_dir }}/ -name "MSSQL_NIST_*.json"
+              =====================================
           run_once: true
+      when: not ansible_check_mode
+
+# Example usage:
+# POC mode:
+#   ansible-playbook -i inventory.yml run_mssql_inspec.yml \
+#     -e @mssql_vault.yml --vault-password-file .vaultpass
+#
+# AAP mode:
+#   - Upload BU inventory as inventory source
+#   - Add MSSQL Custom Credential (mssql_username, mssql_password)
+#   - Add Splunk Custom Credential (optional) and set splunk_enabled=true
+#
+# Limit examples:
+#   --limit "db_alpha"            # Scan only one BU
+#   --limit "db_alpha:db_bravo"   # Scan two BUs
+#   -e "enable_debug=true"        # Verbose output
