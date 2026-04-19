@@ -19,7 +19,7 @@
     - name: Create skip report
       ansible.builtin.template:
         src: skip_report.j2
-        dest: "{{ inspec_results_dir }}/SKIPPED_{{ oracle_server | replace('.', '_') }}_{{ oracle_database }}_{{ ansible_date_time.epoch }}.json"
+        dest: "{{ inspec_results_dir }}/SKIPPED_{{ oracle_server | replace('.', '_') }}_{{ oracle_service }}_{{ ansible_date_time.epoch }}.json"
         mode: "0644"
       delegate_to: "{{ _delegate_host }}"
 
@@ -91,7 +91,7 @@
         db_type: "oracle"
         host: "{{ oracle_server }}"
         port: "{{ oracle_port }}"
-        database: "{{ oracle_database }}"
+        database: "{{ oracle_service }}"
         service: "{{ oracle_service }}"
         skip_reason: "{{ preflight_skip_reason }}"
         error_code: "{{ preflight_error_code }}"
@@ -138,11 +138,10 @@
       Oracle {{ oracle_version }} compliance scan completed
       ====================================================
       Server: {{ oracle_server }}:{{ oracle_port }}
-      Database: {{ oracle_database }}
-      Service: {{ oracle_service | default('N/A') }}
+      Service: {{ oracle_service }}
       Controls executed: {{ oracle_control_files.files | length }}
       Results directory: {{ inspec_results_dir }}
-      Platform pattern: ORACLE_NIST_*_{{ oracle_server }}_{{ oracle_database }}_{{ oracle_version }}_*.json
+      Platform pattern: ORACLE_NIST_*_{{ oracle_server }}_{{ oracle_service }}_{{ oracle_version }}_*.json
   when:
     - preflight_passed | default(true)
     - oracle_control_files is defined

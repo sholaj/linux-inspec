@@ -177,7 +177,6 @@ oracle_databases:
   hosts:
     oracle-db01_1521:
       oracle_server: oracle-db.example.com
-      oracle_database: ORCL
       oracle_service: ORCL
       oracle_port: 1521
       oracle_version: "19"
@@ -278,7 +277,6 @@ all:
       hosts:
         oracle-db01_1521:
           oracle_server: oracle-db.example.com
-          oracle_database: ORCL
           oracle_service: ORCL
           oracle_port: 1521
           oracle_version: "19"

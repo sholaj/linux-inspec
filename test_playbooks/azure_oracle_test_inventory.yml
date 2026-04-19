@@ -33,7 +33,6 @@ all:
           # Connection parameters
           oracle_server: 10.0.2.5
           oracle_port: 1521
-          oracle_database: XE
           oracle_service: XE
           oracle_version: "19"  # Using 19 profile even for XE 21c
           oracle_username: system
@@ -46,7 +45,6 @@ all:
           # Connection parameters
           oracle_server: 10.0.2.5
           oracle_port: 1521
-          oracle_database: XEPDB1
           oracle_service: XEPDB1
           oracle_version: "19"
           oracle_username: system
