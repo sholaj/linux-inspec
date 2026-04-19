@@ -65,7 +65,6 @@ all:
           oracle_server: "[DB_SERVER].example.internal"
           oracle_port: 1521
           oracle_service: ORCLCDB
-          oracle_database: ORCLCDB
           oracle_version: "19"
 
         # Sybase Databases (scanned per database)

@@ -400,7 +400,6 @@ all:
         oracleserver01_orcl_1521:
           database_platform: oracle
           oracle_server: oracleserver01
-          oracle_database: orcl
           oracle_service: XE
           oracle_port: 1521
           oracle_version: "19c"

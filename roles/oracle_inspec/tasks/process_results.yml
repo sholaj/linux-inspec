@@ -10,7 +10,7 @@
 
 - name: Set Oracle result file name
   ansible.builtin.set_fact:
-    oracle_result_file_name: "{{ oracle_platform }}_NIST_{{ oracle_process_id }}_{{ oracle_server }}_{{ oracle_database }}_{{ oracle_version }}_{{ oracle_timestamp }}_{{ oracle_control_file_name }}"
+    oracle_result_file_name: "{{ oracle_platform }}_NIST_{{ oracle_process_id }}_{{ oracle_server }}_{{ oracle_service }}_{{ oracle_version }}_{{ oracle_timestamp }}_{{ oracle_control_file_name }}"
 
 - name: Parse Oracle InSpec result status (matching original script logic)
   ansible.builtin.set_fact:
@@ -42,7 +42,7 @@
     - name: Create Oracle error report matching original script format
       ansible.builtin.copy:
         content: |
-          {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_database }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to Oracle database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect to Oracle","statistics":{"duration":0},"version":"N/A"}]}
+          {"controls":[{"timestamp":"","hostname":"{{ oracle_server }}","database":"{{ oracle_service }}","port":"{{ oracle_port }}","DBVersion":"{{ oracle_version }}","id":"Cannot connect to Oracle database. One or more parameters such as Platform, Host Name, Database Name, Service Name, Port Number, Database Version may be incorrect.","profile_id":"N/A","profile_sha256":"N/A","status":"Unreachable","code_desc":"Cannot connect to Oracle","statistics":{"duration":0},"version":"N/A"}]}
         dest: "{{ inspec_results_dir }}/{{ oracle_result_file_name }}.json"
       when:
         # Only create error report for actual InSpec execution failures (not rc=100/101 which are valid)

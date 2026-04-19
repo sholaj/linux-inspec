@@ -15,7 +15,6 @@
     oracle_server: 10.0.2.5
     oracle_port: 1521
     oracle_service: ORCLCDB
-    oracle_database: ORCLCDB
     oracle_version: "19c"
     oracle_username: system
     oracle_password: OraclePass123
@@ -41,7 +40,6 @@
           =================================
           Server: {{ oracle_server }}:{{ oracle_port }}
           Service: {{ oracle_service }}
-          Database: {{ oracle_database }}
           Version: {{ oracle_version }}
           Runner: {{ runner_host }}
 

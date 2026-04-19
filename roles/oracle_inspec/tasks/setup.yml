@@ -48,7 +48,7 @@
       ║  Oracle InSpec Compliance Scan                                   ║
       ╠══════════════════════════════════════════════════════════════════╣
       ║  Server:          {{ oracle_server }}:{{ oracle_port }}
-      ║  Database:        {{ oracle_database }}
+      ║  Service:         {{ oracle_service }}
       ║  Oracle Version:  {{ oracle_version }}
       ║  Profile:         {{ _inspec_profile_name }} v{{ _inspec_profile_version }}
       ║  CIS Benchmark:   {{ _cis_benchmark_version }}
