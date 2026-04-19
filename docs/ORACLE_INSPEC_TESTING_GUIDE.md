@@ -514,7 +514,6 @@ oracle_databases:
       oracle_server: 10.0.2.6
       oracle_port: 1521
       oracle_service: ORCLCDB
-      oracle_database: ORCLCDB
       oracle_version: "19c"
       oracle_username: system
       oracle_password: "{{ lookup('env', 'ORACLE_PASSWORD') | default('OraclePass123', true) }}"
@@ -526,8 +525,7 @@ oracle_databases:
 |----------|---------|-------------|
 | `oracle_server` | - | Oracle server hostname/IP |
 | `oracle_port` | 1521 | Listener port |
-| `oracle_service` | - | Service name |
-| `oracle_database` | - | Database name |
+| `oracle_service` | - | Service name (used for InSpec connection AND result-file naming) |
 | `oracle_version` | 19c | Oracle version (11g, 12c, 18c, 19c) |
 | `oracle_username` | nist_scan_user | Database username |
 | `oracle_password` | - | Database password (use vault or env var) |

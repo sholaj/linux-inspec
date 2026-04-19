@@ -58,14 +58,12 @@ all:
         ORAPROD01_1521:
           oracle_server: oraprod01.example.com
           oracle_port: 1521
-          oracle_database: ORCL
           oracle_service: ORCL
           oracle_version: "19"
 
         ORAPROD02_1521:
           oracle_server: oraprod02.example.com
           oracle_port: 1521
-          oracle_database: FINDB
           oracle_service: FINDB
           oracle_version: "19"
 

@@ -166,7 +166,7 @@
     _db_scan_record:
       host: "{{ oracle_server }}"
       port: "{{ oracle_port }}"
-      database: "{{ oracle_database }}"
+      database: "{{ oracle_service }}"
       service: "{{ oracle_service }}"
       db_type: "oracle"
       version: "{{ oracle_version }}"

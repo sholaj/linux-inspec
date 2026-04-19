@@ -31,7 +31,7 @@
 
 - name: Log Splunk submission status
   ansible.builtin.debug:
-    msg: "Splunk submission {{ 'successful' if splunk_response is defined and not splunk_response.failed | default(false) else 'failed' }} for {{ oracle_server }}/{{ oracle_database }}"
+    msg: "Splunk submission {{ 'successful' if splunk_response is defined and not splunk_response.failed | default(false) else 'failed' }} for {{ oracle_server }}/{{ oracle_service }}"
   when:
     - send_to_splunk | default(false) | bool
     - inspec_debug_mode | default(false) | bool
