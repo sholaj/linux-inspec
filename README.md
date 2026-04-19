@@ -8,7 +8,7 @@ Automated CIS benchmark compliance scanning for MSSQL, Oracle, Sybase, and Postg
 |------------|---------|----------|
 | **linux-inspec** (this repo) | Execution roles and playbooks | Ansible roles, playbooks, AAP2 config, Terraform test infra |
 | **inspec_cis_database** | CIS InSpec profiles | 15 profiles across 4 platforms, organized as `cis/files/profiles/` |
-| **oar_tower_inventories** | Inventory by business unit | BU-based inventory files (CORP, UATCORP, IMSWESTUAT, IMSWESTPROD, CRDIT) |
+| **oar_tower_inventories** | Inventory by business unit | BU-based inventory files (placeholder BU names: ALPHA, BRAVO, CHARLIE, DELTA, ECHO) |
 
 Profiles are pulled from `inspec_cis_database` via `requirements.yml`. Inventories are stored in `oar_tower_inventories` organized by business unit and environment branch.
 
@@ -64,11 +64,11 @@ Inventories use business-unit groups with `database_platform` per host:
 ```yaml
 all:
   children:
-    db_corp:                        # BU-based group (not technology-based)
+    db_alpha:                       # BU-based group (not technology-based)
       vars:
         ssc_sn_environment: test    # Required: environment identifier
         ssc_sn_region: na           # Required: region identifier
-        ssc_sn_bu: corp             # Required: business unit identifier
+        ssc_sn_bu: alpha            # Required: business unit identifier
         ansible_connection: local
       hosts:
         DBSERVER01_1433:
@@ -88,7 +88,7 @@ The playbook `run_compliance_scans.yml` uses `database_platform` to conditionall
 ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml
 
 # Limit to a specific business unit
-ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml --limit "db_corp"
+ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml --limit "db_alpha"
 
 # Single platform scan
 ansible-playbook -i inventory.yml test_playbooks/run_mssql_inspec.yml
