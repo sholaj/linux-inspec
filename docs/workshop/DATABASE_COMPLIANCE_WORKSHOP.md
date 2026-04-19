@@ -96,9 +96,9 @@ Getting accurate database inventory from affiliates is difficult:
 
 | Affiliate | Password Tool | Integration Method |
 |-----------|--------------|-------------------|
-| IMS West | CyberArk | API lookup (CCP) |
-| CORP | Cloakware | File-based retrieval |
-| IMS West | USM (User System Manager) | Manual rotation tracking |
+| BU-1 | CyberArk | API lookup (CCP) |
+| BU-2 | Cloakware | File-based retrieval |
+| BU-1 | USM (User System Manager) | Manual rotation tracking |
 | Others | AAP2 Vault | Direct injection |
 
 ### Why This Is Hard
