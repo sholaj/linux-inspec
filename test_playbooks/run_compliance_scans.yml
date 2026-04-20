@@ -25,6 +25,15 @@
     splunk_index: "{{ splunk_index | default('compliance_scans') }}"
 
   pre_tasks:
+    # Drop hosts that aren't databases (e.g. inspec-runner under
+    # delegate_hosts in Model B inventories). Without this, every
+    # downstream `map('extract', hostvars, 'database_platform')` and
+    # every `when: database_platform == '<plat>'` raises an undefined
+    # variable for the runner host.
+    - name: Skip non-DB hosts (e.g. inspec-runner / delegate_hosts)
+      ansible.builtin.meta: end_host
+      when: database_platform is not defined
+
     - name: Ensure base results directory exists
       ansible.builtin.file:
         path: "{{ base_results_dir }}"
