@@ -2,9 +2,11 @@
 # Variables for oracle_inspec role
 
 # Supported Oracle versions (bare numeric to match inventory oracle_version)
-# SME-approved set per DBSCAN-756; 11g/18c removed, 21c/23c added.
+# Core SME-approved set is 12 / 19 / 21 / 23 per DBSCAN-756.
+# 18 is retained as a transitional scan target (team still has 18c hosts).
 supported_oracle_versions:
   - "12"
+  - "18"
   - "19"
   - "21"
   - "23"

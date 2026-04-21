@@ -40,11 +40,16 @@ profiles are untouched.
 | MSSQL 2019 | v1.5.0 | v1.2.0-1 (L1 + L2, Database Engine + AWS RDS) | 🟡 Uplift 1.2.0 → 1.5.0 |
 | MSSQL 2022 | v1.1.0 | ❌ not published | 🔴 Publish v1.1.0 |
 | Oracle 12c (12.1.0.2.0) | v3.0.0 | v3.0.0-2 (6 audit-mode variants) | 🟢 **Available now** — download Linux RDBMS Traditional Auditing |
+| Oracle 18c† | v1.0.0 | v1.0.0-1 (6 audit-mode variants) | 🟢 **Available now** — download Linux RDBMS Traditional Auditing |
 | Oracle 19c | v1.2.0 | v1.0.0-1 (6 audit-mode variants) | 🟡 Uplift 1.0.0 → 1.2.0 |
 | Oracle 21c | v1.2.0 | ❌ not published | 🔴 Publish v1.2.0 (same controls as 19c) |
 | Oracle 23c | v1.1.0 | ❌ not published | 🔴 Publish v1.1.0 |
 
-**Summary counts:** 1 ready to download • 4 need uplift • 5 need fresh publish.
+† Oracle 18c is **not** on the SME's core target list (12/19/21/23),
+but is retained as a transitional scan target per team decision. Tracked
+at the current Chef-published version (v1.0.0) — no uplift ask.
+
+**Summary counts:** 2 ready to download • 4 need uplift • 5 need fresh publish.
 
 ## Local repo state
 
@@ -54,10 +59,11 @@ path resolver doesn't need to change; the CIS profile version lives in
 each `inspec.yml` file's `version:` and `summary:` fields):
 
 - Removed: `ssc-cis-mssql2008-*`, `ssc-cis-mssql2018-*`,
-  `ssc-cis-oracle11-*`, `ssc-cis-oracle18-*`
+  `ssc-cis-oracle11-*`
 - Version-bumped: all 6 MSSQL + Oracle 12c / 19c
-- New stubs: `ssc-cis-oracle21-1.0.0-1/` and
-  `ssc-cis-oracle23-1.0.0-1/`
+- New stubs: `ssc-cis-oracle18-1.0.0-1/` (retained, v1.0.0),
+  `ssc-cis-oracle21-1.0.0-1/` (v1.2.0),
+  `ssc-cis-oracle23-1.0.0-1/` (v1.1.0)
 
 The controls content is still the original placeholder `trusted.rb`.
 Once Chef publishes the real tarballs (per the JIRA below), they get
