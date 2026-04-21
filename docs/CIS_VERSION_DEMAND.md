@@ -90,7 +90,7 @@ Chef Automate profile catalogue, or published at an older version.
 
 Please publish the versions below to the Chef Automate compliance
 profile catalogue so our project team can "Get" them through the
-standard UI (https://itsrhv123231.it.statestr.com/compliance/compliance-profiles).
+standard UI ([CHEF_AUTOMATE_URL]/compliance/compliance-profiles).
 
 --- PUBLISH NEW (5) ---
 - CIS Microsoft SQL Server 2012 Benchmark Level 1 - Database Engine, v1.6.0
