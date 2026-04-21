@@ -37,7 +37,7 @@ This guide covers the prerequisites and setup for running InSpec compliance scan
 WinRM::WinRMAuthorizationError: WinRM authentication failed
 ```
 
-**Cause:** Username missing domain context (e.g., `p882789` instead of `p882789@domain.com`)
+**Cause:** Username missing domain context (e.g., `svc_inspec` instead of `svc_inspec@domain.com`)
 
 **Solution:** Use UPN format: `username@domain.com`
 
@@ -227,13 +227,13 @@ cat /tmp/compliance_scans/mssql/winrm/*.json | jq '.statistics'
 **Solution**: Use UPN format for the username:
 ```yaml
 # Wrong - missing domain context
-winrm_username: p882789
+winrm_username: svc_inspec
 
 # Correct - UPN format (recommended)
-winrm_username: p882789@example.internal
+winrm_username: svc_inspec@example.internal
 
 # Correct - Down-level format (escape backslash in YAML)
-winrm_username: "EXAMPLE\\p882789"
+winrm_username: "EXAMPLE\\svc_inspec"
 ```
 
 ---
