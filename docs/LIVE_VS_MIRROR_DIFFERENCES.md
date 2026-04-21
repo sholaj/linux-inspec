@@ -5,20 +5,24 @@ project. The **live AAP env** runs the same code with a small set of
 deliberate differences. This doc is the single place to track them so
 they don't drift unnoticed.
 
-> **Last reconciled:** 2026-04-19, after PRs #10–#13 and the
-> `inspec_cis_database`/`oar_tower_inventories` restructures.
+> **Last reconciled:** 2026-04-21, after inventory-model simplification
+> (env-level file per region, tech groups over BU children, no per-host
+> `database_platform`).
 
 ## TL;DR
 
 | Concern | Public mirror | Live AAP env |
 |---|---|---|
 | BU directory names | NATO-phonetic placeholders (`ALPHA`, `BRAVO`, …) | Real BU acronyms |
-| Inventory file extension | none (e.g. `ALPHA_DEVTEST_NA_Inv_InSpec_Database`) | `.yml` (e.g. `CORP_DEVTEST_NA_Inv_InSpec_Database.yml`) |
+| Inventory file extension | none (e.g. `DEVTEST_NA_Inv_InSpec_Database`) | `.yml` (e.g. `DEVTEST_NA_Inv_InSpec_Database.yml`) |
+| Inventory layout | **1 file per (env, region)** at repo root, tech groups → `db_<bu>` children | same shape |
 | Inventory tooling location | `oar_tower_inventories/tools/` (separate repo) | `roles/inventory_converter/` inside the project repo |
 | Branch model | single `main` in all three repos | feature branches (e.g. `feature/mssql_scan`) during testing |
 | Delegate host placement | `delegate_hosts` group (Model B) | inside the BU group (Model A) |
 | Host-id pattern | `<server>_<port>` (or `_<db>_<port>`) | same + optional `_<MODE_SUFFIX>` (e.g. `_direct`, `_winrm`, `_EE`, `_DELEGATE_CONNECTION`) |
 | Inventory plugin noise | silenced by `enable_plugins = yaml,ini,auto` in `ansible.cfg` | sometimes still visible if EE/global config overrides project config |
+| Multi-platform dispatch | ❌ none — one playbook per platform (`run_<plat>_inspec.yml`) | same |
+| `database_platform` per host | ❌ dropped — platform implicit from `<plat>_databases` parent group | same |
 
 Each row is unpacked below.
 
@@ -107,23 +111,24 @@ The InSpec runner can sit in two valid places.
 ```yaml
 all:
   children:
-    db_corp:
-      vars:
-        ssc_sn_bu: corp
-        ansible_connection: local        # default for DB host_ids
-      hosts:
-        inspec-runner:                   # the real SSH target
-          ansible_host: <runner-fqdn>
-          ansible_user: ansible_svc
-          ansible_connection: ssh        # overrides the group default
-        DBHOST_PORT:
-          database_platform: mssql
-          ...
+    mssql_databases:
+      children:
+        db_corp:
+          vars:
+            ssc_sn_bu: corp
+            ansible_connection: local        # default for DB host_ids
+          hosts:
+            inspec-runner:                   # the real SSH target
+              ansible_host: <runner-fqdn>
+              ansible_user: ansible_svc
+              ansible_connection: ssh        # overrides the group default
+            DBHOST_PORT:
+              mssql_server: ...
 ```
 
 - ✅ `delegate_to: inspec-runner` resolves naturally.
-- ⚠️ `hosts: db_corp` plays iterate the runner too — role logic must
-  short-circuit on it (`when: database_platform is defined`).
+- ⚠️ `hosts: mssql_databases` plays iterate the runner too — role must
+  short-circuit (e.g. `when: mssql_server is defined`).
 
 ### Model B — delegate in a separate top-level group (mirror)
 
@@ -137,18 +142,19 @@ all:
           ansible_user: ansible_svc
           ansible_connection: ssh
 
-    db_alpha:
-      vars:
-        ssc_sn_bu: alpha
-        ansible_connection: local
-        inspec_delegate_host: "inspec-runner"   # name string only
-      hosts:
-        DBHOST_PORT:
-          database_platform: mssql
-          ...
+    mssql_databases:
+      children:
+        db_alpha:
+          vars:
+            ssc_sn_bu: alpha
+            ansible_connection: local
+            inspec_delegate_host: "inspec-runner"   # name string only
+          hosts:
+            DBHOST_PORT:
+              mssql_server: ...
 ```
 
-- ✅ Clean separation — `hosts: db_alpha` iterates DB labels only.
+- ✅ Clean separation — `hosts: mssql_databases` iterates DB labels only.
 - ⚠️ `inspec_delegate_host` must point at an inventory hostname that
   exists somewhere (in `delegate_hosts` or elsewhere) for
   `delegate_to: "{{ inspec_delegate_host }}"` to work.

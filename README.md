@@ -52,49 +52,55 @@ git clone <repository-url>
 cd linux-inspec
 ansible-galaxy role install -r requirements.yml -p requirements_roles/
 
-# 2. Run a compliance scan (using BU-based inventory)
-ansible-playbook -i <inventory-file> test_playbooks/run_compliance_scans.yml \
+# 2. Run a compliance scan (one playbook per platform)
+ansible-playbook -i <inventory-file> test_playbooks/run_mssql_inspec.yml \
   -e @vault.yml --vault-password-file .vaultpass
 ```
 
 ### Inventory Format
 
-Inventories use business-unit groups with `database_platform` per host:
+One env-level inventory file per (env, region). Technology groups
+(`mssql_databases`, `oracle_databases`, ...) own per-BU child groups
+(`db_alpha`, `db_bravo`, ...). BU-scoped vars live on the child group.
+The parent group implies the platform — no per-host `database_platform`:
 
 ```yaml
 all:
   children:
-    db_alpha:                       # BU-based group (not technology-based)
-      vars:
-        ssc_sn_environment: test    # Required: environment identifier
-        ssc_sn_region: na           # Required: region identifier
-        ssc_sn_bu: alpha            # Required: business unit identifier
-        ansible_connection: local
-      hosts:
-        DBSERVER01_1433:
-          database_platform: mssql  # Determines which role to apply
-          mssql_server: "[DB_SERVER].example.internal"
-          mssql_port: 1433
-          mssql_version: "2019"
-          mssql_username: nist_scan_user
+    mssql_databases:
+      children:
+        db_alpha:
+          vars:
+            ssc_sn_environment: test   # Required: environment identifier
+            ssc_sn_region: na          # Required: region identifier
+            ssc_sn_bu: alpha           # Required: business unit identifier
+            ansible_connection: local
+          hosts:
+            ALPHA_DBSERVER01_1433:
+              mssql_server: "[DB_SERVER].example.internal"
+              mssql_port: 1433
+              mssql_version: "2019"
+              mssql_username: nist_scan_user
 ```
 
-The playbook `run_compliance_scans.yml` uses `database_platform` to conditionally include the correct role per host.
+Each single-platform playbook targets its matching tech group via
+`hosts: <plat>_databases`.
 
 ### Running Scans
 
 ```bash
-# Multi-platform scan (all databases in inventory)
-ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml
-
-# Limit to a specific business unit
-ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml --limit "db_alpha"
-
-# Single platform scan
+# All MSSQL hosts in all BUs
 ansible-playbook -i inventory.yml test_playbooks/run_mssql_inspec.yml
 
+# Limit to a specific BU
+ansible-playbook -i inventory.yml test_playbooks/run_oracle_inspec.yml --limit "db_alpha"
+
+# Other platforms
+ansible-playbook -i inventory.yml test_playbooks/run_sybase_inspec.yml
+ansible-playbook -i inventory.yml test_playbooks/run_postgres_inspec.yml
+
 # Debug mode
-ansible-playbook -i inventory.yml test_playbooks/run_compliance_scans.yml -e "enable_debug=true"
+ansible-playbook -i inventory.yml test_playbooks/run_mssql_inspec.yml -e "enable_debug=true"
 ```
 
 ## Controls (InSpec Profiles)
