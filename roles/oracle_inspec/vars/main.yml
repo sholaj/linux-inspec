@@ -1,12 +1,13 @@
 ---
 # Variables for oracle_inspec role
 
-# Supported Oracle versions
+# Supported Oracle versions (bare numeric to match inventory oracle_version)
+# SME-approved set per DBSCAN-756; 11g/18c removed, 21c/23c added.
 supported_oracle_versions:
-  - "11g"
-  - "12c"
-  - "18c"
-  - "19c"
+  - "12"
+  - "19"
+  - "21"
+  - "23"
 
 # InSpec binary path
 inspec_binary_path: "/usr/bin/inspec"
