@@ -6,7 +6,7 @@
 # local). For WinRM-based MSSQL scans see run_mssql_inspec_winrm.yml.
 #
 # Inventory contract (per host):
-#   database_platform: mssql
+#   (platform is implicit from the hosts: mssql_databases group target)
 #   mssql_server, mssql_port, mssql_version, mssql_username, mssql_database
 #   inspec_delegate_host  (group-level; "" or "localhost" = run on EE)
 
