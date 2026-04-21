@@ -3313,5 +3313,107 @@ Address data quality issues identified in the DB [BU] environment. This includes
 
 ---
 
+## DBSCAN-758: Live Inventory Restructure — Env-Level Layout, Drop `database_platform`
+
+### Purpose
+**As a** DevOps engineer, **I want to** migrate the live AAP inventory and
+playbook project from the mixed per-host `database_platform` model to an
+env-level inventory with technology groups over BU child groups, **so that**
+the scanning pipeline matches the SME-approved convention (single platform
+per group, no runtime dispatch) and the live env stays in sync with the
+public mirror.
+
+### Description
+The public mirror has already been reshaped (PR #19, commit `882c456`):
+
+- One inventory file per (env, region) at the repo root
+  (`DEVTEST_NA_Inv_InSpec_Database`), replacing the five per-BU files.
+- Tech groups (`mssql_databases`, `oracle_databases`, `sybase_databases`,
+  `postgres_databases`) each own per-BU children (`db_alpha`,
+  `db_bravo`, …). BU-scoped vars live on the child group.
+- Per-host `database_platform` var removed — platform is implicit from
+  the parent group.
+- `run_compliance_scans.yml` retired; each platform is invoked via its
+  own `run_<plat>_inspec.yml`.
+- Converters (flat-file + CMDB) updated to emit the new structure.
+
+This ticket tracks applying the same simplification to the live AAP
+project (`chf_ansible_inspec_exec` / `chf_devtest_proj_cfgman_inspec_scan`)
+so the live pipeline behaves the same way.
+
+### Acceptance Criteria
+- [ ] Live inventory file consolidated into a single `DEVTEST_NA_*_Inv_InSpec_Database.yml`
+      (and per-env equivalents for NA_PROD, EU, etc. if applicable).
+- [ ] Real BU names preserved in the live file (public mirror uses
+      placeholders — *not* applied in live).
+- [ ] New structure confirmed via `ansible-inventory --list`:
+      `mssql_databases / oracle_databases / sybase_databases` each
+      contain `db_<bu>` children, no host carries `database_platform`.
+- [ ] Live `run_compliance_scans.yml` retired; any scheduled AAP job
+      templates pointing at it converted to use the per-platform
+      `run_<plat>_inspec.yml` playbooks.
+- [ ] Live `roles/inventory_converter/` (if retained in the live project)
+      synced to match `oar_tower_inventories/tools/` output shape.
+- [ ] End-to-end scan validation: at least one MSSQL, one Oracle, and
+      one Sybase scan succeed using the new inventory (including
+      `--limit db_<real-bu>` scoping).
+- [ ] `ansible_connection: local` present on every BU child (prevents
+      the prior `Could not resolve hostname` SSH-lookup failure mode).
+
+### Sub-tasks
+1. Inventory merge:
+   a. Collect the current per-BU inventory files (corp + affiliates).
+   b. Emit a single env file: `mssql_databases.children.db_<bu>.hosts`
+      structure for each platform used in the BU.
+   c. Drop per-host `database_platform` keys.
+   d. Prefix `host_id`s with the BU name so they remain unique across
+      merged groups.
+2. Converter update:
+   a. Apply the `oar_tower_inventories/tools/` changes (commit `9c03545`)
+      to the live project's `roles/inventory_converter/`.
+   b. Re-run the converter against the current CMDB/flat-file sources
+      and confirm output matches (1) above.
+3. Playbook changes:
+   a. Remove `run_compliance_scans.yml` (and the associated
+      `multi-platform-scan` job template) from the live project.
+   b. Confirm `run_mssql_inspec.yml`, `run_oracle_inspec.yml`,
+      `run_sybase_inspec.yml`, `run_postgres_inspec.yml` target the
+      tech group and include no `database_platform` references.
+4. AAP reconfiguration:
+   a. Update the Inventory Source to point at the new file path
+      (single file per env+region).
+   b. Update any Workflow Templates that chained the multi-platform
+      playbook to instead run the per-platform templates in sequence.
+   c. Re-sync the project and inventory source; confirm parse is clean.
+5. Validation runs:
+   a. Run each per-platform playbook against the consolidated
+      inventory (`--check` first, then live).
+   b. Confirm the "platform summary" errors previously seen
+      (DBSCAN-757 context) no longer occur.
+6. Documentation:
+   a. Update the live project README / runbook to reflect the
+      single-inventory / per-platform-playbook model.
+   b. Update `LIVE_VS_MIRROR_DIFFERENCES.md` in the public mirror if
+      any new drift emerges.
+
+### Labels
+`inventory`, `aap2`, `restructure`, `refactor`
+
+### Type: Task
+### Priority: High
+
+### Dependencies
+- **Blocks:** any future work that assumes the simplified single-platform
+  playbook model (e.g. per-BU scheduling, Splunk forwarding toggles).
+- **Related:** DBSCAN-757 (Data Quality Review — the root cause of that
+  ticket's `Generate platform summary` failure is removed by this change).
+
+### Reference
+- Public-mirror PR: sholaj/linux-inspec #19 (commit `882c456`)
+- Companion commit: sholaj/oar_tower_inventories `9c03545` on `main`
+- Design doc: `docs/LIVE_VS_MIRROR_DIFFERENCES.md`
+
+---
+
 *Document generated for project planning purposes.*
-*Last Updated: 2026-03-23*
+*Last Updated: 2026-04-21*
