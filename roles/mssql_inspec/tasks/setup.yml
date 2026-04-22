@@ -15,17 +15,19 @@
            )
       }}
 
-- name: Check if controls exist in requirements role
-  ansible.builtin.stat:
-    path: "{{ _controls_role_path }}/files/profiles/ssc-cis-mssql{{ mssql_version }}-1.0.0-1/inspec.yml"
-  register: _requirements_controls
-  delegate_to: localhost
+- name: Discover MSSQL profile in requirements role
+  # Globs the profile folder by major-version prefix so the role is
+  # agnostic to the CIS-benchmark suffix (e.g. -1.0.0-1, -1.6.0-1).
+  ansible.builtin.set_fact:
+    _requirements_profile_candidates: >-
+      {{ query('ansible.builtin.fileglob',
+               _controls_role_path + '/files/profiles/ssc-cis-mssql' + mssql_version | string + '-*/inspec.yml') }}
 
 - name: Set control paths
   ansible.builtin.set_fact:
     _local_controls_path: >-
-      {{ _controls_role_path + '/files/profiles/ssc-cis-mssql' + mssql_version + '-1.0.0-1'
-         if _requirements_controls.stat.exists
+      {{ (_requirements_profile_candidates | first | dirname)
+         if (_requirements_profile_candidates | length) > 0
          else role_path + '/files/MSSQL' + mssql_version + '_ruby' }}
     _remote_controls_path: "/tmp/inspec_mssql_{{ mssql_version }}"
 
