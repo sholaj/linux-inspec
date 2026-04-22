@@ -47,11 +47,14 @@ do
     else
         if [ "$remote_sha" = $z40 ]
         then
-            # New branch, examine all commits
-            range="$local_sha"
+            # New branch — validate only commits not already on any remote.
+            # Walking "$local_sha" alone would validate the entire history
+            # back to the root commit and fail on pre-existing commits that
+            # predate this hook's commit-message policy.
+            rev_args=("$local_sha" "--not" "--remotes")
         else
             # Update to existing branch, examine new commits
-            range="$remote_sha..$local_sha"
+            rev_args=("$remote_sha..$local_sha")
         fi
 
         # Check each commit message
@@ -69,7 +72,7 @@ do
                 failed=1
                 invalid_commits="${invalid_commits}\n  - ${commit_hash:0:7}: $commit_msg"
             fi
-        done < <(git rev-list "$range")
+        done < <(git rev-list "${rev_args[@]}")
 
         if [ $failed -eq 1 ]; then
             echo ""
