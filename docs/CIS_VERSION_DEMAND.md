@@ -26,8 +26,9 @@ versions for database compliance scanning.
 | MSSQL  | 2022            | v1.1.0 |
 
 Sybase and PostgreSQL are **out of scope** for this SME alignment —
-existing `ssc-cis-sybase15/16-1.0.0-1` and `ssc-cis-postgres15-1.0.0-1`
-profiles are untouched.
+existing `ssc-cis-sybase15/16-*` and `ssc-cis-postgres15-*` profiles
+are untouched. Their `inspec.yml` `version:` stays at 1.0.0 (no
+explicit upstream CIS version stated) until the SME confirms a target.
 
 ## Gap summary
 
@@ -54,16 +55,16 @@ at the current Chef-published version (v1.0.0) — no uplift ask.
 ## Local repo state
 
 `inspec_cis_database/cis/files/profiles/` has been realigned to the SME
-set (directory names retain the `-1.0.0-1` local suffix so the role's
-path resolver doesn't need to change; the CIS profile version lives in
-each `inspec.yml` file's `version:` and `summary:` fields):
+set. Directory names now carry the real CIS benchmark version in the
+suffix (e.g. `ssc-cis-mssql2019-1.5.0-1`); the role setup tasks discover
+profiles via a `ssc-cis-<plat><ver>-*` prefix glob so they stay agnostic
+to the suffix.
 
 - Removed: `ssc-cis-mssql2008-*`, `ssc-cis-mssql2018-*`,
   `ssc-cis-oracle11-*`
-- Version-bumped: all 6 MSSQL + Oracle 12c / 19c
+- Version-bumped folder + metadata: all 6 MSSQL + Oracle 12c / 19c
 - New stubs: `ssc-cis-oracle18-1.0.0-1/` (retained, v1.0.0),
-  `ssc-cis-oracle21-1.0.0-1/` (v1.2.0),
-  `ssc-cis-oracle23-1.0.0-1/` (v1.1.0)
+  `ssc-cis-oracle21-1.2.0-1/`, `ssc-cis-oracle23-1.1.0-1/`
 
 The controls content is still the original placeholder `trusted.rb`.
 Once Chef publishes the real tarballs (per the JIRA below), they get
@@ -129,9 +130,10 @@ For each profile Chef adds or uplifts:
 
 1. Click "Get" in the Chef Automate UI (downloads a `.tar.gz`).
 2. Extract into
-   `inspec_cis_database/cis/files/profiles/ssc-cis-<plat><ver>-1.0.0-1/`
-   **replacing** the local placeholder content (keep the existing
-   directory name and `inspec.yml` metadata).
+   `inspec_cis_database/cis/files/profiles/ssc-cis-<plat><ver>-<cis_version>-1/`
+   **replacing** the local placeholder content (keep the directory
+   name and `inspec.yml` metadata in sync — the suffix must match
+   the `version:` field).
 3. Verify `inspec exec` still resolves inputs (usernm, passwd, hostnm,
    port, servicenm — these are already normalised in the local stubs).
 4. Commit with message `update: DBSCAN-756 import CIS <plat><ver> v<x.y.z>`.
