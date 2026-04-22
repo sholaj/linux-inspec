@@ -15,18 +15,24 @@
       }}
 
 - name: Discover PostgreSQL profile in requirements role
-  # Globs the profile folder by major-version prefix so the role is
+  # Finds the profile folder by major-version prefix so the role is
   # agnostic to the CIS-benchmark suffix (e.g. -1.0.0-1).
-  ansible.builtin.set_fact:
-    _requirements_profile_candidates: >-
-      {{ query('ansible.builtin.fileglob',
-               _controls_role_path + '/files/profiles/ssc-cis-postgres' + postgres_version | string + '-*/inspec.yml') }}
+  # Uses ansible.builtin.find rather than the fileglob lookup because
+  # fileglob restricts search to Ansible's known files/ paths and won't
+  # resolve requirements_roles/ on disk.
+  ansible.builtin.find:
+    paths: "{{ _controls_role_path }}/files/profiles"
+    patterns: "ssc-cis-postgres{{ postgres_version }}-*"
+    file_type: directory
+  register: _requirements_profile
+  delegate_to: localhost
+  failed_when: false
 
 - name: Set control paths
   ansible.builtin.set_fact:
     _local_controls_path: >-
-      {{ (_requirements_profile_candidates | first | dirname)
-         if (_requirements_profile_candidates | length) > 0
+      {{ (_requirements_profile.files | first).path
+         if ((_requirements_profile.files | default([])) | length) > 0
          else role_path + '/files/POSTGRES' + postgres_version + '_ruby' }}
     _remote_controls_path: "/tmp/inspec_postgres_{{ postgres_version }}"
 
