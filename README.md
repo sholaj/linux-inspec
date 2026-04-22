@@ -109,12 +109,12 @@ Profiles are stored in `inspec_cis_database` and pulled via `requirements.yml`:
 
 | Platform | Versions | Profile Naming | Controls |
 |----------|----------|----------------|----------|
-| MSSQL | 2008-2022 (8 profiles) | `ssc-cis-mssql{ver}-1.0.0-1` | 40-72 per version |
-| Oracle | 11, 12, 18, 19 (4 profiles) | `ssc-cis-oracle{ver}-1.0.0-1` | 91 per version |
-| Sybase | 15, 16 (2 profiles) | `ssc-cis-sybase{ver}-1.0.0-1` | 7-84 per version |
-| PostgreSQL | 15 (1 profile) | `ssc-cis-postgres15-1.0.0-1` | 59 |
+| MSSQL | 2008-2022 (8 profiles) | `ssc-cis-mssql{ver}-{cis_version}-1` | 40-72 per version |
+| Oracle | 11, 12, 18, 19 (4 profiles) | `ssc-cis-oracle{ver}-{cis_version}-1` | 91 per version |
+| Sybase | 15, 16 (2 profiles) | `ssc-cis-sybase{ver}-{cis_version}-1` | 7-84 per version |
+| PostgreSQL | 15 (1 profile) | `ssc-cis-postgres15-{cis_version}-1` | 59 |
 
-Roles auto-resolve profiles from `requirements_roles/cis/` (installed via `ansible-galaxy`) with fallback to legacy embedded `roles/*/files/` paths.
+`{cis_version}` is the CIS benchmark version declared in each profile's `inspec.yml` (e.g. `ssc-cis-mssql2019-1.5.0-1`). Roles discover the profile folder via a prefix glob on `ssc-cis-<plat><ver>-*`, so they remain agnostic to the benchmark-version suffix. Falls back to legacy embedded `roles/*/files/` paths if the requirements role is absent.
 
 ## AAP2 Integration
 
