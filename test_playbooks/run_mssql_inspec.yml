@@ -129,6 +129,8 @@
 #   - Add Splunk Custom Credential (optional) and set splunk_enabled=true
 #
 # Limit examples:
-#   --limit "db_alpha"            # Scan only one BU
-#   --limit "db_alpha:db_bravo"   # Scan two BUs
-#   -e "enable_debug=true"        # Verbose output
+#   --limit "db_alpha"                   # One BU (aggregator, all platforms;
+#                                        # intersected with hosts: mssql_databases)
+#   --limit "db_alpha_mssql"             # One BU + this platform, directly
+#   --limit "db_alpha:db_bravo"          # Two BUs
+#   -e "enable_debug=true"               # Verbose output
