@@ -60,31 +60,61 @@ ansible-playbook -i <inventory-file> test_playbooks/run_mssql_inspec.yml \
 ### Inventory Format
 
 One env-level inventory file per (env, region). Technology groups
-(`mssql_databases`, `oracle_databases`, ...) own per-BU child groups
-(`db_alpha`, `db_bravo`, ...). BU-scoped vars live on the child group.
-The parent group implies the platform — no per-host `database_platform`:
+(`mssql_databases`, `oracle_databases`, …) each own **platform-specific**
+per-BU subgroups (`db_<bu>_mssql`, `db_<bu>_oracle`, `db_<bu>_sybase`).
+A top-level `db_<bu>` aggregator holds BU-wide vars and
+children-references the per-platform subgroups so `--limit db_<bu>`
+still targets every host for a BU across platforms. The parent tech
+group implies the platform — no per-host `database_platform`.
+
+Why platform-specific subgroups: Ansible inventory YAML treats group
+names as global keys. A single `db_<bu>` placed as a direct child of
+multiple tech groups merges every host list into one group and leaks
+hosts across platforms (`mssql_databases` ends up with Oracle /
+Sybase hosts and vice versa).
 
 ```yaml
 all:
   children:
+    # BU aggregator — holds BU-wide vars, points at the per-platform subgroups
+    db_alpha:
+      vars:
+        ssc_sn_environment: test   # Required: environment identifier
+        ssc_sn_region: na          # Required: region identifier
+        ssc_sn_bu: alpha           # Required: business unit identifier
+        ansible_connection: local
+        inspec_delegate_host: ""
+      children:
+        db_alpha_mssql:
+        db_alpha_oracle:
+
+    # Tech groups own platform-specific BU subgroups
     mssql_databases:
       children:
-        db_alpha:
-          vars:
-            ssc_sn_environment: test   # Required: environment identifier
-            ssc_sn_region: na          # Required: region identifier
-            ssc_sn_bu: alpha           # Required: business unit identifier
-            ansible_connection: local
+        db_alpha_mssql:
           hosts:
             ALPHA_DBSERVER01_1433:
               mssql_server: "[DB_SERVER].example.internal"
               mssql_port: 1433
               mssql_version: "2019"
               mssql_username: nist_scan_user
+
+    oracle_databases:
+      children:
+        db_alpha_oracle:
+          hosts:
+            ALPHA_CDB1_1521:
+              oracle_server: "[DB_SERVER].example.internal"
+              oracle_port: 1521
+              oracle_service: CDB1
+              oracle_version: "19"
+              oracle_username: nist_scan_user
 ```
 
 Each single-platform playbook targets its matching tech group via
-`hosts: <plat>_databases`.
+`hosts: <plat>_databases`. `--limit db_alpha` hits the aggregator and
+Ansible intersects it with the playbook's tech group to give you
+"alpha BU, this platform only".
 
 ### Running Scans
 
@@ -92,8 +122,12 @@ Each single-platform playbook targets its matching tech group via
 # All MSSQL hosts in all BUs
 ansible-playbook -i inventory.yml test_playbooks/run_mssql_inspec.yml
 
-# Limit to a specific BU
+# Limit to a specific BU (uses the db_<bu> aggregator; intersects with the
+# playbook's hosts: <plat>_databases to target that BU + platform only)
 ansible-playbook -i inventory.yml test_playbooks/run_oracle_inspec.yml --limit "db_alpha"
+
+# Equivalent — target the platform-specific subgroup directly
+ansible-playbook -i inventory.yml test_playbooks/run_oracle_inspec.yml --limit "db_alpha_oracle"
 
 # Other platforms
 ansible-playbook -i inventory.yml test_playbooks/run_sybase_inspec.yml
