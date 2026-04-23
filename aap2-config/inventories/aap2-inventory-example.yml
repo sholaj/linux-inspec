@@ -12,11 +12,23 @@
 #
 # LAYOUT:
 #   - Technology groups (mssql_databases / oracle_databases / sybase_databases
-#     / postgres_databases) own per-BU child groups (db_alpha, db_bravo, ...).
-#   - BU-scoped vars live on the child group.
+#     / postgres_databases) each own PLATFORM-SPECIFIC per-BU subgroups:
+#         mssql_databases.children  -> db_<bu>_mssql
+#         oracle_databases.children -> db_<bu>_oracle
+#         sybase_databases.children -> db_<bu>_sybase
+#         postgres_databases.children -> db_<bu>_postgres
+#   - A top-level db_<bu> aggregator holds BU-wide vars and children-refs
+#     the per-platform subgroups so `--limit db_<bu>` still targets every
+#     host for that BU across platforms.
 #   - No per-host database_platform -- platform is implicit from the parent
-#     group. Each run_<plat>_inspec.yml playbook targets the matching
+#     tech group. Each run_<plat>_inspec.yml playbook targets the matching
 #     <plat>_databases group directly.
+#
+#   WHY NOT a single `db_<bu>` group as a direct child of all three tech
+#   groups: Ansible inventory YAML treats group names as global keys.
+#   Repeating `db_<bu>` under multiple tech groups merges every host list
+#   into one group that then becomes a child of every tech group, polluting
+#   `mssql_databases` with Oracle/Sybase hosts (and vice versa).
 #
 # CREDENTIALS:
 #   NOT stored in this inventory - injected by AAP2 Custom Credentials
@@ -45,17 +57,38 @@ all:
           ansible_ssh_common_args: "-o StrictHostKeyChecking=accept-new"
 
     # =========================================================================
+    # BU aggregator groups (top-level) — hold BU-wide vars, aggregate
+    # the per-platform subgroups so `--limit db_<bu>` still works.
+    # =========================================================================
+    db_alpha:
+      vars:
+        ssc_sn_environment: test
+        ssc_sn_region: na
+        ssc_sn_bu: alpha
+        ansible_connection: local
+        inspec_delegate_host: ""   # empty/localhost = run on EE
+      children:
+        db_alpha_mssql:
+        db_alpha_oracle:
+        db_alpha_sybase:
+        db_alpha_postgres:
+
+    db_bravo:
+      vars:
+        ssc_sn_environment: test
+        ssc_sn_region: na
+        ssc_sn_bu: bravo
+        ansible_connection: local
+        inspec_delegate_host: ""
+      children:
+        db_bravo_mssql:
+
+    # =========================================================================
     # MSSQL (corp + affiliates)
     # =========================================================================
     mssql_databases:
       children:
-        db_alpha:
-          vars:
-            ssc_sn_environment: test
-            ssc_sn_region: na
-            ssc_sn_bu: alpha
-            ansible_connection: local
-            inspec_delegate_host: ""   # empty/localhost = run on EE
+        db_alpha_mssql:
           hosts:
             ALPHA_MSSQL01_1433:
               mssql_server: "[DB_SERVER].example.internal"
@@ -63,13 +96,7 @@ all:
               mssql_version: "2019"
               mssql_database: master
 
-        db_bravo:
-          vars:
-            ssc_sn_environment: test
-            ssc_sn_region: na
-            ssc_sn_bu: bravo
-            ansible_connection: local
-            inspec_delegate_host: ""
+        db_bravo_mssql:
           hosts:
             BRAVO_MSSQL01_1433:
               mssql_server: "[DB_SERVER].example.internal"
@@ -82,13 +109,7 @@ all:
     # =========================================================================
     oracle_databases:
       children:
-        db_alpha:
-          vars:
-            ssc_sn_environment: test
-            ssc_sn_region: na
-            ssc_sn_bu: alpha
-            ansible_connection: local
-            inspec_delegate_host: ""
+        db_alpha_oracle:
           hosts:
             ALPHA_ORCLCDB_1521:
               oracle_server: "[DB_SERVER].example.internal"
@@ -101,13 +122,7 @@ all:
     # =========================================================================
     sybase_databases:
       children:
-        db_alpha:
-          vars:
-            ssc_sn_environment: test
-            ssc_sn_region: na
-            ssc_sn_bu: alpha
-            ansible_connection: local
-            inspec_delegate_host: ""
+        db_alpha_sybase:
           hosts:
             ALPHA_MYSYBASE_5000:
               sybase_server: "[DB_SERVER].example.internal"
@@ -122,13 +137,7 @@ all:
     # =========================================================================
     postgres_databases:
       children:
-        db_alpha:
-          vars:
-            ssc_sn_environment: test
-            ssc_sn_region: na
-            ssc_sn_bu: alpha
-            ansible_connection: local
-            inspec_delegate_host: ""
+        db_alpha_postgres:
           hosts:
             ALPHA_TESTDB_5432:
               postgres_server: "[DB_SERVER].example.internal"

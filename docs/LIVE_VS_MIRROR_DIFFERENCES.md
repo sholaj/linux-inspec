@@ -106,17 +106,21 @@ stabilises.
 
 The InSpec runner can sit in two valid places.
 
-### Model A — delegate as a member of the BU group (live env)
+### Model A — delegate as a member of the BU subgroup (live env)
 
 ```yaml
 all:
   children:
+    db_alpha:
+      vars:
+        ssc_sn_bu: alpha
+        ansible_connection: local        # default for DB host_ids
+      children:
+        db_alpha_mssql:
+
     mssql_databases:
       children:
-        db_corp:
-          vars:
-            ssc_sn_bu: corp
-            ansible_connection: local        # default for DB host_ids
+        db_alpha_mssql:
           hosts:
             inspec-runner:                   # the real SSH target
               ansible_host: <runner-fqdn>
@@ -142,13 +146,17 @@ all:
           ansible_user: ansible_svc
           ansible_connection: ssh
 
+    db_alpha:
+      vars:
+        ssc_sn_bu: alpha
+        ansible_connection: local
+        inspec_delegate_host: "inspec-runner"   # name string only
+      children:
+        db_alpha_mssql:
+
     mssql_databases:
       children:
-        db_alpha:
-          vars:
-            ssc_sn_bu: alpha
-            ansible_connection: local
-            inspec_delegate_host: "inspec-runner"   # name string only
+        db_alpha_mssql:
           hosts:
             DBHOST_PORT:
               mssql_server: ...
@@ -158,6 +166,12 @@ all:
 - ⚠️ `inspec_delegate_host` must point at an inventory hostname that
   exists somewhere (in `delegate_hosts` or elsewhere) for
   `delegate_to: "{{ inspec_delegate_host }}"` to work.
+- ⚠️ Sub-group name must be **platform-specific** (`db_alpha_mssql`,
+  not plain `db_alpha`) — a plain `db_<bu>` placed as a direct child
+  of multiple tech groups is treated as one merged group in Ansible
+  and leaks hosts across platforms. The top-level `db_alpha` is fine
+  as a BU aggregator because it's a child of `all`, not of multiple
+  tech groups.
 
 **Either model is correct.** The role's own `delegate_to` lookup
 (`{{ inspec_delegate_host }}`) is the same in both — what differs is

@@ -23,7 +23,10 @@ job_template:
     cleanup_temp_files: true
     sybase_use_ssh: false
 
-  # Use BU-based limit (e.g., db_alpha) or leave blank for all BUs
+  # Use the BU aggregator (e.g. db_alpha — targets every platform for
+  # that BU; intersected with the playbook's hosts: sybase_databases
+  # at run time) or the platform-specific subgroup directly
+  # (e.g. db_alpha_sybase). Leave blank for all BUs.
   limit: ""
   verbosity: 0
   forks: 5

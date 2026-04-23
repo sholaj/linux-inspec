@@ -31,8 +31,10 @@ job_template:
     # Filter: only scan MSSQL hosts from the selected BU group
     host_group: "all"
 
-  # Use BU-based limit (e.g., db_alpha) or leave blank for all BUs
-  # Legacy "mssql_databases" still works via compatibility group
+  # Use the BU aggregator (e.g. db_alpha — targets every platform for
+  # that BU; intersected with the playbook's hosts: mssql_databases
+  # at run time) or the platform-specific subgroup directly
+  # (e.g. db_alpha_mssql). Leave blank for all BUs.
   limit: ""
   verbosity: 0
   forks: 5
