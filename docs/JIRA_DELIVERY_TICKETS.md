@@ -3329,8 +3329,13 @@ The public mirror has already been reshaped (PR #19, commit `882c456`):
 - One inventory file per (env, region) at the repo root
   (`DEVTEST_NA_Inv_InSpec_Database`), replacing the five per-BU files.
 - Tech groups (`mssql_databases`, `oracle_databases`, `sybase_databases`,
-  `postgres_databases`) each own per-BU children (`db_alpha`,
-  `db_bravo`, …). BU-scoped vars live on the child group.
+  `postgres_databases`) each own **platform-specific** per-BU
+  subgroups (`db_<bu>_mssql`, `db_<bu>_oracle`, …). A top-level
+  `db_<bu>` aggregator holds the BU-wide vars and children-refs the
+  per-platform subgroups so `--limit db_<bu>` still targets every
+  host for a BU across platforms. Platform-specific naming avoids
+  Ansible's group-name-is-global collision that would otherwise leak
+  hosts across tech groups.
 - Per-host `database_platform` var removed — platform is implicit from
   the parent group.
 - `run_compliance_scans.yml` retired; each platform is invoked via its
