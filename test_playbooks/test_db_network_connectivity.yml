@@ -1,0 +1,114 @@
+---
+# Database Network Connectivity Test (AAP2)
+#
+# Purpose:
+#   Verify that the AAP2 execution host can open a TCP connection to
+#   each target database endpoint. Use this to validate Illumio /
+#   firewall whitelisting before running InSpec compliance scans.
+#
+# How it works:
+#   Runs on localhost (the AAP2 execution environment) and uses
+#   ansible.builtin.wait_for in a loop against db_targets. A port
+#   that does not accept a TCP connection within the timeout is
+#   recorded as UNREACHABLE but does not halt the run, so the full
+#   estate is reported in a single pass.
+#
+# Usage (AAP2):
+#   - Job template `hosts`: localhost (or an empty inventory with
+#     only localhost). No inventory hosts are needed — targets are
+#     defined inline in db_targets below.
+#   - Override db_targets / connectivity_timeout via a survey or
+#     extra vars to reuse the same template for different BUs.
+
+- name: "DB network connectivity check"
+  hosts: localhost
+  gather_facts: false
+  vars:
+    # Connection attempt timeout (seconds) per target
+    connectivity_timeout: 5
+
+    # Fail the job when at least one endpoint is unreachable.
+    # Set false to have AAP2 report "changed/ok" but keep the
+    # full summary visible when running an initial discovery.
+    fail_on_unreachable: true
+
+    # Inline list of DB endpoints to test. These are placeholder
+    # examples -- override via AAP2 survey / extra vars (or edit
+    # in a BU-specific branch that is NOT committed) to retarget.
+    # Do NOT commit real hostnames / IPs to this file.
+    db_targets:
+      - name: ALPHA_MSSQL_01
+        host: "[DB_SERVER].example.internal"
+        port: 1433
+        platform: mssql
+        bu: alpha
+
+      - name: ALPHA_ORACLE_01
+        host: "[DB_SERVER].example.internal"
+        port: 1521
+        platform: oracle
+        bu: alpha
+
+      - name: ALPHA_SYBASE_01
+        host: "[DB_SERVER].example.internal"
+        port: 5000
+        platform: sybase
+        bu: alpha
+
+  tasks:
+    - name: "Show what will be tested"
+      ansible.builtin.debug:
+        msg: >-
+          Testing {{ db_targets | length }} DB endpoint(s) from
+          {{ inventory_hostname }} with a {{ connectivity_timeout }}s timeout.
+
+    - name: "TCP port check :: wait_for each DB endpoint"
+      ansible.builtin.wait_for:
+        host: "{{ item.host }}"
+        port: "{{ item.port }}"
+        timeout: "{{ connectivity_timeout | int }}"
+        state: started
+        msg: "{{ item.platform | upper }} {{ item.name }} ({{ item.host }}:{{ item.port }}) unreachable within {{ connectivity_timeout }}s"
+      loop: "{{ db_targets }}"
+      loop_control:
+        label: "{{ item.platform }}:{{ item.name }} -> {{ item.host }}:{{ item.port }}"
+      register: conn_results
+      ignore_errors: true
+
+    - name: "Build pass / fail lists"
+      ansible.builtin.set_fact:
+        conn_pass: >-
+          {{ conn_results.results | rejectattr('failed', 'defined')
+             | list
+             + conn_results.results | selectattr('failed', 'equalto', false) | list }}
+        conn_fail: "{{ conn_results.results | selectattr('failed', 'equalto', true) | list }}"
+
+    - name: "Summary"
+      ansible.builtin.debug:
+        msg: |
+          ============================================================
+           DB NETWORK CONNECTIVITY SUMMARY
+          ============================================================
+           Execution host : {{ inventory_hostname }}
+           Timeout        : {{ connectivity_timeout }}s
+           Tested         : {{ conn_results.results | length }}
+           Reachable      : {{ conn_pass | length }}
+           Unreachable    : {{ conn_fail | length }}
+          ------------------------------------------------------------
+          {% for r in conn_results.results %}
+          {% set ok = not (r.failed | default(false)) %}
+           [ {{ 'OK  ' if ok else 'FAIL' }} ] {{ '%-8s' | format(r.item.platform | upper) }} {{ r.item.name }}  {{ r.item.host }}:{{ r.item.port }}{% if not ok %}  -- {{ r.msg | default('connection failed') }}{% endif %}
+
+          {% endfor %}
+          ============================================================
+
+    - name: "Fail the job if any endpoint was unreachable"
+      ansible.builtin.fail:
+        msg: >-
+          {{ conn_fail | length }} of {{ conn_results.results | length }}
+          DB endpoints were unreachable from {{ inventory_hostname }}.
+          Raise / chase the Illumio whitelisting request for the FAILed
+          entries above.
+      when:
+        - conn_fail | length > 0
+        - fail_on_unreachable | bool
